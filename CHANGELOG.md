@@ -52,3 +52,11 @@
 
 - Added a help control in the popup header to open the integrated documentation.
 - Kept the CA logo non-clickable.
+
+
+### Correctifs TypeScript — typecheck v4
+
+- Protège le déplacement d’un message contre une valeur `undefined` avec `noUncheckedIndexedAccess`.
+- Corrige le chemin de documentation transmis à `browser.runtime.getURL` en utilisant un chemin public absolu (`/documentation.html`).
+- Corrige la configuration Vite WXT : le callback renvoie désormais une configuration Vite (`{ base: './' }`) au lieu de renvoyer l’objet d’environnement reçu.
+- Validation à effectuer dans l’environnement CI avec `npm run typecheck`; aucune réussite de CI n’est présumée ici.

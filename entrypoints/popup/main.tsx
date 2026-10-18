@@ -362,6 +362,7 @@ function Popup() {
     setAutomationMessages(current => {
       const next = [...current];
       const [item] = next.splice(from, 1);
+      if (item === undefined) return current;
       next.splice(to, 0, item);
       return next;
     });
@@ -433,7 +434,7 @@ function Popup() {
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''}`}>
-    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>Détection et automatisation de messages</p></div><button type="button" className="help-button" aria-label="Ouvrir la documentation" title="Documentation" onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('documentation.html') })}>?</button></header>
+    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>Détection et automatisation de messages</p></div><button type="button" className="help-button" aria-label="Ouvrir la documentation" title="Documentation" onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
     <nav className="main-nav" aria-label="Navigation principale">
       <button className={page === 'automation' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('automation')}>Automatisation</button>
       <button className={page === 'variables' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('variables')}>Variables</button>

@@ -5,11 +5,8 @@ export default defineConfig({
   // Une cible MV2 reste possible explicitement via `--mv2` si nécessaire.
   manifestVersion: 3,
   modules: ['@wxt-dev/module-react'],
-  // WXT expects `vite` to be a callback, not a plain Vite config object.
   // Preserve the relative base for documentation hosted under a GitHub Pages project path.
-  vite(config) {
-    return config;
-  },
+  vite: () => ({ base: './' }),
   manifest: {
     name: 'Chat Site Automation',
     description: 'Détecte les champs de chat et automatise les envois selon une fréquence et un créneau définis.',
