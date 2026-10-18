@@ -5,9 +5,11 @@ export default defineConfig({
   // Une cible MV2 reste possible explicitement via `--mv2` si nécessaire.
   manifestVersion: 3,
   modules: ['@wxt-dev/module-react'],
-  // Relative asset URLs also work when the documentation is hosted under a GitHub Pages project path.
-  vite: {
-    base: './',
+  // WXT expects `vite` to be a callback, not a plain Vite config object.
+  // Preserve the relative base for documentation hosted under a GitHub Pages project path.
+  vite(config) {
+    config.base = './';
+    return config;
   },
   manifest: {
     name: 'Chat Site Automation',

@@ -7,6 +7,10 @@
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,
     "useUnknownInCatchVariables": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "moduleResolution": "Bundler",
+    "types": [
+      "wxt/client"
+    ]
   }
 }

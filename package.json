@@ -12,7 +12,7 @@
     "build:edge": "wxt build --browser edge",
     "build:all": "npm run build:chrome && npm run build:firefox && npm run build:edge",
     "build:zip": "wxt zip",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "wxt prepare && tsc --noEmit",
     "build:firefox:mv2": "wxt build --browser firefox --mv2"
   },
   "dependencies": {

@@ -1,3 +1,16 @@
+## CI/typecheck follow-up correction
+
+- `npm run typecheck` now runs `wxt prepare` before `tsc --noEmit`.
+- TypeScript target is set to `ES2022` and module resolution to `Bundler`.
+- Added the WXT client type declaration to the TypeScript configuration.
+- Validation: archive structure checked only; dependencies were not installed and WXT/typecheck were not executed in this environment.
+
+## CI correction — WXT Vite configuration
+
+- Changed `wxt.config.ts` from a plain `vite` object to a callback, matching the WXT configuration API used by WXT 0.20.27.
+- The callback retains the relative `base: './'` setting.
+- Validation status: the archive was inspected and updated; `npx wxt prepare` and the GitHub Actions workflow have not been run here.
+
 # Changelog
 
 ## Unreleased — repository and CI setup
