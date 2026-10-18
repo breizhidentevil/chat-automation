@@ -68,3 +68,9 @@
 - Development tags use `v<package-version>-dev.<run-number>` to keep each workflow run distinct.
 - Version tags matching `v*` continue to publish stable releases.
 - Pull requests do not publish releases. A successful workflow run is still required; this change has not yet been validated by a completed Actions run.
+
+
+## CI correction — prerelease version step
+
+- Fixed shell quoting in the GitHub Actions step that reads the package version for development prerelease tags. The version is now captured in `VERSION` before writing to `GITHUB_OUTPUT`.
+- Validation status: workflow file updated; a successful GitHub Actions run has not yet been confirmed.
