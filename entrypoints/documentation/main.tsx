@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { LOCALE_STORAGE_KEY, preferredLocale, type Locale } from '../../lib/i18n';
+import { EnglishDocumentation } from './English';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 
 function Documentation() {
+  const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
+  useEffect(() => { void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => { const saved = data[LOCALE_STORAGE_KEY]; if (saved === 'fr' || saved === 'en') setLocale(saved); }); }, []);
+  const changeLocale = (next: Locale) => { setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); };
+  if (locale === 'en') return <EnglishDocumentation onLocaleChange={changeLocale} />;
   return <main className="docs-shell">
     <header className="docs-header">
       <div className="docs-mark" aria-hidden="true">CA</div>
-      <div><p className="eyebrow">CHAT AUTOMATION · VERSION 4.1.3</p><h1>Documentation</h1><p className="subtitle">Guide d’utilisation, variables et fonctionnement de l’extension.</p></div>
+      <div><p className="eyebrow">CHAT AUTOMATION · V5</p><h1>Documentation</h1><p className="subtitle">Guide d’utilisation, variables et fonctionnement de l’extension.</p></div><label className="docs-language"><span>Langue</span><select value={locale} onChange={event => changeLocale(event.target.value as Locale)}><option value="fr">Français</option><option value="en">English</option></select></label>
     </header>
     <nav className="toc" aria-label="Sommaire">
       <a href="#demarrage">Démarrage</a><a href="#automation">Automatisation</a><a href="#strategie">Stratégie d’envoi</a><a href="#variables">Variables</a><a href="#chemins">Chemins dynamiques</a><a href="#historique">Historique</a><a href="#logs">Logs</a><a href="#limites">Limites et dépannage</a><a href="#confidentialite">Données et confidentialité</a>
