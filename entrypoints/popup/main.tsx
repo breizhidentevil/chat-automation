@@ -153,7 +153,7 @@ function Popup() {
   const [message, setMessage] = useState('');
   const [automationMessages, setAutomationMessages] = useState<string[]>(['']);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [status, setStatus] = useState('Prêt. Ouvrez une page contenant un chat.');
+  const [status, setStatus] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
@@ -337,18 +337,18 @@ function Popup() {
 
   async function validateStrategy() {
     const text = message.trim();
-    if (!text) { setStatus('Saisissez le message qui servira au test.'); return; }
-    const confirmed = window.confirm('Ce test va réellement envoyer le texte saisi dans le chat de l’onglet actif. La stratégie ne sera enregistrée que si un nouveau message correspondant est détecté dans la conversation. Continuer ?');
+    if (!text) { setStatus(locale === 'fr' ? 'Saisissez le message qui servira au test.' : 'Enter the message to use for the test.'); return; }
+    const confirmed = window.confirm(locale === 'fr' ? 'Ce test va réellement envoyer le texte saisi dans le chat de l’onglet actif. La stratégie ne sera enregistrée que si un nouveau message correspondant est détecté dans la conversation. Continuer?' : 'This test will send the entered text to the active chat. The strategy is saved only if a matching new message is detected. Continue?');
     if (!confirmed) return;
     try {
       const tab = await activeTab();
-      setStatus('Test en cours : l’extension observe la conversation avant d’enregistrer la stratégie…');
+      setStatus(locale === 'fr' ? 'Test en cours : l’extension observe la conversation avant d’enregistrer la stratégie…' : 'Test running: the extension is observing the conversation before saving the strategy…');
       const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_VALIDATE', text });
-      setStatus(typeof response?.message === 'string' ? response.message : 'Résultat du test indéterminé. Consultez les logs.');
+      setStatus(typeof response?.message === 'string' ? response.message : (locale === 'fr' ? 'Résultat du test indéterminé. Consultez les logs.' : 'Test result is inconclusive. Check the logs.'));
       await refreshStrategyStatus();
       await refreshLogs();
     } catch (error) {
-      setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : 'Le script de page est indisponible. Rechargez la page puis réessayez.');
+      setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : locale === 'fr' ? 'Le script de page est indisponible. Rechargez la page puis réessayez.' : 'The page script is unavailable. Reload the page and try again.');
     }
   }
 
@@ -378,16 +378,16 @@ function Popup() {
   async function startAutomation() {
     const messages = automationMessages.map(text => text.trim());
     const amount = Number(interval);
-    if (messages.length === 0 || messages.some(text => !text)) { setStatus('Ajoutez au moins un message et renseignez tous les messages de la séquence.'); return; }
+    if (messages.length === 0 || messages.some(text => !text)) { setStatus(t('sequenceEmpty')); return; }
     for (let index = 0; index < messages.length; index++) {
       const unknown = validateTemplateVariables(messages[index]!, variables, 'automation');
       if (unknown.length > 0) { setStatus(`Message ${index + 1} : variable(s) inconnue(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.`); setPage('variables'); return; }
       const residual = messages[index]!.replace(/{{\s*[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*\s*}}/g, '');
       if (residual.includes('{{') || residual.includes('}}')) { setStatus(`Message ${index + 1} : syntaxe de variable invalide. Utilisez {{nom}}.`); return; }
     }
-    if (!Number.isFinite(amount) || amount <= 0) { setStatus('L’intervalle doit être un nombre positif.'); return; }
-    if (!/^\d+$/.test(repeatCount.trim()) || !Number.isSafeInteger(Number(repeatCount)) || Number(repeatCount) < 0) { setStatus('Le nombre de cycles doit être un entier positif ou nul (0 = infini).'); return; }
-    if (timeWindowEnabled && startTime === endTime) { setStatus('Le créneau est invalide : choisissez deux heures différentes, ou désactivez le créneau horaire.'); return; }
+    if (!Number.isFinite(amount) || amount <= 0) { setStatus(t('invalidInterval')); return; }
+    if (!/^\d+$/.test(repeatCount.trim()) || !Number.isSafeInteger(Number(repeatCount)) || Number(repeatCount) < 0) { setStatus(t('invalidRepeatCount')); return; }
+    if (timeWindowEnabled && startTime === endTime) { setStatus(t('invalidTimeWindow')); return; }
     try {
       const tab = await activeTab();
       await persistSettings();
@@ -396,7 +396,7 @@ function Popup() {
         intervalMs: Math.round(amount * (unit === 'minutes' ? 60_000 : 1_000)),
         repeatMode: Number(repeatCount) === 0 ? 'infinite' : 'finite', repeatCount: Number(repeatCount), timeWindowEnabled, startTime, endTime,
       });
-      setStatus(typeof response?.message === 'string' ? response.message : 'Automatisation lancée.');
+      setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
       await refreshLogs();
     } catch (error) {
       setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : 'Le script de page est indisponible. Rechargez la page puis réessayez.');
@@ -407,9 +407,9 @@ function Popup() {
     try {
       const tab = await activeTab();
       const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_STOP' });
-      setStatus(typeof response?.message === 'string' ? response.message : 'Commande d’arrêt transmise.');
+      setStatus(typeof response?.message === 'string' ? response.message : t('automationStopped'));
       await refreshLogs();
-    } catch { setStatus('Impossible de joindre le script de page. Vérifiez que l’onglet est toujours ouvert.'); }
+    } catch { setStatus(locale === 'fr' ? 'Impossible de joindre le script de page. Vérifiez que l’onglet est toujours ouvert.' : 'Could not reach the page script. Make sure the tab is still open.'); }
   }
 
   function countdownLabel(target: number | null | undefined): string {
@@ -422,14 +422,14 @@ function Popup() {
 
   function phaseLabel(phase: RuntimeStatus['phase']): string {
     switch (phase) {
-      case 'ready': return 'Prêt à envoyer';
-      case 'waiting-interval': return 'Compte à rebours';
-      case 'waiting-window': return 'En attente du créneau';
+      case 'ready': return locale === 'fr' ? 'Prêt à envoyer' : 'Ready to send';
+      case 'waiting-interval': return locale === 'fr' ? 'Compte à rebours' : 'Countdown';
+      case 'waiting-window': return locale === 'fr' ? 'En attente du créneau' : 'Waiting for time window';
       case 'waiting-llm': return t('waitingLLM');
-      case 'sending': return 'Envoi en cours';
-      case 'finished': return 'Terminé';
-      case 'failed': return 'Arrêt sur erreur';
-      default: return 'Arrêté';
+      case 'sending': return locale === 'fr' ? 'Envoi en cours' : 'Sending';
+      case 'finished': return locale === 'fr' ? 'Terminé' : 'Finished';
+      case 'failed': return locale === 'fr' ? 'Arrêt sur erreur' : 'Stopped due to error';
+      default: return locale === 'fr' ? 'Arrêté' : 'Stopped';
     }
   }
 
