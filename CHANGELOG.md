@@ -2,6 +2,8 @@
 
 ## Unreleased — repository and CI setup
 
+- Pinned npm to 10.8.2 in GitHub Actions and disabled audit/funding requests during dependency installation to make CI installation more predictable. This is a mitigation; successful installation still needs to be confirmed by a workflow run.
+
 - Replaced the project README with an English overview and development guide.
 - Added GitHub Actions automation to build Chrome, Firefox, and Edge ZIP packages.
 - Added GitHub Pages deployment for the built-in documentation page, using relative asset URLs for project-site paths.

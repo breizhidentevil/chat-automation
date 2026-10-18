@@ -29,8 +29,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Pin npm version
+        run: npm install --global npm@10.8.2
+
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Type-check
         run: npm run typecheck
