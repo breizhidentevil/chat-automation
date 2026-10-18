@@ -101,7 +101,22 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Publish browser ZIPs to GitHub Release
+      - name: Read extension version
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        id: version
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish development prerelease for main branch
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-dev.${{ github.run_number }}
+          name: Chat Automation ${{ steps.version.outputs.version }} dev build ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: true
+          files: packages/*.zip
+
+      - name: Publish stable release for version tags
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
