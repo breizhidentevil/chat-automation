@@ -1,3 +1,15 @@
+## Typecheck follow-up
+
+- Removed the unresolved `wxt/client` type-library entry; WXT's generated tsconfig is the source of generated ambient types.
+- Preserved the `wxt prepare` step before TypeScript checks.
+- Validation status: ZIP integrity verified; dependencies and typecheck were not run in this environment.
+
+## TypeScript typecheck correction
+
+- Removed the explicit `wxt/client` entry from `compilerOptions.types`; this package path is not resolvable as a standalone type-definition library in the current WXT 0.20.27 setup.
+- WXT-generated configuration remains extended via `./.wxt/tsconfig.json`, and the `typecheck` script still runs `wxt prepare` before `tsc --noEmit`.
+- Validation status: ZIP integrity checked; `tsc --noEmit` has not been run here.
+
 ## CI/typecheck follow-up correction
 
 - `npm run typecheck` now runs `wxt prepare` before `tsc --noEmit`.
