@@ -74,3 +74,11 @@
 
 - Fixed shell quoting in the GitHub Actions step that reads the package version for development prerelease tags. The version is now captured in `VERSION` before writing to `GITHUB_OUTPUT`.
 - Validation status: workflow file updated; a successful GitHub Actions run has not yet been confirmed.
+
+
+## V5 — Initial French/English localization
+
+- Added a centralized localization module with French and English labels for key popup controls.
+- Added a language selector to the popup header and persisted the explicit choice in browser local storage.
+- Uses the browser language as the initial default when no saved preference exists (English for English browser locales, French otherwise).
+- This is an initial localization pass, not yet a complete translation of every popup message, runtime status, autocomplete suggestion, and the integrated documentation. Typecheck/build has not yet been run for this change.
