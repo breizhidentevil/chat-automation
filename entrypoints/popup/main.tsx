@@ -15,33 +15,33 @@ type TemplateSuggestion = { value: string; description: string; kind: 'custom' |
 
 const DYNAMIC_VARIABLE_SUGGESTIONS: TemplateSuggestion[] = [
   { value: 'system.runtime.timestamp', description: 'currentTimestamp', kind: 'dynamic' },
-  { value: 'system.runtime.date', description: 'currentDate', kind: 'Chemin dynamique' },
-  { value: 'system.runtime.time', description: 'currentTime', kind: 'Chemin dynamique' },
-  { value: 'system.runtime.timezone', description: 'timezone', kind: 'Chemin dynamique' },
-  { value: 'automation.sequence.iteration', description: 'currentIteration', kind: 'Chemin dynamique' },
-  { value: 'automation.sequence.total_iterations', description: 'totalIterations', kind: 'Chemin dynamique' },
-  { value: 'automation.message.index', description: 'currentMessageIndex', kind: 'Chemin dynamique' },
-  { value: 'automation.message.total', description: 'messageCountSequence', kind: 'Chemin dynamique' },
-  { value: 'automation.config.interval', description: 'configuredInterval', kind: 'Chemin dynamique' },
-  { value: 'automation.messages[0].content', description: 'firstConfiguredMessage', kind: 'Chemin dynamique' },
-  { value: 'chat.messages[0].content', description: 'firstChatMessage', kind: 'Chemin dynamique' },
-  { value: 'chat.session.url', description: 'activeConversationUrl', kind: 'Chemin dynamique' },
-  { value: 'chat.session.title', description: 'activeConversationTitle', kind: 'Chemin dynamique' },
-  { value: 'chat.sent[0].content', description: 'firstSentMessage', kind: 'Chemin dynamique' },
-  { value: 'chat.received[0].content', description: 'firstReceivedMessage', kind: 'Chemin dynamique' },
-  { value: 'history.messages[0].content', description: 'firstHistoryMessage', kind: 'Chemin dynamique' },
-  { value: 'history.messages[0].author', description: 'firstHistoryAuthor', kind: 'Chemin dynamique' },
-  { value: 'history.messages[0].timestamp', description: 'firstHistoryDate', kind: 'Chemin dynamique' },
-  { value: 'history.message.count', description: 'historyMessageCount', kind: 'Chemin dynamique' },
-  { value: 'history.sent[0].content', description: 'firstHistorySent', kind: 'Chemin dynamique' },
-  { value: 'history.received[0].content', description: 'firstHistoryReceived', kind: 'Chemin dynamique' },
-  { value: 'logs.events[0].message', description: 'firstLogMessage', kind: 'Chemin dynamique' },
-  { value: 'logs.events[0].level', description: 'firstLogLevel', kind: 'Chemin dynamique' },
-  { value: 'logs.events[0].timestamp', description: 'firstLogDate', kind: 'Chemin dynamique' },
-  { value: 'logs.errors[0].message', description: 'firstError', kind: 'Chemin dynamique' },
-  { value: 'logs.warnings[0].message', description: 'firstWarning', kind: 'Chemin dynamique' },
-  { value: 'strategy.site.domain', description: 'currentDomain', kind: 'Chemin dynamique' },
-  { value: 'data.records[0].id', description: 'firstRecordId', kind: 'Chemin dynamique' },
+  { value: 'system.runtime.date', description: 'currentDate', kind: 'dynamic' },
+  { value: 'system.runtime.time', description: 'currentTime', kind: 'dynamic' },
+  { value: 'system.runtime.timezone', description: 'timezone', kind: 'dynamic' },
+  { value: 'automation.sequence.iteration', description: 'currentIteration', kind: 'dynamic' },
+  { value: 'automation.sequence.total_iterations', description: 'totalIterations', kind: 'dynamic' },
+  { value: 'automation.message.index', description: 'currentMessageIndex', kind: 'dynamic' },
+  { value: 'automation.message.total', description: 'messageCountSequence', kind: 'dynamic' },
+  { value: 'automation.config.interval', description: 'configuredInterval', kind: 'dynamic' },
+  { value: 'automation.messages[0].content', description: 'firstConfiguredMessage', kind: 'dynamic' },
+  { value: 'chat.messages[0].content', description: 'firstChatMessage', kind: 'dynamic' },
+  { value: 'chat.session.url', description: 'activeConversationUrl', kind: 'dynamic' },
+  { value: 'chat.session.title', description: 'activeConversationTitle', kind: 'dynamic' },
+  { value: 'chat.sent[0].content', description: 'firstSentMessage', kind: 'dynamic' },
+  { value: 'chat.received[0].content', description: 'firstReceivedMessage', kind: 'dynamic' },
+  { value: 'history.messages[0].content', description: 'firstHistoryMessage', kind: 'dynamic' },
+  { value: 'history.messages[0].author', description: 'firstHistoryAuthor', kind: 'dynamic' },
+  { value: 'history.messages[0].timestamp', description: 'firstHistoryDate', kind: 'dynamic' },
+  { value: 'history.message.count', description: 'historyMessageCount', kind: 'dynamic' },
+  { value: 'history.sent[0].content', description: 'firstHistorySent', kind: 'dynamic' },
+  { value: 'history.received[0].content', description: 'firstHistoryReceived', kind: 'dynamic' },
+  { value: 'logs.events[0].message', description: 'firstLogMessage', kind: 'dynamic' },
+  { value: 'logs.events[0].level', description: 'firstLogLevel', kind: 'dynamic' },
+  { value: 'logs.events[0].timestamp', description: 'firstLogDate', kind: 'dynamic' },
+  { value: 'logs.errors[0].message', description: 'firstError', kind: 'dynamic' },
+  { value: 'logs.warnings[0].message', description: 'firstWarning', kind: 'dynamic' },
+  { value: 'strategy.site.domain', description: 'currentDomain', kind: 'dynamic' },
+  { value: 'data.records[0].id', description: 'firstRecordId', kind: 'dynamic' },
 ];
 
 function TemplateTextarea({
@@ -381,9 +381,9 @@ function Popup() {
     if (messages.length === 0 || messages.some(text => !text)) { setStatus(t('sequenceEmpty')); return; }
     for (let index = 0; index < messages.length; index++) {
       const unknown = validateTemplateVariables(messages[index]!, variables, 'automation');
-      if (unknown.length > 0) { setStatus(`Message ${index + 1} : variable(s) inconnue(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.`); setPage('variables'); return; }
+      if (unknown.length > 0) { setStatus(locale === 'fr' ? `Message ${index + 1} : variable(s) inconnue(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.` : `Message ${index + 1}: unknown variable(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Create them on the Variables page.`); setPage('variables'); return; }
       const residual = messages[index]!.replace(/{{\s*[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*\s*}}/g, '');
-      if (residual.includes('{{') || residual.includes('}}')) { setStatus(`Message ${index + 1} : syntaxe de variable invalide. Utilisez {{nom}}.`); return; }
+      if (residual.includes('{{') || residual.includes('}}')) { setStatus(locale === 'fr' ? `Message ${index + 1} : syntaxe de variable invalide. Utilisez {{nom}}.` : `Message ${index + 1}: invalid variable syntax. Use {{name}}.`); return; }
     }
     if (!Number.isFinite(amount) || amount <= 0) { setStatus(t('invalidInterval')); return; }
     if (!/^\d+$/.test(repeatCount.trim()) || !Number.isSafeInteger(Number(repeatCount)) || Number(repeatCount) < 0) { setStatus(t('invalidRepeatCount')); return; }
@@ -399,7 +399,7 @@ function Popup() {
       setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
       await refreshLogs();
     } catch (error) {
-      setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : 'Le script de page est indisponible. Rechargez la page puis réessayez.');
+      setStatus(error instanceof Error && error.message.startsWith(locale === 'fr' ? 'Cette page' : 'This page') ? error.message : (locale === 'fr' ? 'Le script de page est indisponible. Rechargez la page puis réessayez.' : 'The page script is unavailable. Reload the page and try again.'));
     }
   }
 
@@ -413,7 +413,7 @@ function Popup() {
   }
 
   function countdownLabel(target: number | null | undefined): string {
-    if (typeof target !== 'number') return 'En attente';
+    if (typeof target !== 'number') return locale === 'fr' ? 'En attente' : 'Waiting';
     const secondsLeft = Math.max(0, Math.ceil((target - clockNow) / 1000));
     const minutes = Math.floor(secondsLeft / 60);
     const seconds = secondsLeft % 60;
@@ -464,7 +464,7 @@ function Popup() {
     </> : <>
       <div className="page-heading"><h2>{t('automateSending')}</h2><p>{t('siteStrategyDescription', { site: strategyOrigin })}</p></div>
       <div className="sequence-heading"><div><h3>{t('sequence')}</h3><p className="helper">{t('sequenceHelp')}</p></div><button className="secondary add-message" onClick={addAutomationMessage}>{t('add')}</button></div>
-      <div className="message-sequence" aria-label="Séquence de messages">
+      <div className="message-sequence" aria-label={t('sequence')}>
         {automationMessages.map((text, index) => <div
           className={draggingIndex === index ? 'sequence-item dragging' : 'sequence-item'}
           key={`sequence-${index}`}
@@ -494,7 +494,7 @@ function Popup() {
           <p className="helper">{t('outsideWindow')}</p>
           <div className="field-row time-row">
             <div><label htmlFor="start-time">{t('start')}</label><input id="start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
-            <span className="time-separator">à</span>
+            <span className="time-separator">{locale === 'fr' ? 'à' : 'to'}</span>
             <div><label htmlFor="end-time">{t('end')}</label><input id="end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
           </div>
           <p className="helper">{t('windowOvernight')}</p>
@@ -502,14 +502,14 @@ function Popup() {
       </section>
       <p className="notice">{t('variableUsageNotice')}</p>
     </> : page === 'variables' ? <>
-      <div className="page-heading"><h2>Variables</h2><p>Créez des valeurs réutilisables dans les modèles de messages. Les variables statiques sont actuellement prises en charge.</p></div>
+      <div className="page-heading"><h2>{t('variables')}</h2><p>{t('variablesIntro')}</p></div>
       <section className="variable-form">
         <h3>{editingVariableId ? t('editVariable') : t('newVariable')}</h3>
         <label htmlFor="variable-name">{t('name')}</label>
-        <input id="variable-name" value={variableName} onChange={event => setVariableName(event.target.value)} placeholder="prenom" autoComplete="off" />
+        <input id="variable-name" value={variableName} onChange={event => setVariableName(event.target.value)} placeholder={locale === 'fr' ? 'prenom' : 'first_name'} autoComplete="off" />
         <p className="helper">{t('variableUsage')} <code>{`{{${variableName.trim() || 'name'}}}`}</code></p>
         <label htmlFor="variable-value">{t('staticValue')}</label>
-        <textarea id="variable-value" value={variableValue} onChange={event => setVariableValue(event.target.value)} placeholder="Alexandre" rows={2} />
+        <textarea id="variable-value" value={variableValue} onChange={event => setVariableValue(event.target.value)} placeholder={locale === 'fr' ? 'Alexandre' : 'Alex'} rows={2} />
         <label htmlFor="variable-scope">{t('scope')}</label>
         <select id="variable-scope" value={variableScope} onChange={event => setVariableScope(event.target.value as VariableScope)}><option value="global">{t('globalScope')}</option><option value="automation">{t('automationScope')}</option></select>
         {variableError ? <p className="variable-error" role="alert">{variableError}</p> : null}
@@ -553,7 +553,7 @@ function Popup() {
         <button className="stop-button" onClick={() => void stopAutomation()}>{t('stopAutomation')}</button>
       </div>
       <p className="status" role="status">{status}</p>
-      <section className="runtime-panel" aria-live="polite" aria-label="État de l’automatisation">
+      <section className="runtime-panel" aria-live="polite" aria-label={t('tracking')}>
         <div className="runtime-head"><h3>{t('tracking')}</h3><span className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</span></div>
         <p className="runtime-note">{runtimeStatus?.note ?? t('noRun')}</p>
         <div className="runtime-metrics">
