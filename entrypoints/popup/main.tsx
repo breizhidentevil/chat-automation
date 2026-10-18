@@ -11,37 +11,37 @@ type SavedSettings = { message?: string; messages?: string[]; interval?: string;
 type RuntimeStatus = { phase: 'stopped' | 'ready' | 'waiting-interval' | 'waiting-window' | 'waiting-llm' | 'sending' | 'finished' | 'failed'; note: string; messageIndex: number; messagesCount: number; completedSequences: number; repeatMode: 'infinite' | 'finite'; repeatCount: number; nextSendAt: number | null; updatedAt: number };
 
 
-type TemplateSuggestion = { value: string; description: string; kind: 'Variable personnalisée' | 'Chemin dynamique' };
+type TemplateSuggestion = { value: string; description: string; kind: 'custom' | 'dynamic' };
 
 const DYNAMIC_VARIABLE_SUGGESTIONS: TemplateSuggestion[] = [
-  { value: 'system.runtime.timestamp', description: 'Date et heure actuelles au format ISO', kind: 'Chemin dynamique' },
-  { value: 'system.runtime.date', description: 'Date actuelle', kind: 'Chemin dynamique' },
-  { value: 'system.runtime.time', description: 'Heure actuelle', kind: 'Chemin dynamique' },
-  { value: 'system.runtime.timezone', description: 'Fuseau horaire', kind: 'Chemin dynamique' },
-  { value: 'automation.sequence.iteration', description: 'Itération actuelle', kind: 'Chemin dynamique' },
-  { value: 'automation.sequence.total_iterations', description: 'Nombre total d’itérations configurées', kind: 'Chemin dynamique' },
-  { value: 'automation.message.index', description: 'Index du message courant', kind: 'Chemin dynamique' },
-  { value: 'automation.message.total', description: 'Nombre de messages dans la séquence', kind: 'Chemin dynamique' },
-  { value: 'automation.config.interval', description: 'Intervalle configuré entre les envois', kind: 'Chemin dynamique' },
-  { value: 'automation.messages[0].content', description: 'Contenu du premier message configuré', kind: 'Chemin dynamique' },
-  { value: 'chat.messages[0].content', description: 'Contenu du premier message du chat', kind: 'Chemin dynamique' },
-  { value: 'chat.session.url', description: 'URL de la conversation active', kind: 'Chemin dynamique' },
-  { value: 'chat.session.title', description: 'Titre de la conversation active', kind: 'Chemin dynamique' },
-  { value: 'chat.sent[0].content', description: 'Premier message envoyé dans le chat', kind: 'Chemin dynamique' },
-  { value: 'chat.received[0].content', description: 'Premier message reçu dans le chat', kind: 'Chemin dynamique' },
-  { value: 'history.messages[0].content', description: 'Premier message de l’historique', kind: 'Chemin dynamique' },
-  { value: 'history.messages[0].author', description: 'Auteur du premier message', kind: 'Chemin dynamique' },
-  { value: 'history.messages[0].timestamp', description: 'Date du premier message', kind: 'Chemin dynamique' },
-  { value: 'history.message.count', description: 'Nombre de messages dans l’historique', kind: 'Chemin dynamique' },
-  { value: 'history.sent[0].content', description: 'Premier message envoyé dans l’historique', kind: 'Chemin dynamique' },
-  { value: 'history.received[0].content', description: 'Premier message reçu dans l’historique', kind: 'Chemin dynamique' },
-  { value: 'logs.events[0].message', description: 'Message du premier événement de log', kind: 'Chemin dynamique' },
-  { value: 'logs.events[0].level', description: 'Niveau du premier événement de log', kind: 'Chemin dynamique' },
-  { value: 'logs.events[0].timestamp', description: 'Date du premier événement de log', kind: 'Chemin dynamique' },
-  { value: 'logs.errors[0].message', description: 'Message de la première erreur', kind: 'Chemin dynamique' },
-  { value: 'logs.warnings[0].message', description: 'Message du premier avertissement', kind: 'Chemin dynamique' },
-  { value: 'strategy.site.domain', description: 'Domaine du site courant', kind: 'Chemin dynamique' },
-  { value: 'data.records[0].id', description: 'Identifiant du premier enregistrement disponible', kind: 'Chemin dynamique' },
+  { value: 'system.runtime.timestamp', description: 'currentTimestamp', kind: 'dynamic' },
+  { value: 'system.runtime.date', description: 'currentDate', kind: 'Chemin dynamique' },
+  { value: 'system.runtime.time', description: 'currentTime', kind: 'Chemin dynamique' },
+  { value: 'system.runtime.timezone', description: 'timezone', kind: 'Chemin dynamique' },
+  { value: 'automation.sequence.iteration', description: 'currentIteration', kind: 'Chemin dynamique' },
+  { value: 'automation.sequence.total_iterations', description: 'totalIterations', kind: 'Chemin dynamique' },
+  { value: 'automation.message.index', description: 'currentMessageIndex', kind: 'Chemin dynamique' },
+  { value: 'automation.message.total', description: 'messageCountSequence', kind: 'Chemin dynamique' },
+  { value: 'automation.config.interval', description: 'configuredInterval', kind: 'Chemin dynamique' },
+  { value: 'automation.messages[0].content', description: 'firstConfiguredMessage', kind: 'Chemin dynamique' },
+  { value: 'chat.messages[0].content', description: 'firstChatMessage', kind: 'Chemin dynamique' },
+  { value: 'chat.session.url', description: 'activeConversationUrl', kind: 'Chemin dynamique' },
+  { value: 'chat.session.title', description: 'activeConversationTitle', kind: 'Chemin dynamique' },
+  { value: 'chat.sent[0].content', description: 'firstSentMessage', kind: 'Chemin dynamique' },
+  { value: 'chat.received[0].content', description: 'firstReceivedMessage', kind: 'Chemin dynamique' },
+  { value: 'history.messages[0].content', description: 'firstHistoryMessage', kind: 'Chemin dynamique' },
+  { value: 'history.messages[0].author', description: 'firstHistoryAuthor', kind: 'Chemin dynamique' },
+  { value: 'history.messages[0].timestamp', description: 'firstHistoryDate', kind: 'Chemin dynamique' },
+  { value: 'history.message.count', description: 'historyMessageCount', kind: 'Chemin dynamique' },
+  { value: 'history.sent[0].content', description: 'firstHistorySent', kind: 'Chemin dynamique' },
+  { value: 'history.received[0].content', description: 'firstHistoryReceived', kind: 'Chemin dynamique' },
+  { value: 'logs.events[0].message', description: 'firstLogMessage', kind: 'Chemin dynamique' },
+  { value: 'logs.events[0].level', description: 'firstLogLevel', kind: 'Chemin dynamique' },
+  { value: 'logs.events[0].timestamp', description: 'firstLogDate', kind: 'Chemin dynamique' },
+  { value: 'logs.errors[0].message', description: 'firstError', kind: 'Chemin dynamique' },
+  { value: 'logs.warnings[0].message', description: 'firstWarning', kind: 'Chemin dynamique' },
+  { value: 'strategy.site.domain', description: 'currentDomain', kind: 'Chemin dynamique' },
+  { value: 'data.records[0].id', description: 'firstRecordId', kind: 'Chemin dynamique' },
 ];
 
 function TemplateTextarea({
@@ -65,7 +65,7 @@ function TemplateTextarea({
   const tokenStart = openToken ? beforeCaret.lastIndexOf('{{') : -1;
   const query = openToken?.[1] ?? '';
   const candidates: TemplateSuggestion[] = [
-    ...variables.map(variable => ({ value: variable.name, description: `${variable.scope === 'global' ? 'Variable globale' : 'Variable d’automatisation'} · ${variable.value}`, kind: 'Variable personnalisée' as const })),
+    ...variables.map(variable => ({ value: variable.name, description: `${variable.scope === 'global' ? 'globalVariable' : 'automationVariable'}|${variable.value}`, kind: 'custom' as const })),
     ...DYNAMIC_VARIABLE_SUGGESTIONS,
   ];
   const filtered = openToken && !dismissed
@@ -129,7 +129,7 @@ function TemplateTextarea({
       rows={rows}
       autoComplete="off"
     />
-    {filtered.length > 0 ? <div className="variable-autocomplete" role="listbox" aria-label="Suggestions de variables">
+    {filtered.length > 0 ? <div className="variable-autocomplete" role="listbox" aria-label={t('suggestions')}>
       {filtered.map((item, index) => <button
         type="button"
         role="option"
@@ -138,15 +138,15 @@ function TemplateTextarea({
         key={`${item.kind}-${item.value}`}
         onMouseDown={event => event.preventDefault()}
         onClick={() => insertSuggestion(item)}
-      ><span className="suggestion-main"><code>{`{{${item.value}}}`}</code><small>{item.kind}</small></span><span className="suggestion-description">{item.description}</span></button>)}
-      <p className="autocomplete-help">↑ ↓ pour naviguer · Entrée ou Tab pour insérer · Échap pour fermer</p>
+      ><span className="suggestion-main"><code>{`{{${item.value}}}`}</code><small>{t(item.kind === 'custom' ? 'variableCustom' : 'dynamicPath')}</small></span><span className="suggestion-description">{item.description.includes('|') ? `${t(item.description.split('|')[0] as Parameters<typeof translate>[1])} · ${item.description.split('|').slice(1).join('|')}` : t(item.description as Parameters<typeof translate>[1])}</span></button>)}
+      <p className="autocomplete-help">{t('navigateSuggestions')}</p>
     </div> : null}
   </div>;
 }
 
 function Popup() {
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
   const [page, setPage] = useState<Page>('automation');
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
@@ -187,7 +187,7 @@ function Popup() {
     } catch {
       setStrategyOrigin('');
       setStrategyReady(false);
-      setStatus('Ouvrez un onglet de chat HTTP ou HTTPS pour configurer la stratégie.');
+      setStatus(t('openChatTab'));
     }
   }
 
@@ -219,7 +219,7 @@ function Popup() {
       setHistoryMessages([]);
       setHistoryOrigin('');
       setHistoryConversationId('');
-      setHistoryError(error instanceof Error ? error.message : 'Impossible de charger l’historique de ce site.');
+      setHistoryError(error instanceof Error ? error.message : t('historyLoadError'));
     }
   }
 
@@ -309,14 +309,14 @@ function Popup() {
   async function saveVariable() {
     setVariableError('');
     const name = variableName.trim();
-    if (!VARIABLE_NAME_PATTERN.test(name)) { setVariableError('Nom invalide. Utilisez une lettre ou _ au début, puis des lettres, chiffres, _ ou -.'); return; }
-    if (!variableValue.trim()) { setVariableError('La valeur ne peut pas être vide.'); return; }
-    if (variables.some(item => item.name === name && item.scope === variableScope && item.id !== editingVariableId)) { setVariableError('Une variable portant ce nom existe déjà dans cette portée.'); return; }
+    if (!VARIABLE_NAME_PATTERN.test(name)) { setVariableError(t('invalidVariableName')); return; }
+    if (!variableValue.trim()) { setVariableError(t('emptyVariableValue')); return; }
+    if (variables.some(item => item.name === name && item.scope === variableScope && item.id !== editingVariableId)) { setVariableError(t('duplicateVariable')); return; }
     const item: VariableDefinition = { id: editingVariableId ?? `var-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, type: 'static', value: variableValue, scope: variableScope, updatedAt: Date.now() };
     const next = editingVariableId ? variables.map(existing => existing.id === editingVariableId ? item : existing) : [...variables, item];
     await persistVariables(next);
     setVariableName(''); setVariableValue(''); setVariableScope('global'); setEditingVariableId(null);
-    setStatus(`Variable « ${name} » enregistrée.`);
+    setStatus(t('testSaved', { name }));
   }
 
   function editVariable(item: VariableDefinition) {
@@ -324,14 +324,14 @@ function Popup() {
   }
 
   async function deleteVariable(item: VariableDefinition) {
-    if (!window.confirm(`Supprimer la variable « ${item.name} » ? Les messages qui l’utilisent devront être corrigés avant leur envoi.`)) return;
+    if (!window.confirm(t('confirmDeleteVariable', { name: item.name }))) return;
     await persistVariables(variables.filter(existing => existing.id !== item.id));
     if (editingVariableId === item.id) { setEditingVariableId(null); setVariableName(''); setVariableValue(''); setVariableScope('global'); }
   }
 
   async function activeTab() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url || !/^https?:/.test(tab.url)) throw new Error('Cette page ne permet pas l’injection (page interne du navigateur ou URL non HTTP).');
+    if (!tab?.id || !tab.url || !/^https?:/.test(tab.url)) throw new Error(t('strategyUnavailable'));
     return tab;
   }
 
@@ -454,16 +454,16 @@ function Popup() {
       <div className="page-heading"><h2>{t('automation')}</h2><p>{t('checkingStrategy')}</p></div>
       <p className="empty">{t('loadingSiteConfig')}</p>
     </> : strategyReady === false ? <>
-      <div className="page-heading"><h2>{t('setupStrategy')}</h2><p>Aucune stratégie validée n’est enregistrée pour {strategyOrigin || 'l’onglet actif'}. Effectuez un test pour apprendre comment envoyer un message sur ce site. Une fois la stratégie validée, cette page affichera automatiquement les paramètres d’automatisation.</p></div>
+      <div className="page-heading"><h2>{t('setupStrategy')}</h2><p>{t('strategyDescription')}</p></div>
       <label htmlFor="message">{t('testMessage')}</label>
-      <TemplateTextarea id="message" value={message} onChange={setMessage} variables={variables} placeholder="Écrivez un message de test…" rows={4} />
-      <p className="helper autocomplete-note">Tapez <code>{`{{`}</code> pour afficher les variables disponibles.</p>
+      <TemplateTextarea id="message" value={message} onChange={setMessage} variables={variables} placeholder={t('writeTestMessage')} rows={4} />
+      <p className="helper autocomplete-note">{t('variableHint')}</p>
       <button className="secondary validate-button" onClick={() => void validateStrategy()}>{t('testAndSave')}</button>
-      <p className="notice">Ce test envoie réellement le texte saisi dans le chat actif. La stratégie ne sera enregistrée que si l’extension confirme qu’un nouveau message correspondant apparaît dans la conversation.</p>
+      <p className="notice">{t('testWarning')}</p>
       <p className="status" role="status">{status}</p>
     </> : <>
-      <div className="page-heading"><h2>{t('automateSending')}</h2><p>Stratégie validée pour {strategyOrigin}. La séquence sera envoyée sur l’onglet actif, selon la fréquence et les options horaires choisies.</p></div>
-      <div className="sequence-heading"><div><h3>{t('sequence')}</h3><p className="helper">Les messages sont envoyés dans l’ordre affiché, puis la séquence recommence au premier message.</p></div><button className="secondary add-message" onClick={addAutomationMessage}>{t('add')}</button></div>
+      <div className="page-heading"><h2>{t('automateSending')}</h2><p>{t('siteStrategyDescription', { site: strategyOrigin })}</p></div>
+      <div className="sequence-heading"><div><h3>{t('sequence')}</h3><p className="helper">{t('sequenceHelp')}</p></div><button className="secondary add-message" onClick={addAutomationMessage}>{t('add')}</button></div>
       <div className="message-sequence" aria-label="Séquence de messages">
         {automationMessages.map((text, index) => <div
           className={draggingIndex === index ? 'sequence-item dragging' : 'sequence-item'}
@@ -474,10 +474,10 @@ function Popup() {
           onDrop={event => { event.preventDefault(); const from = Number(event.dataTransfer.getData('text/plain')); if (Number.isInteger(from)) moveAutomationMessage(from, index); setDraggingIndex(null); }}
           onDragEnd={() => setDraggingIndex(null)}
         >
-          <button type="button" className="drag-handle" aria-label={`Déplacer le message ${index + 1}`} title="Glisser pour réordonner">⠿</button>
+          <button type="button" className="drag-handle" aria-label={t('dragMessage', { number: index + 1 })} title={t('dragToReorder')}>⠿</button>
           <span className="sequence-number">{index + 1}</span>
-          <TemplateTextarea ariaLabel={`Message ${index + 1}`} className="sequence-template-input" value={text} onChange={next => updateAutomationMessage(index, next)} variables={variables} placeholder={`Texte du message ${index + 1}…`} rows={2} />
-          <button type="button" className="remove-message" aria-label={`Supprimer le message ${index + 1}`} title="Supprimer ce message" onClick={() => removeAutomationMessage(index)}>×</button>
+          <TemplateTextarea ariaLabel={`Message ${index + 1}`} className="sequence-template-input" value={text} onChange={next => updateAutomationMessage(index, next)} variables={variables} placeholder={t('messagePlaceholder', { number: index + 1 })} rows={2} />
+          <button type="button" className="remove-message" aria-label={t('removeMessage', { number: index + 1 })} title={t('removeThisMessage')} onClick={() => removeAutomationMessage(index)}>×</button>
         </div>)}
       </div>
       <section className="settings-section">
@@ -487,22 +487,22 @@ function Popup() {
           <div className="cycle-field"><label htmlFor="unit">{t('unit')}</label><select id="unit" value={unit} onChange={e => setUnit(e.target.value as 'seconds' | 'minutes')}><option value="seconds">{t('seconds')}</option><option value="minutes">{t('minutes')}</option></select></div>
           <div className="cycle-field"><label htmlFor="repeat-count">{t('cycleCount')}</label><input id="repeat-count" type="text" inputMode="numeric" pattern="[0-9]*" value={repeatCount} onChange={e => setRepeatCount(e.target.value)} aria-describedby="repeat-count-help" /></div>
         </div>
-        <p id="repeat-count-help" className="helper cycle-help">0 = infini. Une valeur positive définit le nombre de répétitions de la séquence entière.</p>
+        <p id="repeat-count-help" className="helper cycle-help">{t('infiniteHelp')}</p>
         <h3>{t('dailyWindow')}</h3>
         <label className="toggle-row" htmlFor="time-window-enabled"><input id="time-window-enabled" type="checkbox" checked={timeWindowEnabled} onChange={e => setTimeWindowEnabled(e.target.checked)} /><span>{t('limitWindow')}</span></label>
         {timeWindowEnabled ? <>
-          <p className="helper">Les envois sont suspendus en dehors de ce créneau, puis reprennent à l’ouverture suivante.</p>
+          <p className="helper">{t('outsideWindow')}</p>
           <div className="field-row time-row">
             <div><label htmlFor="start-time">{t('start')}</label><input id="start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
             <span className="time-separator">à</span>
             <div><label htmlFor="end-time">{t('end')}</label><input id="end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
           </div>
-          <p className="helper">Si l’heure de début est après l’heure de fin, le créneau passe minuit. Une même heure de début et de fin n’est pas autorisée.</p>
-        </> : <p className="helper">Aucune restriction horaire : les envois peuvent avoir lieu à toute heure.</p>}
+          <p className="helper">{t('windowOvernight')}</p>
+        </> : <p className="helper">{t('noTimeRestriction')}</p>}
       </section>
-      <p className="notice">Utilisez {'{{nom}}'} pour insérer une variable définie dans la page Variables. Les variables sont résolues juste avant chaque envoi. L’onglet doit rester ouvert ; un rechargement interrompt le cycle.</p>
+      <p className="notice">{t('variableUsageNotice')}</p>
     </> : page === 'variables' ? <>
-      <div className="page-heading"><h2>Variables</h2><p>Créez des valeurs réutilisables dans les modèles de messages. La V4 active actuellement les variables statiques ; le moteur est préparé pour ajouter d’autres fournisseurs ultérieurement.</p></div>
+      <div className="page-heading"><h2>Variables</h2><p>Créez des valeurs réutilisables dans les modèles de messages. Les variables statiques sont actuellement prises en charge.</p></div>
       <section className="variable-form">
         <h3>{editingVariableId ? 'Modifier une variable' : 'Nouvelle variable'}</h3>
         <label htmlFor="variable-name">Nom</label>
