@@ -215,3 +215,8 @@ nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .autocomplete-help { margin: 4px 5px 3px; color: #73777d; font-size: 9px; }
 .autocomplete-note { margin-top: 5px; }
 .sequence-item .template-input textarea { min-height: 48px; resize: vertical; }
+
+
+/* V5 locale selector */
+.locale-picker { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; margin-left: auto; color: #62676e; font-size: 10px; }
+.locale-picker select { max-width: 94px; padding: 4px 5px; border: 1px solid #cfd3d8; border-radius: 5px; background: #fff; color: #202124; font: inherit; font-size: 11px; }
