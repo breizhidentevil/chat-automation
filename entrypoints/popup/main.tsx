@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './style.css';
 import { deduplicateConversationMessages, historyStorageKey, type ConversationMessage } from '../../lib/history';
 import { validateTemplateVariables, VARIABLE_NAME_PATTERN, VARIABLES_STORAGE_KEY, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 type LogEntry = { timestamp: number; level: string; site: string; event: string; details?: string };
 type Page = 'automation' | 'variables' | 'history' | 'logs';
@@ -144,6 +145,8 @@ function TemplateTextarea({
 }
 
 function Popup() {
+  const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const [page, setPage] = useState<Page>('automation');
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
@@ -238,6 +241,10 @@ function Popup() {
   }
 
   useEffect(() => {
+    void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => {
+      const saved = data[LOCALE_STORAGE_KEY];
+      if (saved === 'fr' || saved === 'en') setLocale(saved);
+    });
     void refreshLogs();
     void browser.storage.local.get(VARIABLES_STORAGE_KEY).then(data => {
       const saved = data[VARIABLES_STORAGE_KEY];
@@ -434,29 +441,29 @@ function Popup() {
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''}`}>
-    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>Détection et automatisation de messages</p></div><button type="button" className="help-button" aria-label="Ouvrir la documentation" title="Documentation" onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
-    <nav className="main-nav" aria-label="Navigation principale">
-      <button className={page === 'automation' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('automation')}>Automatisation</button>
-      <button className={page === 'variables' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('variables')}>Variables</button>
-      <button className={page === 'history' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('history')}>Historique</button>
-      <button className={page === 'logs' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('logs')}>Logs</button>
+    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><label className="locale-picker"><span>{t('language')}</span><select aria-label={t('language')} value={locale} onChange={event => { const next = event.target.value as Locale; setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); }}><option value="fr">Français</option><option value="en">English</option></select></label><button type="button" className="help-button" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
+    <nav className="main-nav" aria-label={locale === 'fr' ? 'Navigation principale' : 'Main navigation'}>
+      <button className={page === 'automation' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('automation')}>{t('automation')}</button>
+      <button className={page === 'variables' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('variables')}>{t('variables')}</button>
+      <button className={page === 'history' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('history')}>{t('history')}</button>
+      <button className={page === 'logs' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('logs')}>{t('logs')}</button>
     </nav>
 
     <div className="popup-content">
     {page === 'automation' ? strategyReady === null ? <>
-      <div className="page-heading"><h2>Automatisation</h2><p>Vérification de la stratégie enregistrée pour l’onglet actif…</p></div>
-      <p className="empty">Chargement de la configuration du site.</p>
+      <div className="page-heading"><h2>{t('automation')}</h2><p>{t('checkingStrategy')}</p></div>
+      <p className="empty">{t('loadingSiteConfig')}</p>
     </> : strategyReady === false ? <>
-      <div className="page-heading"><h2>Configurer la stratégie d’envoi</h2><p>Aucune stratégie validée n’est enregistrée pour {strategyOrigin || 'l’onglet actif'}. Effectuez un test pour apprendre comment envoyer un message sur ce site. Une fois la stratégie validée, cette page affichera automatiquement les paramètres d’automatisation.</p></div>
-      <label htmlFor="message">Message de test</label>
+      <div className="page-heading"><h2>{t('setupStrategy')}</h2><p>Aucune stratégie validée n’est enregistrée pour {strategyOrigin || 'l’onglet actif'}. Effectuez un test pour apprendre comment envoyer un message sur ce site. Une fois la stratégie validée, cette page affichera automatiquement les paramètres d’automatisation.</p></div>
+      <label htmlFor="message">{t('testMessage')}</label>
       <TemplateTextarea id="message" value={message} onChange={setMessage} variables={variables} placeholder="Écrivez un message de test…" rows={4} />
       <p className="helper autocomplete-note">Tapez <code>{`{{`}</code> pour afficher les variables disponibles.</p>
-      <button className="secondary validate-button" onClick={() => void validateStrategy()}>Tester l’envoi et enregistrer la stratégie</button>
+      <button className="secondary validate-button" onClick={() => void validateStrategy()}>{t('testAndSave')}</button>
       <p className="notice">Ce test envoie réellement le texte saisi dans le chat actif. La stratégie ne sera enregistrée que si l’extension confirme qu’un nouveau message correspondant apparaît dans la conversation.</p>
       <p className="status" role="status">{status}</p>
     </> : <>
-      <div className="page-heading"><h2>Automatiser l’envoi</h2><p>Stratégie validée pour {strategyOrigin}. La séquence sera envoyée sur l’onglet actif, selon la fréquence et les options horaires choisies.</p></div>
-      <div className="sequence-heading"><div><h3>Séquence de messages</h3><p className="helper">Les messages sont envoyés dans l’ordre affiché, puis la séquence recommence au premier message.</p></div><button className="secondary add-message" onClick={addAutomationMessage}>+ Ajouter</button></div>
+      <div className="page-heading"><h2>{t('automateSending')}</h2><p>Stratégie validée pour {strategyOrigin}. La séquence sera envoyée sur l’onglet actif, selon la fréquence et les options horaires choisies.</p></div>
+      <div className="sequence-heading"><div><h3>{t('sequence')}</h3><p className="helper">Les messages sont envoyés dans l’ordre affiché, puis la séquence recommence au premier message.</p></div><button className="secondary add-message" onClick={addAutomationMessage}>{t('add')}</button></div>
       <div className="message-sequence" aria-label="Séquence de messages">
         {automationMessages.map((text, index) => <div
           className={draggingIndex === index ? 'sequence-item dragging' : 'sequence-item'}
@@ -474,21 +481,21 @@ function Popup() {
         </div>)}
       </div>
       <section className="settings-section">
-        <h3>Paramètres des cycles</h3>
+        <h3>{t('cycleSettings')}</h3>
         <div className="cycle-grid">
-          <div className="cycle-field"><label htmlFor="interval">Fréquence</label><input id="interval" type="number" min="1" step="1" value={interval} onChange={e => setIntervalValue(e.target.value)} /></div>
-          <div className="cycle-field"><label htmlFor="unit">Unité</label><select id="unit" value={unit} onChange={e => setUnit(e.target.value as 'seconds' | 'minutes')}><option value="seconds">Secondes</option><option value="minutes">Minutes</option></select></div>
-          <div className="cycle-field"><label htmlFor="repeat-count">Nombre de cycles</label><input id="repeat-count" type="text" inputMode="numeric" pattern="[0-9]*" value={repeatCount} onChange={e => setRepeatCount(e.target.value)} aria-describedby="repeat-count-help" /></div>
+          <div className="cycle-field"><label htmlFor="interval">{t('frequency')}</label><input id="interval" type="number" min="1" step="1" value={interval} onChange={e => setIntervalValue(e.target.value)} /></div>
+          <div className="cycle-field"><label htmlFor="unit">{t('unit')}</label><select id="unit" value={unit} onChange={e => setUnit(e.target.value as 'seconds' | 'minutes')}><option value="seconds">{t('seconds')}</option><option value="minutes">{t('minutes')}</option></select></div>
+          <div className="cycle-field"><label htmlFor="repeat-count">{t('cycleCount')}</label><input id="repeat-count" type="text" inputMode="numeric" pattern="[0-9]*" value={repeatCount} onChange={e => setRepeatCount(e.target.value)} aria-describedby="repeat-count-help" /></div>
         </div>
         <p id="repeat-count-help" className="helper cycle-help">0 = infini. Une valeur positive définit le nombre de répétitions de la séquence entière.</p>
-        <h3>Créneau horaire quotidien</h3>
-        <label className="toggle-row" htmlFor="time-window-enabled"><input id="time-window-enabled" type="checkbox" checked={timeWindowEnabled} onChange={e => setTimeWindowEnabled(e.target.checked)} /><span>Limiter les envois à un créneau horaire</span></label>
+        <h3>{t('dailyWindow')}</h3>
+        <label className="toggle-row" htmlFor="time-window-enabled"><input id="time-window-enabled" type="checkbox" checked={timeWindowEnabled} onChange={e => setTimeWindowEnabled(e.target.checked)} /><span>{t('limitWindow')}</span></label>
         {timeWindowEnabled ? <>
           <p className="helper">Les envois sont suspendus en dehors de ce créneau, puis reprennent à l’ouverture suivante.</p>
           <div className="field-row time-row">
-            <div><label htmlFor="start-time">Début</label><input id="start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
+            <div><label htmlFor="start-time">{t('start')}</label><input id="start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
             <span className="time-separator">à</span>
-            <div><label htmlFor="end-time">Fin</label><input id="end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
+            <div><label htmlFor="end-time">{t('end')}</label><input id="end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
           </div>
           <p className="helper">Si l’heure de début est après l’heure de fin, le créneau passe minuit. Une même heure de début et de fin n’est pas autorisée.</p>
         </> : <p className="helper">Aucune restriction horaire : les envois peuvent avoir lieu à toute heure.</p>}
@@ -542,12 +549,12 @@ function Popup() {
     </div> : null}
     {page === 'automation' && strategyReady === true ? <div className="automation-dock">
       <div className="automation-actions">
-        <button className="primary" onClick={() => void startAutomation()}>Démarrer l’automatisation</button>
-        <button className="stop-button" onClick={() => void stopAutomation()}>Arrêter l’automatisation</button>
+        <button className="primary" onClick={() => void startAutomation()}>{t('startAutomation')}</button>
+        <button className="stop-button" onClick={() => void stopAutomation()}>{t('stopAutomation')}</button>
       </div>
       <p className="status" role="status">{status}</p>
       <section className="runtime-panel" aria-live="polite" aria-label="État de l’automatisation">
-        <div className="runtime-head"><h3>Suivi de l’automatisation</h3><span className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</span></div>
+        <div className="runtime-head"><h3>{t('tracking')}</h3><span className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</span></div>
         <p className="runtime-note">{runtimeStatus?.note ?? 'Aucune exécution enregistrée. Démarrez une automatisation pour afficher sa progression.'}</p>
         <div className="runtime-metrics">
           <div><span>Itération</span><strong>{runtimeStatus?.phase === 'finished' ? (runtimeStatus.completedSequences || 0) : runtimeStatus && runtimeStatus.phase !== 'stopped' && runtimeStatus.phase !== 'failed' ? runtimeStatus.completedSequences + 1 : runtimeStatus?.completedSequences ?? 0}<small>{runtimeStatus?.repeatMode === 'infinite' ? ' / ∞' : runtimeStatus ? ` / ${runtimeStatus.repeatCount}` : ''}</small></strong></div>
