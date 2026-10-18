@@ -45,7 +45,7 @@ const DYNAMIC_VARIABLE_SUGGESTIONS: TemplateSuggestion[] = [
 ];
 
 function TemplateTextarea({
-  value, onChange, variables, placeholder, rows = 3, id, ariaLabel, className = '',
+  value, onChange, variables, placeholder, rows = 3, id, ariaLabel, className = '', t,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -55,6 +55,7 @@ function TemplateTextarea({
   id?: string;
   ariaLabel?: string;
   className?: string;
+  t: (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [caret, setCaret] = useState(0);
@@ -457,7 +458,7 @@ function Popup() {
     </> : strategyReady === false ? <>
       <div className="page-heading"><h2>{t('setupStrategy')}</h2><p>{t('strategyDescription')}</p></div>
       <label htmlFor="message">{t('testMessage')}</label>
-      <TemplateTextarea id="message" value={message} onChange={setMessage} variables={variables} placeholder={t('writeTestMessage')} rows={4} />
+      <TemplateTextarea t={t} id="message" value={message} onChange={setMessage} variables={variables} placeholder={t('writeTestMessage')} rows={4} />
       <p className="helper autocomplete-note">{t('variableHint')}</p>
       <button className="secondary validate-button" onClick={() => void validateStrategy()}>{t('testAndSave')}</button>
       <p className="notice">{t('testWarning')}</p>
@@ -477,7 +478,7 @@ function Popup() {
         >
           <button type="button" className="drag-handle" aria-label={t('dragMessage', { number: index + 1 })} title={t('dragToReorder')}>⠿</button>
           <span className="sequence-number">{index + 1}</span>
-          <TemplateTextarea ariaLabel={`Message ${index + 1}`} className="sequence-template-input" value={text} onChange={next => updateAutomationMessage(index, next)} variables={variables} placeholder={t('messagePlaceholder', { number: index + 1 })} rows={2} />
+          <TemplateTextarea t={t} ariaLabel={`Message ${index + 1}`} className="sequence-template-input" value={text} onChange={next => updateAutomationMessage(index, next)} variables={variables} placeholder={t('messagePlaceholder', { number: index + 1 })} rows={2} />
           <button type="button" className="remove-message" aria-label={t('removeMessage', { number: index + 1 })} title={t('removeThisMessage')} onClick={() => removeAutomationMessage(index)}>×</button>
         </div>)}
       </div>
@@ -520,7 +521,7 @@ function Popup() {
         <div className="section-head"><h2>{t('savedVariables', { count: variables.length })}</h2></div>
         {variables.length === 0 ? <p className="empty">{t('noVariables')}</p> : <div className="variable-list">{variables.map(item => <article className="variable-card" key={item.id}><div className="variable-card-head"><code>{`{{${item.name}}}`}</code><span>{item.scope === 'global' ? t('globalVariable') : t('automation')}</span></div><p>{item.value}</p><div className="variable-card-actions"><button className="secondary" onClick={() => editVariable(item)}>{t('edit')}</button><button className="secondary danger-action" onClick={() => void deleteVariable(item)}>{t('delete')}</button></div></article>)}</div>}
       </section>
-      <section className="variable-preview"><h3>{t('previewResolution')}</h3><p className="helper">{t('previewHelp')}</p><label htmlFor="variable-preview-input">{t('testTemplate')}</label><TemplateTextarea id="variable-preview-input" value={variablePreviewText} onChange={setVariablePreviewText} variables={variables} placeholder="Bonjour {{prenom}}" rows={2} />
+      <section className="variable-preview"><h3>{t('previewResolution')}</h3><p className="helper">{t('previewHelp')}</p><label htmlFor="variable-preview-input">{t('testTemplate')}</label><TemplateTextarea t={t} id="variable-preview-input" value={variablePreviewText} onChange={setVariablePreviewText} variables={variables} placeholder="Bonjour {{prenom}}" rows={2} />
         {(() => { const unknown = validateTemplateVariables(variablePreviewText, variables, 'automation'); const preview = variablePreviewText.replace(/{{\s*([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)\s*}}/g, (_match, name: string) => { if (name.includes('.') || name.includes('[')) return `[${t('resolvedAtRuntime', { name })}]`; const scoped = variables.find(item => item.name === name && item.scope === 'automation'); const global = variables.find(item => item.name === name && item.scope === 'global'); return scoped?.value ?? global?.value ?? `{{${name}}}`; }); return <div className="preview-result"><strong>{t('result')}</strong><p>{preview || t('enterTemplate')}</p>{unknown.length > 0 ? <small>{t('missingVariables', { names: unknown.map(name => `{{${name}}}`).join(', ') })}</small> : null}</div>; })()}
       </section>
     </> : page === 'history' ? <>
