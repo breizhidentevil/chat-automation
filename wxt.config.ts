@@ -8,7 +8,6 @@ export default defineConfig({
   // WXT expects `vite` to be a callback, not a plain Vite config object.
   // Preserve the relative base for documentation hosted under a GitHub Pages project path.
   vite(config) {
-    config.base = './';
     return config;
   },
   manifest: {

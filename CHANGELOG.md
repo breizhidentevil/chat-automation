@@ -1,3 +1,9 @@
+## Typecheck correction v3
+
+- Set `compilerOptions.jsx` to `react-jsx` for TSX entrypoints.
+- Removed the invalid Vite hook typing/mutation that treated the Vite hook argument as `ConfigEnv` and accessed `base` on it.
+- Validation status: archive integrity checked; CI build and TypeScript typecheck have not been run in this environment.
+
 ## Typecheck follow-up
 
 - Removed the unresolved `wxt/client` type-library entry; WXT's generated tsconfig is the source of generated ambient types.
