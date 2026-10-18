@@ -31,3 +31,7 @@ th:first-child, td:first-child { width: 22%; }
 .docs-footer p { font-size: 12px; margin: 4px 0; color: #6b7075; }
 .docs-footer a { display: inline-block; margin-top: 9px; color: #303134; }
 @media (max-width: 640px) { .docs-shell { padding: 20px 12px 36px; } .docs-header { align-items: flex-start; gap: 12px; } .docs-mark { width: 46px; height: 46px; flex-basis: 46px; border-radius: 12px; } section { padding: 17px 15px; } table { display: block; overflow-x: auto; } }
+
+.docs-language { display: flex; flex-direction: column; gap: 4px; margin-left: auto; color: #5f6368; font-size: 11px; }
+.docs-language select { padding: 6px 8px; border: 1px solid #d5d9de; border-radius: 7px; background: #fff; color: #202124; font: inherit; }
+@media (max-width: 640px) { .docs-language { margin-left: 0; } }
