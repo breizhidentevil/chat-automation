@@ -60,3 +60,11 @@
 - Corrige le chemin de documentation transmis à `browser.runtime.getURL` en utilisant un chemin public absolu (`/documentation.html`).
 - Corrige la configuration Vite WXT : le callback renvoie désormais une configuration Vite (`{ base: './' }`) au lieu de renvoyer l’objet d’environnement reçu.
 - Validation à effectuer dans l’environnement CI avec `npm run typecheck`; aucune réussite de CI n’est présumée ici.
+
+
+## Unreleased — GitHub Releases for development builds
+
+- Updated `.github/workflows/build-and-publish.yml` to publish a GitHub prerelease with the browser ZIP packages after successful pushes to `main` or `master`.
+- Development tags use `v<package-version>-dev.<run-number>` to keep each workflow run distinct.
+- Version tags matching `v*` continue to publish stable releases.
+- Pull requests do not publish releases. A successful workflow run is still required; this change has not yet been validated by a completed Actions run.
