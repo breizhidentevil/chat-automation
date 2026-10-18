@@ -76,9 +76,11 @@
 - Validation status: workflow file updated; a successful GitHub Actions run has not yet been confirmed.
 
 
-## V5 — Initial French/English localization
+## V5 — French/English localization (in progress)
 
-- Added a centralized localization module with French and English labels for key popup controls.
-- Added a language selector to the popup header and persisted the explicit choice in browser local storage.
-- Uses the browser language as the initial default when no saved preference exists (English for English browser locales, French otherwise).
-- This is an initial localization pass, not yet a complete translation of every popup message, runtime status, autocomplete suggestion, and the integrated documentation. Typecheck/build has not yet been run for this change.
+- Added a centralized French/English translation catalog with matching key sets.
+- Added a popup language selector; the chosen language is persisted in extension local storage and shared with the integrated documentation.
+- The initial language follows the browser locale (English for English browser locales, French otherwise) unless a saved preference exists.
+- Localized the primary automation controls, variable editor and autocomplete labels, history and logs views, runtime phase labels, and most help/error text in the popup.
+- Added an English version of the integrated documentation with a language selector; the French guide remains available.
+- Some messages returned by page scripts and a few remaining interface strings may still be French. Validation status: source files were reviewed for translation-key parity, but TypeScript typecheck and browser builds have not been run. Network access to the repository was unavailable for a local build.
