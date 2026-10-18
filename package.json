@@ -1,0 +1,29 @@
+{
+  "name": "chat-site-automation",
+  "description": "Extension navigateur pour détecter les champs de chat, apprendre les procédures par site et journaliser les tentatives.",
+  "version": "0.20.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "build:chrome": "wxt build --browser chrome",
+    "build:firefox": "wxt build --browser firefox --mv3",
+    "build:edge": "wxt build --browser edge",
+    "build:all": "npm run build:chrome && npm run build:firefox && npm run build:edge",
+    "build:zip": "wxt zip",
+    "typecheck": "tsc --noEmit",
+    "build:firefox:mv2": "wxt build --browser firefox --mv2"
+  },
+  "dependencies": {
+    "@wxt-dev/module-react": "^1.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "wxt": "^0.20.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.3"
+  }
+}
