@@ -7,6 +7,7 @@ import './style.css';
 function Documentation() {
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
   useEffect(() => { void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => { const saved = data[LOCALE_STORAGE_KEY]; if (saved === 'fr' || saved === 'en') setLocale(saved); }); }, []);
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const changeLocale = (next: Locale) => { setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); };
   if (locale === 'en') return <EnglishDocumentation onLocaleChange={changeLocale} />;
   return <main className="docs-shell">
