@@ -2,7 +2,7 @@
 
 [![Build, package, and publish](https://github.com/breizhidentevil/chat-automation/actions/workflows/build-and-publish.yml/badge.svg?branch=main)](https://github.com/breizhidentevil/chat-automation/actions/workflows/build-and-publish.yml)
 [![Latest release](https://img.shields.io/github/v/release/breizhidentevil/chat-automation?include_prereleases)](https://github.com/breizhidentevil/chat-automation/releases/latest)
-[![License](https://img.shields.io/badge/license-not%20declared-lightgrey)](#license)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Chat Automation** is a browser extension built with WXT, React, and TypeScript. It detects chat inputs, stores a validated sending strategy per website origin, and runs configurable message sequences while tracking progress and diagnostic events.
 
@@ -89,4 +89,4 @@ If the documentation link is temporarily unavailable, check the [workflow runs](
 
 ## License
 
-No license has been declared yet. All rights reserved unless a license is added to this repository.
+This project is licensed under the **MIT License**. See the [`LICENSE`](LICENSE) file for the full license text.
