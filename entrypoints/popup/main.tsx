@@ -425,7 +425,7 @@ function Popup() {
       case 'ready': return 'Prêt à envoyer';
       case 'waiting-interval': return 'Compte à rebours';
       case 'waiting-window': return 'En attente du créneau';
-      case 'waiting-llm': return 'En attente du LLM';
+      case 'waiting-llm': return t('waitingLLM');
       case 'sending': return 'Envoi en cours';
       case 'finished': return 'Terminé';
       case 'failed': return 'Arrêt sur erreur';
@@ -504,48 +504,48 @@ function Popup() {
     </> : page === 'variables' ? <>
       <div className="page-heading"><h2>Variables</h2><p>Créez des valeurs réutilisables dans les modèles de messages. Les variables statiques sont actuellement prises en charge.</p></div>
       <section className="variable-form">
-        <h3>{editingVariableId ? 'Modifier une variable' : 'Nouvelle variable'}</h3>
-        <label htmlFor="variable-name">Nom</label>
+        <h3>{editingVariableId ? t('editVariable') : t('newVariable')}</h3>
+        <label htmlFor="variable-name">{t('name')}</label>
         <input id="variable-name" value={variableName} onChange={event => setVariableName(event.target.value)} placeholder="prenom" autoComplete="off" />
-        <p className="helper">Utilisation dans un message : <code>{`{{${variableName.trim() || 'prenom'}}}`}</code></p>
-        <label htmlFor="variable-value">Valeur statique</label>
+        <p className="helper">{t('variableUsage')} <code>{`{{${variableName.trim() || 'name'}}}`}</code></p>
+        <label htmlFor="variable-value">{t('staticValue')}</label>
         <textarea id="variable-value" value={variableValue} onChange={event => setVariableValue(event.target.value)} placeholder="Alexandre" rows={2} />
-        <label htmlFor="variable-scope">Portée</label>
-        <select id="variable-scope" value={variableScope} onChange={event => setVariableScope(event.target.value as VariableScope)}><option value="global">Globale — disponible partout</option><option value="automation">Automatisation — disponible dans les séquences</option></select>
+        <label htmlFor="variable-scope">{t('scope')}</label>
+        <select id="variable-scope" value={variableScope} onChange={event => setVariableScope(event.target.value as VariableScope)}><option value="global">{t('globalScope')}</option><option value="automation">{t('automationScope')}</option></select>
         {variableError ? <p className="variable-error" role="alert">{variableError}</p> : null}
-        <div className="variable-form-actions"><button className="primary" onClick={() => void saveVariable()}>{editingVariableId ? 'Enregistrer les modifications' : 'Ajouter la variable'}</button>{editingVariableId ? <button className="secondary" onClick={() => { setEditingVariableId(null); setVariableName(''); setVariableValue(''); setVariableScope('global'); setVariableError(''); }}>Annuler</button> : null}</div>
+        <div className="variable-form-actions"><button className="primary" onClick={() => void saveVariable()}>{editingVariableId ? t('saveChanges') : t('addVariable')}</button>{editingVariableId ? <button className="secondary" onClick={() => { setEditingVariableId(null); setVariableName(''); setVariableValue(''); setVariableScope('global'); setVariableError(''); }}>{t('cancel')}</button> : null}</div>
       </section>
       <section className="variable-list-section">
-        <div className="section-head"><h2>Variables enregistrées ({variables.length})</h2></div>
-        {variables.length === 0 ? <p className="empty">Aucune variable. Ajoutez-en une ci-dessus pour l’utiliser dans vos messages.</p> : <div className="variable-list">{variables.map(item => <article className="variable-card" key={item.id}><div className="variable-card-head"><code>{`{{${item.name}}}`}</code><span>{item.scope === 'global' ? 'Globale' : 'Automatisation'}</span></div><p>{item.value}</p><div className="variable-card-actions"><button className="secondary" onClick={() => editVariable(item)}>Modifier</button><button className="secondary danger-action" onClick={() => void deleteVariable(item)}>Supprimer</button></div></article>)}</div>}
+        <div className="section-head"><h2>{t('savedVariables', { count: variables.length })}</h2></div>
+        {variables.length === 0 ? <p className="empty">{t('noVariables')}</p> : <div className="variable-list">{variables.map(item => <article className="variable-card" key={item.id}><div className="variable-card-head"><code>{`{{${item.name}}}`}</code><span>{item.scope === 'global' ? t('globalVariable') : t('automation')}</span></div><p>{item.value}</p><div className="variable-card-actions"><button className="secondary" onClick={() => editVariable(item)}>{t('edit')}</button><button className="secondary danger-action" onClick={() => void deleteVariable(item)}>{t('delete')}</button></div></article>)}</div>}
       </section>
-      <section className="variable-preview"><h3>Aperçu de résolution</h3><p className="helper">Les variables reconnues dans un modèle seront remplacées juste avant l’envoi.</p><label htmlFor="variable-preview-input">Modèle de test</label><TemplateTextarea id="variable-preview-input" value={variablePreviewText} onChange={setVariablePreviewText} variables={variables} placeholder="Bonjour {{prenom}}" rows={2} />
-        {(() => { const unknown = validateTemplateVariables(variablePreviewText, variables, 'automation'); const preview = variablePreviewText.replace(/{{\s*([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)\s*}}/g, (_match, name: string) => { if (name.includes('.') || name.includes('[')) return `[résolu à l’exécution : ${name}]`; const scoped = variables.find(item => item.name === name && item.scope === 'automation'); const global = variables.find(item => item.name === name && item.scope === 'global'); return scoped?.value ?? global?.value ?? `{{${name}}}`; }); return <div className="preview-result"><strong>Résultat</strong><p>{preview || 'Saisissez un modèle pour afficher l’aperçu.'}</p>{unknown.length > 0 ? <small>Variables manquantes : {unknown.map(name => `{{${name}}}`).join(', ')}</small> : null}</div>; })()}
+      <section className="variable-preview"><h3>{t('previewResolution')}</h3><p className="helper">{t('previewHelp')}</p><label htmlFor="variable-preview-input">{t('testTemplate')}</label><TemplateTextarea id="variable-preview-input" value={variablePreviewText} onChange={setVariablePreviewText} variables={variables} placeholder="Bonjour {{prenom}}" rows={2} />
+        {(() => { const unknown = validateTemplateVariables(variablePreviewText, variables, 'automation'); const preview = variablePreviewText.replace(/{{\s*([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)\s*}}/g, (_match, name: string) => { if (name.includes('.') || name.includes('[')) return `[${t('resolvedAtRuntime', { name })}]`; const scoped = variables.find(item => item.name === name && item.scope === 'automation'); const global = variables.find(item => item.name === name && item.scope === 'global'); return scoped?.value ?? global?.value ?? `{{${name}}}`; }); return <div className="preview-result"><strong>{t('result')}</strong><p>{preview || t('enterTemplate')}</p>{unknown.length > 0 ? <small>{t('missingVariables', { names: unknown.map(name => `{{${name}}}`).join(', ') })}</small> : null}</div>; })()}
       </section>
     </> : page === 'history' ? <>
-      <div className="page-heading"><h2>Historique de la conversation</h2><p>Capture locale des messages visibles dans l’onglet actif. Les réponses sont mises à jour pendant leur génération puis finalisées lorsque le texte se stabilise.</p></div>
-      <div className="history-toolbar"><span className="history-origin">{historyConversationId || 'Aucune conversation sélectionnée'}</span><button className="secondary" onClick={() => void refreshHistory()}>Actualiser</button></div>
-      {historyError ? <p className="notice">{historyError}</p> : historyMessages.length === 0 ? <p className="empty history-empty">Aucun message capturé pour ce site. Ouvrez une conversation et gardez l’onglet ouvert pendant que l’extension l’observe.</p> : <div className="history-list">{historyMessages.map(item => <article className={`history-message role-${item.role} status-${item.status}`} key={item.id}>
-        <div className="history-message-head"><strong>{item.role === 'user' ? 'Vous' : item.role === 'assistant' ? 'Assistant' : item.role === 'system' ? 'Système' : 'Auteur inconnu'}</strong><span>{new Date(item.firstSeenAt).toLocaleString()}</span><em>{item.status === 'streaming' ? 'En cours' : item.status === 'incomplete' ? 'Interrompu / incomplet' : 'Terminé'}</em></div>
-        <p>{item.content}</p>{item.contentTruncated ? <small className="history-truncated">Contenu tronqué à 20 000 caractères.</small> : null}
+      <div className="page-heading"><h2>{t('conversationHistory')}</h2><p>{t('historyIntro')}</p></div>
+      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><button className="secondary" onClick={() => void refreshHistory()}>{t('refresh')}</button></div>
+      {historyError ? <p className="notice">{historyError}</p> : historyMessages.length === 0 ? <p className="empty history-empty">{t('noCapturedMessages')}</p> : <div className="history-list">{historyMessages.map(item => <article className={`history-message role-${item.role} status-${item.status}`} key={item.id}>
+        <div className="history-message-head"><strong>{item.role === 'user' ? t('you') : item.role === 'assistant' ? 'Assistant' : item.role === 'system' ? t('system') : t('unknownAuthor')}</strong><span>{new Date(item.firstSeenAt).toLocaleString()}</span><em>{item.status === 'streaming' ? t('inProgress') : item.status === 'incomplete' ? t('interrupted') : t('completed')}</em></div>
+        <p>{item.content}</p>{item.contentTruncated ? <small className="history-truncated">{t('truncated')}</small> : null}
       </article>)}</div>}
-      <p className="notice">L’historique est conservé localement par site (jusqu’aux 2 000 derniers messages) et cette vue affiche la conversation de l’onglet actif. Seuls les messages que l’interface expose dans le DOM peuvent être capturés ; les pièces jointes, images, éléments masqués et conversations non chargées peuvent être absents.</p>
+      <p className="notice">{t('historyNotice')}</p>
     </> : null}
 
     {page === 'logs' ? <>
-      <div className="page-heading"><h2>Journal des événements</h2><p>Les événements de détection et d’automatisation sont regroupés ici. La liste s’actualise automatiquement.</p></div>
+      <div className="page-heading"><h2>{t('eventLog')}</h2><p>{t('logIntro')}</p></div>
       <section className="logs-section logs-page-section">
-        <div className="section-head"><h2>Événements récents</h2><button className="secondary" onClick={() => void refreshLogs()}>Actualiser</button></div>
-        <div className="logs">{logs.length === 0 ? <p className="empty">Aucun événement enregistré.</p> : logs.map((log, index) => <article key={`${log.timestamp}-${index}`}><strong>{log.level}</strong><span>{new Date(log.timestamp).toLocaleString()} · {log.site}</span><p>{log.event}{log.details ? ` — ${log.details}` : ''}</p></article>)}</div>
+        <div className="section-head"><h2>{t('recentEvents')}</h2><button className="secondary" onClick={() => void refreshLogs()}>Actualiser</button></div>
+        <div className="logs">{logs.length === 0 ? <p className="empty">{t('noEvents')}</p> : logs.map((log, index) => <article key={`${log.timestamp}-${index}`}><strong>{log.level}</strong><span>{new Date(log.timestamp).toLocaleString()} · {log.site}</span><p>{log.event}{log.details ? ` — ${log.details}` : ''}</p></article>)}</div>
       </section>
-      <p className="notice">Les logs de confirmation peuvent contenir un aperçu du message attendu. La validation observe un nouveau message dans le DOM ; elle ne constitue pas une preuve de réception par le serveur.</p>
+      <p className="notice">{t('logNotice')}</p>
     </> : null}
     </div>
     {page === 'history' ? <div className="history-dock">
-      <button className="secondary export-history-button" disabled={historyMessages.length === 0} onClick={() => void exportHistory()}>Exporter l’historique JSON</button>
+      <button className="secondary export-history-button" disabled={historyMessages.length === 0} onClick={() => void exportHistory()}>{t('exportHistory')}</button>
     </div> : null}
     {page === 'logs' ? <div className="logs-dock">
-      <button className="secondary export-logs-button" onClick={() => void exportLogs()}>Exporter les logs JSON</button>
+      <button className="secondary export-logs-button" onClick={() => void exportLogs()}>{t('exportLogs')}</button>
     </div> : null}
     {page === 'automation' && strategyReady === true ? <div className="automation-dock">
       <div className="automation-actions">
@@ -555,11 +555,11 @@ function Popup() {
       <p className="status" role="status">{status}</p>
       <section className="runtime-panel" aria-live="polite" aria-label="État de l’automatisation">
         <div className="runtime-head"><h3>{t('tracking')}</h3><span className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</span></div>
-        <p className="runtime-note">{runtimeStatus?.note ?? 'Aucune exécution enregistrée. Démarrez une automatisation pour afficher sa progression.'}</p>
+        <p className="runtime-note">{runtimeStatus?.note ?? t('noRun')}</p>
         <div className="runtime-metrics">
-          <div><span>Itération</span><strong>{runtimeStatus?.phase === 'finished' ? (runtimeStatus.completedSequences || 0) : runtimeStatus && runtimeStatus.phase !== 'stopped' && runtimeStatus.phase !== 'failed' ? runtimeStatus.completedSequences + 1 : runtimeStatus?.completedSequences ?? 0}<small>{runtimeStatus?.repeatMode === 'infinite' ? ' / ∞' : runtimeStatus ? ` / ${runtimeStatus.repeatCount}` : ''}</small></strong></div>
-          <div><span>Message</span><strong>{runtimeStatus?.messagesCount ? `${Math.min(runtimeStatus.messageIndex + 1, runtimeStatus.messagesCount)} / ${runtimeStatus.messagesCount}` : '—'}</strong></div>
-          <div><span>Prochain envoi</span><strong>{runtimeStatus?.phase === 'waiting-llm' ? 'En attente du LLM' : runtimeStatus?.phase === 'sending' ? 'En cours…' : runtimeStatus?.phase === 'finished' || runtimeStatus?.phase === 'stopped' || runtimeStatus?.phase === 'failed' ? '—' : countdownLabel(runtimeStatus?.nextSendAt)}</strong></div>
+          <div><span>{t('iteration')}</span><strong>{runtimeStatus?.phase === 'finished' ? (runtimeStatus.completedSequences || 0) : runtimeStatus && runtimeStatus.phase !== 'stopped' && runtimeStatus.phase !== 'failed' ? runtimeStatus.completedSequences + 1 : runtimeStatus?.completedSequences ?? 0}<small>{runtimeStatus?.repeatMode === 'infinite' ? ' / ∞' : runtimeStatus ? ` / ${runtimeStatus.repeatCount}` : ''}</small></strong></div>
+          <div><span>{t('message')}</span><strong>{runtimeStatus?.messagesCount ? `${Math.min(runtimeStatus.messageIndex + 1, runtimeStatus.messagesCount)} / ${runtimeStatus.messagesCount}` : '—'}</strong></div>
+          <div><span>{t('nextSend')}</span><strong>{runtimeStatus?.phase === 'waiting-llm' ? 'En attente du LLM' : runtimeStatus?.phase === 'sending' ? t('sending') : runtimeStatus?.phase === 'finished' || runtimeStatus?.phase === 'stopped' || runtimeStatus?.phase === 'failed' ? '—' : countdownLabel(runtimeStatus?.nextSendAt)}</strong></div>
         </div>
       </section>
     </div> : page !== 'automation' ? <p className="status detection-status" role="status">{status}</p> : null}
