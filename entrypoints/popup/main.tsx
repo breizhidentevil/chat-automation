@@ -153,7 +153,7 @@ function Popup() {
   const [message, setMessage] = useState('');
   const [automationMessages, setAutomationMessages] = useState<string[]>(['']);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr') === 'fr' ? 'Prêt. Ouvrez une page contenant un chat.' : 'Ready. Open a page containing a chat.');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
