@@ -147,6 +147,7 @@ function TemplateTextarea({
 function Popup() {
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
   const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const [page, setPage] = useState<Page>('automation');
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
