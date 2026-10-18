@@ -2,6 +2,8 @@
 
 ## Unreleased — repository and CI setup
 
+- Added an explicit `wxt prepare` step before TypeScript checking so the generated `.wxt/tsconfig.json` and browser declarations exist in CI. Set the TypeScript target to ES2022 to support iteration over `Set` values. This workflow fix has not yet been validated by a GitHub Actions run.
+
 - Pinned npm to 10.8.2 in GitHub Actions and disabled audit/funding requests during dependency installation to make CI installation more predictable. This is a mitigation; successful installation still needs to be confirmed by a workflow run.
 
 - Replaced the project README with an English overview and development guide.
