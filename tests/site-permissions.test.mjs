@@ -76,6 +76,8 @@ test('stops active page scripts and history capture when host permission is revo
 });
 
 test('does not export other conversations when the selected conversation has no records', () => {
-  assert.match(popup, /const selectedItems = historyConversationId \? exactConversation : siteItems/);
-  assert.doesNotMatch(popup, /exactConversation\.length > 0 \? exactConversation : siteItems/);
+  const exportFunction = popup.match(/async function exportHistory\(\) \{[\\s\\S]*?\n  \}/)?.[0];
+  assert.ok(exportFunction, 'history export function should exist');
+  assert.match(exportFunction, /const selectedItems = historyConversationId \? exactConversation : siteItems/);
+  assert.doesNotMatch(exportFunction, /exactConversation\.length > 0 \? exactConversation : siteItems/);
 });
