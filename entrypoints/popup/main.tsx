@@ -23,6 +23,7 @@ import HistoryPage from './pages/HistoryPage';
 import LogsPage from './pages/LogsPage';
 import VariablesPage from './pages/VariablesPage';
 import AutomationPage from './pages/AutomationPage';
+import { usePagePolling } from './hooks/usePagePolling';
 import { downloadJsonFile } from '../../services/file-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -215,19 +216,9 @@ function Popup() {
     if (page === 'automation') void refreshStrategyStatus();
   }, [page]);
 
-  useEffect(() => {
-    if (page !== 'history') return;
-    void refreshHistory();
-    const timer = window.setInterval(() => { void refreshHistory(); }, 1500);
-    return () => window.clearInterval(timer);
-  }, [page]);
+  usePagePolling(page === 'history', refreshHistory, 1500);
 
-  useEffect(() => {
-    if (page !== 'logs') return;
-    void refreshLogs();
-    const timer = window.setInterval(() => { void refreshLogs(); }, 1000);
-    return () => window.clearInterval(timer);
-  }, [page]);
+  usePagePolling(page === 'logs', refreshLogs, 1000);
 
   useEffect(() => {
     let mounted = true;
