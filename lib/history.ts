@@ -57,6 +57,18 @@ export function historyStorageKey(_origin: string): string {
   return HISTORY_STORAGE_KEY;
 }
 
+const MAX_MESSAGE_CONTENT_LENGTH = 100_000;
+
+/** Bound captured DOM text before it crosses the extension messaging/storage boundary. */
+function boundConversationMessage(message: ConversationMessage): ConversationMessage {
+  if (message.content.length <= MAX_MESSAGE_CONTENT_LENGTH) return message;
+  return {
+    ...message,
+    content: message.content.slice(0, MAX_MESSAGE_CONTENT_LENGTH),
+    contentTruncated: true,
+  };
+}
+
 export async function readConversationHistory(origin: string): Promise<ConversationMessage[]> {
   const result = await browser.storage.local.get(HISTORY_STORAGE_KEY);
   const value = result[HISTORY_STORAGE_KEY];
@@ -68,8 +80,9 @@ export async function readConversationHistory(origin: string): Promise<Conversat
  * are serialized instead of racing to overwrite a shared storage snapshot.
  */
 export async function upsertConversationMessage(message: ConversationMessage): Promise<void> {
+  const boundedMessage = boundConversationMessage(message);
   try {
-    const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_UPSERT', message });
+    const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_UPSERT', message: boundedMessage });
     if (response?.ok === true) return;
     console.warn('[Chat Automation] Le contexte background n’a pas confirmé l’écriture de l’historique ; tentative de sauvegarde directe.');
   } catch (error) {
@@ -81,12 +94,12 @@ export async function upsertConversationMessage(message: ConversationMessage): P
   try {
     const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
     const current = deduplicateConversationMessages(Array.isArray(stored[HISTORY_STORAGE_KEY]) ? stored[HISTORY_STORAGE_KEY] as ConversationMessage[] : []);
-    const index = current.findIndex(item => item.id === message.id && item.origin === message.origin);
+    const index = current.findIndex(item => item.id === boundedMessage.id && item.origin === boundedMessage.origin);
     if (index >= 0) {
       const previous = current[index]!;
-      current[index] = { ...previous, ...message, firstSeenAt: previous.firstSeenAt };
+      current[index] = { ...previous, ...boundedMessage, firstSeenAt: previous.firstSeenAt };
     } else {
-      current.push(message);
+      current.push(boundedMessage);
     }
     await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: deduplicateConversationMessages(current).slice(-2000) });
   } catch (error) {
@@ -116,18 +129,19 @@ export async function markInterruptedMessagesIncomplete(origin: string): Promise
 let backgroundWriteQueue: Promise<void> = Promise.resolve();
 
 export function backgroundUpsertConversationMessage(message: ConversationMessage): Promise<void> {
+  const boundedMessage = boundConversationMessage(message);
   const operation = backgroundWriteQueue.then(async () => {
     const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
     const current = deduplicateConversationMessages(Array.isArray(stored[HISTORY_STORAGE_KEY]) ? stored[HISTORY_STORAGE_KEY] as ConversationMessage[] : []);
-    const index = current.findIndex(item => item.id === message.id && item.origin === message.origin);
+    const index = current.findIndex(item => item.id === boundedMessage.id && item.origin === boundedMessage.origin);
     if (index >= 0) {
       const old = current[index]!;
-      const merged: ConversationMessage = { ...old, ...message, firstSeenAt: old.firstSeenAt };
-      if (message.status === 'complete') merged.completedAt = message.completedAt ?? old.completedAt ?? Date.now();
+      const merged: ConversationMessage = { ...old, ...boundedMessage, firstSeenAt: old.firstSeenAt };
+      if (boundedMessage.status === 'complete') merged.completedAt = boundedMessage.completedAt ?? old.completedAt ?? Date.now();
       else delete merged.completedAt;
       current[index] = merged;
     } else {
-      current.push({ ...message, ...(message.status === 'complete' ? { completedAt: message.completedAt ?? Date.now() } : {}) });
+      current.push({ ...boundedMessage, ...(boundedMessage.status === 'complete' ? { completedAt: boundedMessage.completedAt ?? Date.now() } : {}) });
     }
 
     // One global text budget keeps the extension's shared storage below common quotas.
