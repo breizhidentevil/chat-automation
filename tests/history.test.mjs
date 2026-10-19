@@ -126,6 +126,22 @@ test('history limits retain the newest entry when it alone exceeds the approxima
 });
 
 
+test('upsert bounds oversized DOM text before sending it to the background', async () => {
+  const previousBrowser = globalThis.browser;
+  let sent;
+  globalThis.browser = {
+    runtime: { sendMessage: async value => { sent = value; return { ok: true }; } },
+  };
+  try {
+    await upsertConversationMessage(message({ content: 'x'.repeat(100_001) }));
+    assert.equal(sent.message.content.length, 100_000);
+    assert.equal(sent.message.contentTruncated, true);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
 test('a rejected background upsert never falls back to direct storage writes', async () => {
   const previousBrowser = globalThis.browser;
   let writes = 0;
@@ -177,6 +193,29 @@ test('history reads discard malformed persisted records', async () => {
   try {
     const result = await readConversationHistory('https://example.com');
     assert.deepEqual(result.map(item => item.id), ['valid']);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
+test('background persistence bounds oversized messages and marks them truncated', async () => {
+  const previousBrowser = globalThis.browser;
+  let written;
+  globalThis.browser = {
+    storage: { local: {
+      get: async () => ({ chatAutomationHistoryV1: [], chatAutomationHistoryClearedAtV1: {} }),
+      set: async value => { written = value.chatAutomationHistoryV1; },
+    } },
+  };
+  try {
+    await backgroundUpsertConversationMessage(message({
+      id: 'oversized',
+      content: 'x'.repeat(100_001),
+    }));
+    assert.equal(written.length, 1);
+    assert.equal(written[0].content.length, 100_000);
+    assert.equal(written[0].contentTruncated, true);
   } finally {
     if (previousBrowser === undefined) delete globalThis.browser;
     else globalThis.browser = previousBrowser;
