@@ -39,7 +39,7 @@ export default function VariablesPage(props: VariablesPageProps) {
   } = props;
   return <>
 
-      <div className="page-heading"><h2>{t('variables')}</h2><p>{t('variablesIntro')}</p></div>
+      <div className="page-heading"><h2>{t('variables')}</h2></div>
       <section className="variable-form">
         <h3>{editingVariableId ? t('editVariable') : t('newVariable')}</h3>
         <label htmlFor="variable-name">{t('name')}</label>
