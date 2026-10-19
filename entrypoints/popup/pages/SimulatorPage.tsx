@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert, Badge, Button, Card, NumberInput, Paper, Textarea, TextInput } from '@mantine/core';
 import type { Locale } from '../../../lib/i18n';
 import { translate } from '../../../lib/i18n';
 import type { SimulationResult } from '../../../lib/simulator';
@@ -52,8 +53,8 @@ export default function SimulatorPage({
         {automationMessages.length === 0 ? <p className="empty">{t('sequenceEmpty')}</p> : <ol className="simulation-message-list">{automationMessages.map((item, index) => <li key={index}><strong>{index + 1}.</strong><code>{item || t('emptyMessage')}</code></li>)}</ol>}
         <p className="helper">{t('simulationFromSettings')}</p>
         <div className="field-row">
-          <div className="field-grow"><label htmlFor="simulation-start">{t('simulationStart')}</label><input id="simulation-start" type="datetime-local" value={simulationStartAt} onChange={event => setSimulationStartAt(event.target.value)} /></div>
-          <div className="simulation-cycle-field"><label htmlFor="simulation-cycles">{t('simulationCycles')}</label><input id="simulation-cycles" type="number" min="1" max="10" step="1" value={simulationCycles} onChange={event => setSimulationCycles(event.target.value)} /></div>
+          <div className="field-grow"><TextInput id="simulation-start" type="datetime-local" label={t('simulationStart')} value={simulationStartAt} onChange={event => setSimulationStartAt(event.currentTarget.value)} /></div>
+          <div className="simulation-cycle-field"><NumberInput id="simulation-cycles" label={t('simulationCycles')} min={1} max={10} step={1} allowDecimal={false} allowNegative={false} value={simulationCycles} onChange={value => setSimulationCycles(String(value))} /></div>
         </div>
         <p className="helper">{t('simulationInterval', { interval: intervalAmountLabel(interval, unit, locale) })}</p>
         {timeWindowEnabled ? <p className="helper">{t('simulationWindow', { start: startTime, end: endTime })}</p> : <p className="helper">{t('noTimeRestriction')}</p>}
@@ -61,28 +62,28 @@ export default function SimulatorPage({
       <section className="simulator-context">
         <label htmlFor="simulation-context">{t('simulationContext')}</label>
         <p className="helper">{t('simulationContextHelp')}</p>
-        <textarea id="simulation-context" className="simulation-context-input" rows={7} spellCheck={false} value={simulationContext} onChange={event => setSimulationContext(event.target.value)} />
+        <Textarea id="simulation-context" className="simulation-context-input" rows={7} spellCheck={false} autosize minRows={7} maxRows={14} value={simulationContext} onChange={event => setSimulationContext(event.currentTarget.value)} />
       </section>
-      <button className="primary" onClick={() => void runSimulation()}>{t('runSimulation')}</button>
-      {simulationError ? <p className="simulation-error" role="alert">{simulationError}</p> : null}
+      <Button className="primary" onClick={() => void runSimulation()}>{t('runSimulation')}</Button>
+      {simulationError ? <Alert className="simulation-error" color="red" variant="light" role="alert">{simulationError}</Alert> : null}
       {simulationResult ? <>
         <section className="simulation-summary" aria-live="polite">
           <h3>{t('simulationResults')}</h3>
           <div className="simulation-metrics">
-            <div><span>{t('simulationSuccessful')}</span><strong>{simulationResult.successful}</strong></div>
-            <div><span>{t('simulationFailed')}</span><strong>{simulationResult.failed}</strong></div>
-            <div><span>{t('simulationDuration')}</span><strong>{formatSimulationDuration(simulationResult.simulatedDurationMs)}</strong></div>
+            <Paper component="div" padding="xs" withBorder><span>{t('simulationSuccessful')}</span><strong>{simulationResult.successful}</strong></Paper>
+            <Paper component="div" padding="xs" withBorder><span>{t('simulationFailed')}</span><strong>{simulationResult.failed}</strong></Paper>
+            <Paper component="div" padding="xs" withBorder><span>{t('simulationDuration')}</span><strong>{formatSimulationDuration(simulationResult.simulatedDurationMs)}</strong></Paper>
           </div>
           <p className="helper">{new Date(simulationResult.startedAt).toLocaleString()} → {new Date(simulationResult.finishedAt).toLocaleString()}</p>
         </section>
         <section className="simulation-timeline">
           <h3>{t('simulationTimeline')}</h3>
-          {simulationResult.entries.map((entry, index) => <article className={entry.error ? 'simulation-entry failed' : 'simulation-entry'} key={index}>
+          {simulationResult.entries.map((entry, index) => <Card component="article" className={entry.error ? 'simulation-entry failed' : 'simulation-entry'} key={index} padding="sm" withBorder>
             <div className="simulation-entry-head"><strong>{t('simulationEntry', { cycle: entry.cycle, message: entry.messageIndex })}</strong><time>{new Date(entry.scheduledAt).toLocaleString()}</time></div>
             <p className="simulation-template"><span>{t('simulationTemplate')}</span><code>{entry.template}</code></p>
             {entry.error ? <p className="simulation-entry-error">{entry.error}</p> : <p className="simulation-rendered"><span>{t('simulationRendered')}</span><code>{entry.renderedText || t('simulationNoOutput')}</code></p>}
             {entry.variablesUsed?.length ? <small>{t('simulationVariables', { names: entry.variablesUsed.join(', ') })}</small> : null}
-          </article>)}
+          </Card>)}
         </section>
       </> : null}
     
