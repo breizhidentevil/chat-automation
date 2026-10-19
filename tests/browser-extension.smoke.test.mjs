@@ -9,7 +9,7 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
   const { chromium } = await import('playwright');
   await access(resolve(extensionPath, 'manifest.json'));
   const context = await chromium.launchPersistentContext('', {
-    headless: true,
+    headless: false,
     args: [
       '--no-sandbox',
       '--disable-extensions-except=' + extensionPath,
