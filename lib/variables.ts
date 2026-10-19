@@ -106,7 +106,11 @@ export function validateTemplateVariables(template: string, variables: VariableD
   const available = new Set(filterValidVariableDefinitions(variables)
     .filter(variable => variable.scope === 'global' || variable.scope === scope)
     .map(variable => variable.name));
-  return findTemplateVariables(template).filter(name => !isDynamicPath(name) && !available.has(name));
+  return findTemplateVariables(template).filter(name => {
+    if (isDynamicPath(name)) return false;
+    const root = name.split(/[.[]/, 1)[0] ?? '';
+    return !available.has(root);
+  });
 }
 
 function tokenizePath(path: string): Array<string | number> {
@@ -170,7 +174,16 @@ export async function resolveMessageTemplate(
   const variablesUsed = findTemplateVariables(template);
   const rootData: Record<string, unknown> = {
     ...dynamicData,
-    ...Object.fromEntries([...byName.entries()].map(([name, definition]) => [name, definition.value])),
+    ...Object.fromEntries([...byName.entries()].map(([name, definition]) => {
+      const serialized = definition.value.trim();
+      if (serialized.startsWith('{') || serialized.startsWith('[')) {
+        try {
+          const parsed: unknown = JSON.parse(serialized);
+          if (parsed !== null && typeof parsed === 'object') return [name, parsed];
+        } catch { /* Plain text that resembles JSON remains a string. */ }
+      }
+      return [name, definition.value];
+    })),
     system: {
       runtime: {
         timestamp: context.timestamp.toISOString(),
