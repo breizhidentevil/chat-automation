@@ -16,7 +16,22 @@ export default defineContentScript({
     void startConversationHistoryObserver();
     browser.runtime.onMessage.addListener(async (message: unknown) => {
       if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
-      if (message.type === 'CHAT_AUTOMATION_PING') return { ready: true, origin: location.origin };
+      if (message.type === 'CHAT_AUTOMATION_PING') {
+        if (siteAccessRevoked) {
+          siteAccessRevoked = false;
+          void startConversationHistoryObserver();
+        }
+        return { ready: true, origin: location.origin };
+      }
+      if (message.type === 'CHAT_AUTOMATION_PERMISSION_REVOKED') {
+        siteAccessRevoked = true;
+        stopAutomation('stopped', 'Accès au site révoqué : automatisation et capture de l’historique arrêtées.');
+        historyObserver?.disconnect();
+        historyObserver = undefined;
+        if (historyScanTimer !== undefined) window.clearTimeout(historyScanTimer);
+        historyScanTimer = undefined;
+        return { ok: true };
+      }
       if (message.type === 'CHAT_AUTOMATION_STOP') {
         stopAutomation();
         return { message: 'Automatisation arrêtée.' };
@@ -415,6 +430,8 @@ const historyLastChanged = new WeakMap<HTMLElement, number>();
 const historyElementRoles = new WeakMap<HTMLElement, ConversationRole>();
 let historyScanTimer: number | undefined;
 let historyObserver: MutationObserver | undefined;
+let historyPollTimer: number | undefined;
+let siteAccessRevoked = false;
 let historyScanBusy = false;
 let historyClaimedExisting = new Set<string>();
 let historyKnownEntries: ConversationMessage[] = [];
@@ -540,11 +557,14 @@ async function startConversationHistoryObserver(): Promise<void> {
   } catch (error) {
     console.warn('[Chat Automation] Initialisation de l’historique impossible', error);
   }
+  if (siteAccessRevoked) return;
   historyObserver?.disconnect();
+  if (historyPollTimer !== undefined) window.clearInterval(historyPollTimer);
   historyObserver = new MutationObserver(() => scheduleHistoryScan());
   historyObserver.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['data-message-author-role', 'data-author', 'data-role', 'data-testid', 'aria-label', 'class'] });
   scanConversationHistory();
-  window.setInterval(() => {
+  historyPollTimer = window.setInterval(() => {
+    if (siteAccessRevoked) return;
     if (historyLastRoute !== `${location.pathname}${location.search}${location.hash}`) {
       historyLastRoute = `${location.pathname}${location.search}${location.hash}`;
       historyClaimedExisting = new Set<string>();
@@ -556,11 +576,13 @@ async function startConversationHistoryObserver(): Promise<void> {
 }
 
 function scheduleHistoryScan(): void {
+  if (siteAccessRevoked) return;
   if (historyScanTimer !== undefined) window.clearTimeout(historyScanTimer);
   historyScanTimer = window.setTimeout(() => { scanConversationHistory(); }, 300);
 }
 
 function scanConversationHistory(): void {
+  if (siteAccessRevoked) return;
   if (historyScanBusy || !document.body) return;
   historyScanBusy = true;
   try {
