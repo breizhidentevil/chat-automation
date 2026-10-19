@@ -7,10 +7,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# All jobs start with read-only permissions. Publishing permissions are granted
+# only to the jobs that need them, and never to the build/test job.
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: pages-${{ github.ref }}
@@ -18,8 +18,10 @@ concurrency:
 
 jobs:
   build:
-    name: Build browser packages and documentation
+    name: Test and build browser packages
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -45,15 +47,13 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Build Chrome package
+      - name: Build Chrome package and documentation site
         run: |
           npm run build:chrome
-          mkdir -p packages
+          mkdir -p packages site
           cd .output/chrome-mv3
           zip -qr ../../packages/chat-automation-chrome.zip .
           cd ../..
-          rm -rf site
-          mkdir -p site
           cp -R .output/chrome-mv3/. site/
           cat > site/index.html <<'HTML'
           <!doctype html>
@@ -90,30 +90,72 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Configure GitHub Pages
+      - name: Upload documentation site
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-automation-documentation-site
+          path: site/
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy-docs:
+    name: Deploy documentation
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download documentation site
+        uses: actions/download-artifact@v4
+        with:
+          name: chat-automation-documentation-site
+          path: site
+
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Upload documentation site
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
       - name: Deploy documentation to GitHub Pages
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         id: deployment
         uses: actions/deploy-pages@v4
 
+  publish-release:
+    name: Publish browser release
+    needs: build
+    if: (github.event_name == 'push' && ((github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/master') || startsWith(github.ref, 'refs/tags/v')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download browser packages
+        uses: actions/download-artifact@v4
+        with:
+          name: chat-automation-browser-packages
+          path: packages
+
       - name: Read extension version
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Publish development prerelease for main branch
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}-dev.${{ github.run_number }}
