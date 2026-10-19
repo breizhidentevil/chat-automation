@@ -5,7 +5,6 @@ import { deduplicateConversationMessages, historyStorageKey, type ConversationMe
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
-
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
 import { selectHistoryExportMessages } from '../../lib/history-export';
@@ -13,7 +12,6 @@ import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
-import { loadStoredVariables, saveStoredVariables } from '../../services/variables-storage';
 import { loadAutomationSettings, saveAutomationSettings } from '../../services/automation-settings';
 import { loadVisibleHistory } from '../../services/history-service';
 import { loadRecentLogs } from '../../services/logs-service';
