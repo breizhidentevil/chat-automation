@@ -15,6 +15,8 @@ import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
 import { loadStoredVariables, saveStoredVariables } from '../../services/variables-storage';
 import { loadAutomationSettings, saveAutomationSettings } from '../../services/automation-settings';
+import { loadVisibleHistory } from '../../services/history-service';
+import { loadRecentLogs } from '../../services/logs-service';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -257,9 +259,8 @@ function Popup() {
 
   async function refreshLogs() {
     try {
-      const data = await browser.storage.local.get('chatAutomationLogs');
-      const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
-      setLogs((entries as LogEntry[]).slice(-30).reverse());
+      const entries = await loadRecentLogs(key => browser.storage.local.get(key));
+      setLogs(entries as LogEntry[]);
       logReadErrorReported.current = false;
     } catch (error) {
       if (!logReadErrorReported.current) {
@@ -279,16 +280,8 @@ function Popup() {
       const conversationId = `${origin}${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`;
       setHistoryOrigin(origin);
       setHistoryConversationId(conversationId);
-      const key = historyStorageKey(origin);
-      const data = await browser.storage.local.get(key);
-      const items = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) : [];
-      const siteItems = deduplicateConversationMessages((items as ConversationMessage[]).filter(item => item.origin === origin));
-      const exactConversation = siteItems.filter(item => item.conversationId === conversationId);
-      // Les applications SPA peuvent modifier l’URL (paramètres, hash ou route interne)
-      // après la capture. Si aucune entrée ne correspond à l’URL actuelle, ne pas
-      // masquer tout l’historique du site : afficher les messages les plus récents.
-      const visibleItems = exactConversation.length > 0 ? exactConversation : siteItems;
-      setHistoryMessages(visibleItems.slice().sort((a, b) => a.firstSeenAt - b.firstSeenAt).slice(-300).reverse());
+      const visibleItems = await loadVisibleHistory(key => browser.storage.local.get(key), origin, conversationId);
+      setHistoryMessages(visibleItems);
     } catch (error) {
       setHistoryMessages([]);
       setHistoryOrigin('');
