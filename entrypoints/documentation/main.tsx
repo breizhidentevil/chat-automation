@@ -2,10 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { LOCALE_STORAGE_KEY, preferredLocale, type Locale } from '../../lib/i18n';
 import { EnglishDocumentation } from './English';
 import { createRoot } from 'react-dom/client';
+import { Button, MantineProvider, Select, useMantineColorScheme } from '@mantine/core';
+import '@mantine/core/styles.css';
 import './style.css';
+import './theme.css';
 
 function Documentation() {
+  const { setColorScheme, clearColorScheme } = useMantineColorScheme();
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
+  useEffect(() => {
+    let active = true;
+    void browser.storage.local.get('chatAutomationColorScheme').then(data => {
+      if (!active) return;
+      const preference = data.chatAutomationColorScheme;
+      if (preference === 'light' || preference === 'dark') setColorScheme(preference);
+      else clearColorScheme();
+    }).catch(() => { if (active) clearColorScheme(); });
+    return () => { active = false; };
+  }, [clearColorScheme, setColorScheme]);
   useEffect(() => { void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => { const saved = data[LOCALE_STORAGE_KEY]; if (saved === 'fr' || saved === 'en') setLocale(saved); }); }, []);
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const changeLocale = (next: Locale) => { setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); };
@@ -13,7 +27,7 @@ function Documentation() {
   return <main className="docs-shell">
     <header className="docs-header">
       <div className="docs-mark" aria-hidden="true">CA</div>
-      <div><p className="eyebrow">CHAT AUTOMATION · V5</p><h1>Documentation</h1><p className="subtitle">Guide d’utilisation, variables et fonctionnement de l’extension.</p></div><label className="docs-language"><span>Langue</span><select value={locale} onChange={event => changeLocale(event.target.value as Locale)}><option value="fr">Français</option><option value="en">English</option></select></label>
+      <div><p className="eyebrow">CHAT AUTOMATION · V5</p><h1>Documentation</h1><p className="subtitle">Guide d’utilisation, variables et fonctionnement de l’extension.</p></div><Select className="docs-language" aria-label="Langue" value={locale} onChange={value => { if (value === "fr" || value === "en") changeLocale(value); }} data={[{ value: "fr", label: "Français" }, { value: "en", label: "English" }]} size="sm" />
     </header>
     <nav className="toc" aria-label="Sommaire">
       <a href="#demarrage">Démarrage</a><a href="#automation">Automatisation</a><a href="#strategie">Stratégie d’envoi</a><a href="#variables">Variables</a><a href="#chemins">Chemins dynamiques</a><a href="#simulateur">Simulateur</a><a href="#historique">Historique</a><a href="#logs">Logs</a><a href="#limites">Limites et dépannage</a><a href="#confidentialite">Données et confidentialité</a>
@@ -50,7 +64,9 @@ function Documentation() {
       <h3>Erreurs de résolution</h3><ul><li>Une propriété inconnue, une donnée absente ou un index hors limites provoque une erreur de résolution.</li><li>Un index ne peut être utilisé que sur un tableau.</li><li>Les valeurs simples sont converties en texte. Les objets ou tableaux terminaux sont sérialisés en JSON.</li><li>Les segments dangereux tels que <code>constructor</code>, <code>prototype</code> et <code>__proto__</code> sont refusés.</li></ul><p className="callout">Le moteur de chemins et les racines sont extensibles, mais seules les données réellement fournies par le contexte de la version actuelle sont accessibles. Une syntaxe de chemin valide ne garantit pas qu’une propriété existe.</p>
     </section>
 
-    <section id="simulateur"><h2>6. Simulateur</h2><p>Le simulateur vérifie le rendu des modèles et le calendrier d’une séquence sans envoyer de message. Il reprend les messages et paramètres de l’onglet Automatisation.</p><ol><li>Configurez d’abord les messages, les variables, la fréquence et le créneau dans Automatisation.</li><li>Ouvrez Simulateur, choisissez la date de départ et le nombre de cycles (de 1 à 10).</li><li>Le contexte dynamique est un objet JSON fictif utilisé pour tester les chemins <code>chat</code>, <code>history</code>, <code>logs</code>, <code>strategy</code> ou <code>data</code>. Il reste local et temporaire.</li><li>Cliquez sur <strong>Lancer la simulation</strong>, puis examinez la chronologie, les messages rendus et les erreurs. Corrigez les modèles ou les paramètres avant une exécution réelle.</li></ol><p className="callout">La simulation n’envoie aucun message et ne modifie pas l’historique, les logs ni les paramètres enregistrés.</p></section>\n\n    <section id="historique"><h2>7. Historique</h2><p>La page Historique affiche les messages visibles que le script de capture a pu identifier dans l’onglet actif. Les messages peuvent être mis à jour pendant leur génération et marqués terminés ou incomplets. Chaque message est limité à 100 000 caractères ; au-delà, son contenu est tronqué et signalé comme tel. L’historique est conservé localement, jusqu’à 2 000 messages, et peut être exporté au format JSON.</p><p>La capture dépend de la structure HTML du site. Les messages masqués, les conversations non chargées, les pièces jointes et certains rôles non identifiables peuvent être absents. Si aucun message n’apparaît, ouvrez la conversation dans un onglet ordinaire et rechargez la page.</p></section>
+    <section id="simulateur"><h2>6. Simulateur</h2><p>Le simulateur vérifie le rendu des modèles et le calendrier d’une séquence sans envoyer de message. Il reprend les messages et paramètres de l’onglet Automatisation.</p><ol><li>Configurez d’abord les messages, les variables, la fréquence et le créneau dans Automatisation.</li><li>Ouvrez Simulateur, choisissez la date de départ et le nombre de cycles (de 1 à 10).</li><li>Le contexte dynamique est un objet JSON fictif utilisé pour tester les chemins <code>chat</code>, <code>history</code>, <code>logs</code>, <code>strategy</code> ou <code>data</code>. Il reste local et temporaire.</li><li>Cliquez sur <strong>Lancer la simulation</strong>, puis examinez la chronologie, les messages rendus et les erreurs. Corrigez les modèles ou les paramètres avant une exécution réelle.</li></ol><p className="callout">La simulation n’envoie aucun message et ne modifie pas l’historique, les logs ni les paramètres enregistrés.</p></section>
+
+    <section id="historique"><h2>7. Historique</h2><p>La page Historique affiche les messages visibles que le script de capture a pu identifier dans l’onglet actif. Les messages peuvent être mis à jour pendant leur génération et marqués terminés ou incomplets. Chaque message est limité à 100 000 caractères ; au-delà, son contenu est tronqué et signalé comme tel. L’historique est conservé localement, jusqu’à 2 000 messages, et peut être exporté au format JSON.</p><p>La capture dépend de la structure HTML du site. Les messages masqués, les conversations non chargées, les pièces jointes et certains rôles non identifiables peuvent être absents. Si aucun message n’apparaît, ouvrez la conversation dans un onglet ordinaire et rechargez la page.</p></section>
 
     <section id="logs"><h2>8. Logs</h2><p>La page Logs présente les événements récents de détection et d’automatisation et s’actualise automatiquement. L’export JSON télécharge les événements enregistrés. Les logs peuvent inclure des détails de diagnostic et des aperçus du texte attendu pendant une validation.</p><p>Dans les chemins dynamiques, <code>logs.events[index]</code> donne accès aux événements du site actif. Les collections <code>logs.errors</code>, <code>logs.warnings</code> et <code>logs.info</code> filtrent les événements selon leur niveau dans le contexte courant.</p></section>
 
@@ -58,8 +74,8 @@ function Documentation() {
 
     <section id="confidentialite"><h2>10. Données et confidentialité</h2><p>Les variables, paramètres, historiques et logs décrits ici sont stockés dans le stockage local de l’extension. L’historique et les logs peuvent contenir des textes de conversation ou des détails de diagnostic. Les exports JSON sont enregistrés à l’emplacement choisi par le navigateur et peuvent contenir ces mêmes informations : examinez-les avant de les partager.</p><p>La permission d’hôte large est utilisée pour permettre le fonctionnement sur les pages web ordinaires, sous réserve des restrictions du navigateur. La capture se limite aux éléments que le script peut observer dans la page.</p></section>
 
-    <footer className="docs-footer"><p>Documentation intégrée — Chat Automation V5.</p><p>À chaque itération, cette documentation doit être révisée pour correspondre au comportement réellement livré.</p><a href="#top" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Retour en haut ↑</a></footer>
+    <footer className="docs-footer"><p>Documentation intégrée — Chat Automation V5.</p><p>À chaque itération, cette documentation doit être révisée pour correspondre au comportement réellement livré.</p><Button component="a" href="#top" variant="subtle" size="compact-sm" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Retour en haut ↑</Button></footer>
   </main>;
 }
 
-createRoot(document.getElementById('root')!).render(<Documentation />);
+createRoot(document.getElementById("root")!).render(<MantineProvider defaultColorScheme="auto" theme={{ primaryColor: "blue", fontFamily: "Inter, system-ui, sans-serif", defaultRadius: "md" }}><Documentation /></MantineProvider>);

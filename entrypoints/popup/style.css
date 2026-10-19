@@ -289,63 +289,9 @@ nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .site-access-control .mantine-Button-root { min-height: 30px; }
 
 
-/* V5.4.0 appearance preference: keep custom popup surfaces legible in dark mode. */
-.theme-picker { width: 92px; min-width: 82px; flex: 0 0 92px; color: var(--mantine-color-text); font-size: 10px; }
-.theme-picker .mantine-Select-input { min-height: 28px; height: 28px; padding-inline: 7px; font-size: 10px; }
-:root[data-mantine-color-scheme="dark"] {
-  color-scheme: dark;
-  background: #1a1b1e;
-  color: #c1c2c5;
-}
-:root[data-mantine-color-scheme="dark"] body { background: #1a1b1e; color: #c1c2c5; }
-:root[data-mantine-color-scheme="dark"] .popup-shell { color: #c1c2c5; background: #1a1b1e; }
-:root[data-mantine-color-scheme="dark"] .mark { background: #373a40; color: #fff; }
-:root[data-mantine-color-scheme="dark"] header p,
-:root[data-mantine-color-scheme="dark"] footer,
-:root[data-mantine-color-scheme="dark"] .page-heading p,
-:root[data-mantine-color-scheme="dark"] .helper,
-:root[data-mantine-color-scheme="dark"] .notice,
-:root[data-mantine-color-scheme="dark"] .status,
-:root[data-mantine-color-scheme="dark"] .empty,
-:root[data-mantine-color-scheme="dark"] .runtime-note,
-:root[data-mantine-color-scheme="dark"] .simulation-metrics span,
-:root[data-mantine-color-scheme="dark"] .simulation-template span,
-:root[data-mantine-color-scheme="dark"] .simulation-rendered span,
-:root[data-mantine-color-scheme="dark"] .simulation-entry-head time,
-:root[data-mantine-color-scheme="dark"] .simulation-entry > small { color: #a6a7ab; }
-:root[data-mantine-color-scheme="dark"] section { border-top-color: #373a40; }
-:root[data-mantine-color-scheme="dark"] .sequence-item,
-:root[data-mantine-color-scheme="dark"] .variable-card,
-:root[data-mantine-color-scheme="dark"] .simulation-metrics > div,
-:root[data-mantine-color-scheme="dark"] .simulation-entry {
-  border-color: #373a40;
-  background: #25262b;
-  color: #c1c2c5;
-}
-:root[data-mantine-color-scheme="dark"] .sequence-item textarea,
-:root[data-mantine-color-scheme="dark"] textarea,
-:root[data-mantine-color-scheme="dark"] input,
-:root[data-mantine-color-scheme="dark"] select,
-:root[data-mantine-color-scheme="dark"] .locale-picker .mantine-Select-input,
-:root[data-mantine-color-scheme="dark"] .theme-picker .mantine-Select-input {
-  border-color: #5c5f66;
-  background: #1a1b1e;
-  color: #c1c2c5;
-}
-:root[data-mantine-color-scheme="dark"] .notice,
-:root[data-mantine-color-scheme="dark"] .simulation-rendered code { background: #25262b; color: #c1c2c5; }
-:root[data-mantine-color-scheme="dark"] .variable-autocomplete { border-color: #5c5f66; background: #25262b; }
-:root[data-mantine-color-scheme="dark"] .variable-suggestion { background: #25262b; color: #c1c2c5; }
-:root[data-mantine-color-scheme="dark"] .variable-suggestion:hover,
-:root[data-mantine-color-scheme="dark"] .variable-suggestion.active { background: #373a40; }
-:root[data-mantine-color-scheme="dark"] .simulation-entry.failed { border-color: #7a3434; background: #2c2022; }
-:root[data-mantine-color-scheme="dark"] .simulation-error { background: #3b2225; color: #ffa8a8; }
-:root[data-mantine-color-scheme="dark"] .simulator-safety-note { border-color: #285b40; background: #1d3328; color: #8ce99a; }
-:root[data-mantine-color-scheme="dark"] .logs .mantine-Paper-root { border-bottom-color: #373a40; background: transparent; color: #c1c2c5; }
-:root[data-mantine-color-scheme="dark"] .logs .mantine-Paper-root > span { color: #a6a7ab; }
+/* Theme tokens and dark-mode surfaces are defined in theme.css. */
 
-
-/* Le logo ouvre directement le tutoriel intégré. */
-button.mark { border: 0; padding: 0; font: inherit; cursor: pointer; }
+/* The brand mark is decorative; the help button opens the integrated guide. */
+.mark { user-select: none; }
 .site-origin { display: block; margin-top: 3px; color: #777; font-size: 10px; overflow-wrap: anywhere; }
 :root[data-mantine-color-scheme="dark"] .site-origin { color: #a6a7ab; }

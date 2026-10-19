@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Badge, Button, MantineProvider, Select, Tabs, useMantineColorScheme } from '@mantine/core';
 import '@mantine/core/styles.css';
 import './style.css';
+import './theme.css';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
@@ -154,7 +155,7 @@ function Popup() {
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''} ${page === 'simulator' ? 'simulator-view' : ''}`}>
-    <header className="popup-header"><button type="button" className="mark" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>CA</button><div className="brand-copy"><h1>Chat Automation</h1></div><Select className="locale-picker" aria-label={t('language')} value={locale} onChange={value => { if (value === 'fr' || value === 'en') { setLocale(value); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: value }); } }} data={[{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }]} size="xs" /> <Select className="theme-picker" aria-label={t('appearance')} value={colorSchemePreference} onChange={value => void changeColorScheme(value)} data={[{ value: 'auto', label: t('themeAuto') }, { value: 'light', label: t('themeLight') }, { value: 'dark', label: t('themeDark') }]} size="xs" /> <Button type="button" className="help-button" variant="default" size="compact-md" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</Button></header>
+    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1></div><Select className="locale-picker" aria-label={t('language')} value={locale} onChange={value => { if (value === 'fr' || value === 'en') { setLocale(value); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: value }); } }} data={[{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }]} size="xs" /> <Select className="theme-picker" aria-label={t('appearance')} value={colorSchemePreference} onChange={value => void changeColorScheme(value)} data={[{ value: 'auto', label: t('themeAuto') }, { value: 'light', label: t('themeLight') }, { value: 'dark', label: t('themeDark') }]} size="xs" /> <Button type="button" className="help-button" variant="default" size="compact-md" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</Button></header>
     <Tabs value={page} onChange={value => { if (value) setPage(value as Page); }} className="popup-tabs">
       <Tabs.List className="main-nav" aria-label={t('mainNavigation')}>
         <Tabs.Tab value="automation">{t('automation')}</Tabs.Tab>
@@ -283,7 +284,7 @@ function Popup() {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <MantineProvider defaultColorScheme="auto" theme={{ primaryColor: 'dark', fontFamily: 'Inter, system-ui, sans-serif' }}>
+  <MantineProvider defaultColorScheme="auto" theme={{ primaryColor: 'blue', fontFamily: 'Inter, system-ui, sans-serif', defaultRadius: 'md' }}>
     <Popup />
   </MantineProvider>,
 );
