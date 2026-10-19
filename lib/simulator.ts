@@ -36,7 +36,7 @@ export const MAX_SIMULATION_MESSAGES = 100;
 export const MAX_SIMULATION_ENTRIES = 200;
 
 function parseClock(value: string): number {
-  const match = /^(\\d{2}):(\\d{2})$/.exec(value);
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
   if (!match) throw new Error('Les heures doivent respecter le format HH:MM.');
   return Number(match[1]) * 60 + Number(match[2]);
 }
