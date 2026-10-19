@@ -643,7 +643,7 @@ function Popup() {
       historyMessages={historyMessages}
       refreshHistory={() => void refreshHistory()}
       clearSiteHistory={() => void clearSiteHistory()}
-    /> : null
+    /> : null}
 
     {page === 'logs' ? <LogsPage
       t={t}
