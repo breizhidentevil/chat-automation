@@ -1,20 +1,9 @@
 import { contentScriptIdForOrigin } from '../lib/content-script-id';
+import { getSupportedSiteOrigin } from '../lib/site-origin';
 
 export type SiteAccessResult =
   | { granted: false; origin: string }
   | { granted: true; origin: string; pageScriptInjected: boolean };
-
-/** Return a usable web origin, excluding browser-internal and malformed URLs. */
-export function getSupportedSiteOrigin(url: string | undefined): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-    return parsed.origin;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Request access to the active site's origin and register the extension content
