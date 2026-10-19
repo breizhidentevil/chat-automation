@@ -61,7 +61,7 @@ function Documentation() {
 
     <section id="confidentialite"><h2>10. Données et confidentialité</h2><p>Les variables, paramètres, historiques et logs décrits ici sont stockés dans le stockage local de l’extension. L’historique et les logs peuvent contenir des textes de conversation ou des détails de diagnostic. Les exports JSON sont enregistrés à l’emplacement choisi par le navigateur et peuvent contenir ces mêmes informations : examinez-les avant de les partager.</p><p>La permission d’hôte large est utilisée pour permettre le fonctionnement sur les pages web ordinaires, sous réserve des restrictions du navigateur. La capture se limite aux éléments que le script peut observer dans la page.</p></section>
 
-    <footer className="docs-footer"><p>Documentation intégrée — Chat Automation V5.</p><p>À chaque itération, cette documentation doit être révisée pour correspondre au comportement réellement livré.</p><a href="#top" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Retour en haut ↑</a></footer>
+    <footer className="docs-footer"><p>Documentation intégrée — Chat Automation V5.</p><p>À chaque itération, cette documentation doit être révisée pour correspondre au comportement réellement livré.</p><Button component="a" href="#top" variant="subtle" size="compact-sm" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Retour en haut ↑</Button></footer>
   </main>;
 }
 
