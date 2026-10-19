@@ -1,3 +1,5 @@
+import { isValidConversationMessage } from './history-validation';
+
 export type ConversationRole = 'user' | 'assistant' | 'system' | 'unknown';
 export type ConversationMessageStatus = 'streaming' | 'complete' | 'incomplete';
 
@@ -99,7 +101,9 @@ export function historyStorageKey(_origin: string): string {
 export async function readConversationHistory(origin: string): Promise<ConversationMessage[]> {
   const result = await browser.storage.local.get(HISTORY_STORAGE_KEY);
   const value = result[HISTORY_STORAGE_KEY];
-  return Array.isArray(value) ? (value as ConversationMessage[]).filter(message => message.origin === origin) : [];
+  return Array.isArray(value)
+    ? value.filter(isValidConversationMessage).filter(message => message.origin === origin)
+    : [];
 }
 
 /**
@@ -136,7 +140,11 @@ let backgroundWriteQueue: Promise<void> = Promise.resolve();
 export function backgroundUpsertConversationMessage(message: ConversationMessage): Promise<void> {
   const operation = backgroundWriteQueue.then(async () => {
     const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
-    const current = deduplicateConversationMessages(Array.isArray(stored[HISTORY_STORAGE_KEY]) ? stored[HISTORY_STORAGE_KEY] as ConversationMessage[] : []);
+    const current = deduplicateConversationMessages(
+      Array.isArray(stored[HISTORY_STORAGE_KEY])
+        ? stored[HISTORY_STORAGE_KEY].filter(isValidConversationMessage)
+        : [],
+    );
     const index = current.findIndex(item => item.id === message.id && item.origin === message.origin);
     if (index >= 0) {
       const old = current[index]!;
