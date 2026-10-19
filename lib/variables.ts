@@ -72,7 +72,7 @@ function readPath(root: unknown, path: string): string {
       if (part < 0 || part >= current.length) throw new Error(`Index hors limites dans « ${path} » (index ${part}, taille ${current.length}).`);
       current = current[part];
     } else {
-      if (typeof current !== 'object' || !(part in current)) throw new Error(`Propriété « ${part} » introuvable dans « ${path} ».`);
+      if (typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, part)) throw new Error(`Propriété « ${part} » introuvable dans « ${path} ».`);
       current = (current as Record<string, unknown>)[part];
     }
   }
