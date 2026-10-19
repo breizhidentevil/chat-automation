@@ -3,13 +3,6 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import ts from 'typescript';
 
-async function loadTypeScriptModule(path, replacements = []) {
-  let source = await readFile(new URL(path, import.meta.url), 'utf8');
-  source = ts.transpile(source, { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 });
-  for (const [from, to] of replacements) source = source.replace(from, to);
-  return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
-}
-
 const variablesUrl = `data:text/javascript;base64,${Buffer.from(
   ts.transpile(
     (await readFile(new URL('../lib/variables.ts', import.meta.url), 'utf8')),
