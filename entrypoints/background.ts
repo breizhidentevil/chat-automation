@@ -65,7 +65,21 @@ export default defineBackground(() => {
       } catch {
         return { ok: false };
       }
-      return backgroundClearSiteHistory(origin).then(() => ({ ok: true })).catch(error => {
+      return backgroundClearSiteHistory(origin).then(async () => {
+        // Existing DOM messages would otherwise be captured again immediately after
+        // deletion. Tell matching tabs to suppress their current visible contents.
+        try {
+          const tabs = await browser.tabs.query({ url: `${origin}/*` });
+          await Promise.all(tabs.filter(tab => tab.id !== undefined).map(tab =>
+            browser.tabs.sendMessage(tab.id!, { type: 'CHAT_HISTORY_CLEARED', origin }).catch(() => undefined),
+          ));
+        } catch (error) {
+          // Storage deletion succeeded; notification failure must not report a false
+          // deletion failure to the user.
+          console.warn('[Chat Automation] Notification des onglets après effacement impossible.', error);
+        }
+        return { ok: true };
+      }).catch(error => {
         console.error('[Chat Automation] Effacement de l’historique impossible.', error);
         return { ok: false };
       });
