@@ -76,7 +76,7 @@ function Popup() {
     () => setStatus(t('settingsReadError')),
     () => setStatus(t('settingsSaveError')),
   );
-  const { variables, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
+  const { variables, variablesDocument, setVariablesDocument, saveVariableDocument, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
 
   const { logs, refreshLogs, clearLogs, exportLogs } = useLogs({
     enabled: page === 'logs',
