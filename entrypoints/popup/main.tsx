@@ -14,6 +14,8 @@ import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
+import { loadStoredVariables, saveStoredVariables } from '../../services/variables-storage';
+import { loadAutomationSettings, saveAutomationSettings } from '../../services/automation-settings';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -347,15 +349,13 @@ function Popup() {
       console.error('[Chat Automation] Lecture de la langue échouée.', error);
     });
     void refreshLogs();
-    void browser.storage.local.get(VARIABLES_STORAGE_KEY).then(data => {
-      const saved = data[VARIABLES_STORAGE_KEY];
-      setVariables(filterValidVariableDefinitions(saved));
+    void loadStoredVariables(key => browser.storage.local.get(key)).then(saved => {
+      setVariables(saved);
     }).catch(error => {
       console.error('[Chat Automation] Lecture des variables échouée.', error);
       setVariableError(t('variablesReadError'));
     });
-    void browser.storage.local.get('chatAutomationSettings').then(({ chatAutomationSettings }) => {
-      const saved = sanitizeSavedAutomationSettings(chatAutomationSettings);
+    void loadAutomationSettings(key => browser.storage.local.get(key)).then(saved => {
       if (!saved) return;
       setMessage(saved.message);
       setAutomationMessages(saved.messages);
@@ -411,7 +411,7 @@ function Popup() {
 
   async function persistSettings(): Promise<boolean> {
     try {
-      await browser.storage.local.set({ chatAutomationSettings: { message, messages: automationMessages, interval, unit, repeatCount, timeWindowEnabled, startTime, endTime } });
+      await saveAutomationSettings(items => browser.storage.local.set(items), { message, messages: automationMessages, interval, unit, repeatCount, timeWindowEnabled, startTime, endTime });
       return true;
     } catch (error) {
       console.error('[Chat Automation] Écriture des paramètres échouée.', error);
@@ -421,9 +421,8 @@ function Popup() {
   }
 
   async function persistVariables(next: VariableDefinition[]): Promise<boolean> {
-    const safeNext = filterValidVariableDefinitions(next);
     try {
-      await browser.storage.local.set({ [VARIABLES_STORAGE_KEY]: safeNext });
+      const safeNext = await saveStoredVariables(items => browser.storage.local.set(items), next);
       setVariables(safeNext);
       setVariableError('');
       return true;
