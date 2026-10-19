@@ -52,6 +52,14 @@ test('prevents cleared visible history from being immediately captured again', (
   assert.match(contentScript, /historyClearedContent\.delete\(element\)/);
 });
 
+test('suppresses pre-clear DOM nodes even when they were not recognized as message candidates', () => {
+  assert.match(contentScript, /historyClearedExistingElements = new WeakMap<HTMLElement, boolean>\(\)/);
+  assert.match(contentScript, /document\.querySelectorAll<HTMLElement>\('\*'\)/);
+  assert.match(contentScript, /historyClearedExistingElements\.set\(element, true\)/);
+  assert.match(contentScript, /historyClearedExistingElements\.get\(element\) === true\) continue/);
+  assert.match(contentScript, /historyClearedExistingElements\.set\(element, false\)/);
+});
+
 test('stops active page scripts and history capture when host permission is revoked', () => {
   assert.match(requireBackgroundSource, /browser\.tabs\.query\(\{ url: origins \}\)/);
   assert.match(requireBackgroundSource, /CHAT_AUTOMATION_PERMISSION_REVOKED/);
