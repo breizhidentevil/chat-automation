@@ -28,6 +28,17 @@ export function deduplicateConversationMessages(messages: ConversationMessage[])
   const sorted = [...messages].sort((a, b) => a.firstSeenAt - b.firstSeenAt);
   const result: ConversationMessage[] = [];
   for (const message of sorted) {
+    // Updates to the same logical message must merge even when their content changes.
+    const identityIndex = result.findIndex(existing =>
+      existing.origin === message.origin && existing.id === message.id,
+    );
+    if (identityIndex >= 0) {
+      result[identityIndex] = mergeConversationMessage(result[identityIndex]!, message);
+      continue;
+    }
+
+    // Some sites expose the same visible message through multiple DOM nodes with
+    // different generated IDs. Collapse only matching content observed within 1s.
     const duplicateIndex = result.findIndex(existing =>
       existing.origin === message.origin
       && existing.conversationId === message.conversationId
@@ -53,7 +64,7 @@ export function deduplicateConversationMessages(messages: ConversationMessage[])
         : {}),
     };
   }
-  return result;
+  return result.sort((a, b) => a.firstSeenAt - b.firstSeenAt);
 }
 
 const statusRank = (status: ConversationMessageStatus): number =>
