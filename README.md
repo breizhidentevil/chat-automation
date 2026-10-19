@@ -66,6 +66,15 @@ npm run build:all
 
 To package builds manually, use the build output for the relevant browser. The CI workflow also creates ZIP packages and attaches them to releases.
 
+## Versioning policy
+
+The extension version follows Semantic Versioning and is kept in sync between `package.json` and `package-lock.json`; WXT uses this package version in the generated browser manifest.
+
+- Baseline: `5.0.0`.
+- Each development iteration that changes the project increments the patch version (for example, `5.0.0` → `5.0.1` → `5.0.2`).
+- The minor or major component changes only when the scope of a release justifies it.
+- GitHub Actions adds its run number to development prerelease tags (for example, `v5.0.1-dev.201`); that build number does not replace the extension version.
+
 ## Release and documentation publishing
 
 The [GitHub Actions workflow](https://github.com/breizhidentevil/chat-automation/actions/workflows/build-and-publish.yml):
