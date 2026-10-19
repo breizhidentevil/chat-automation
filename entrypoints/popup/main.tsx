@@ -5,7 +5,7 @@ import { deduplicateConversationMessages, historyStorageKey, type ConversationMe
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
-import { isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, type VariableDefinition, type VariableScope } from '../../lib/variables';
+
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
 import { selectHistoryExportMessages } from '../../lib/history-export';
@@ -25,6 +25,7 @@ import VariablesPage from './pages/VariablesPage';
 import AutomationPage from './pages/AutomationPage';
 import { usePagePolling } from './hooks/usePagePolling';
 import { useRuntimeStatus, type RuntimeStatus } from './hooks/useRuntimeStatus';
+import { useVariables } from './hooks/useVariables';
 import { downloadJsonFile } from '../../services/file-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -54,12 +55,6 @@ function Popup() {
   const [siteAccessStatus, setSiteAccessStatus] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
-  const [variables, setVariables] = useState<VariableDefinition[]>([]);
-  const [variableName, setVariableName] = useState('');
-  const [variableValue, setVariableValue] = useState('');
-  const [variableScope, setVariableScope] = useState<VariableScope>('global');
-  const [editingVariableId, setEditingVariableId] = useState<string | null>(null);
-  const [variableError, setVariableError] = useState('');
   const [variablePreviewText, setVariablePreviewText] = useState('Bonjour {{prenom}}');
   const [variablePreviewResult, setVariablePreviewResult] = useState<TemplatePreviewResult | null>(null);
   const [variablePreviewError, setVariablePreviewError] = useState('');
@@ -82,6 +77,7 @@ function Popup() {
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [simulationError, setSimulationError] = useState('');
   const { runtimeStatus, clockNow } = useRuntimeStatus(() => setStatus(t('automationStatusReadError')));
+  const { variables, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
 
   useEffect(() => {
     let active = true;
@@ -192,12 +188,6 @@ function Popup() {
       console.error('[Chat Automation] Lecture de la langue échouée.', error);
     });
     void refreshLogs();
-    void loadStoredVariables(key => browser.storage.local.get(key)).then(saved => {
-      setVariables(saved);
-    }).catch(error => {
-      console.error('[Chat Automation] Lecture des variables échouée.', error);
-      setVariableError(t('variablesReadError'));
-    });
     void loadAutomationSettings(key => browser.storage.local.get(key)).then(saved => {
       if (!saved) return;
       setMessage(saved.message);
@@ -228,50 +218,6 @@ function Popup() {
       setStatus(t('settingsSaveError'));
       return false;
     }
-  }
-
-  async function persistVariables(next: VariableDefinition[]): Promise<boolean> {
-    try {
-      const safeNext = await saveStoredVariables(items => browser.storage.local.set(items), next);
-      setVariables(safeNext);
-      setVariableError('');
-      return true;
-    } catch (error) {
-      console.error('[Chat Automation] Écriture des variables échouée.', error);
-      setVariableError(t('variablesSaveError'));
-      return false;
-    }
-  }
-
-  async function saveVariable() {
-    setVariableError('');
-    const name = variableName.trim();
-    if (!isValidVariableName(name)) { setVariableError(t('invalidVariableName')); return; }
-    if (!variableValue.trim()) { setVariableError(t('emptyVariableValue')); return; }
-    if (variableValue.length > MAX_VARIABLE_VALUE_LENGTH) { setVariableError(t('variableValueTooLong')); return; }
-    if (variables.some(item => item.name === name && item.scope === variableScope && item.id !== editingVariableId)) { setVariableError(t('duplicateVariable')); return; }
-    const item: VariableDefinition = { id: editingVariableId ?? `var-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, type: 'static', value: variableValue, scope: variableScope, updatedAt: Date.now() };
-    const next = editingVariableId ? variables.map(existing => existing.id === editingVariableId ? item : existing) : [...variables, item];
-    const totalValueLength = next.reduce((total, variable) => total + variable.value.length, 0);
-    if (next.length > MAX_VARIABLE_DEFINITIONS || totalValueLength > MAX_TOTAL_VARIABLE_VALUE_LENGTH) {
-      setVariableError(locale === 'fr'
-        ? 'Limite atteinte : 100 variables et 1 000 000 caractères cumulés au maximum.'
-        : 'Limit reached: at most 100 variables and 1,000,000 combined characters.');
-      return;
-    }
-    if (!await persistVariables(next)) return;
-    setVariableName(''); setVariableValue(''); setVariableScope('global'); setEditingVariableId(null);
-    setStatus(t('testSaved', { name }));
-  }
-
-  function editVariable(item: VariableDefinition) {
-    setEditingVariableId(item.id); setVariableName(item.name); setVariableValue(item.value); setVariableScope(item.scope); setVariableError('');
-  }
-
-  async function deleteVariable(item: VariableDefinition) {
-    if (!window.confirm(t('confirmDeleteVariable', { name: item.name }))) return;
-    await persistVariables(variables.filter(existing => existing.id !== item.id));
-    if (editingVariableId === item.id) { setEditingVariableId(null); setVariableName(''); setVariableValue(''); setVariableScope('global'); }
   }
 
   async function activeTab() {
@@ -604,7 +550,7 @@ function Popup() {
       setVariableScope={setVariableScope}
       variableError={variableError}
       saveVariable={() => void saveVariable()}
-      cancelEditing={() => { setEditingVariableId(null); setVariableName(''); setVariableValue(''); setVariableScope('global'); setVariableError(''); }}
+      cancelEditing={cancelEditing}
       variables={variables}
       editVariable={editVariable}
       deleteVariable={item => void deleteVariable(item)}
