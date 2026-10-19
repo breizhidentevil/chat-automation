@@ -57,26 +57,27 @@ function TemplateTextarea({
   const openToken = beforeCaret.match(/{{\s*([A-Za-z0-9_.\-[\]]*)$/);
   const tokenStart = openToken ? beforeCaret.lastIndexOf('{{') : -1;
   const query = openToken?.[1] ?? '';
-  const customSuggestions: TemplateSuggestion[] = [];
-  function addNestedSuggestions(root: string, value: unknown, description: string, depth = 0) {
-    if (depth > 12 || value === null || typeof value !== 'object') return;
-    if (Array.isArray(value)) {
-      value.forEach((item, index) => {
-        const path = `${root}[${index}]`;
+  const candidates = React.useMemo<TemplateSuggestion[]>(() => {
+    const customSuggestions: TemplateSuggestion[] = [];
+    function addNestedSuggestions(root: string, value: unknown, description: string, depth = 0) {
+      if (depth > 12 || value === null || typeof value !== 'object') return;
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => {
+          const path = `${root}[${index}]`;
+          customSuggestions.push({ value: path, description, kind: 'custom' });
+          addNestedSuggestions(path, item, description, depth + 1);
+        });
+        return;
+      }
+      for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+        if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) || ['__proto__', 'prototype', 'constructor'].includes(key)) continue;
+        const path = `${root}.${key}`;
         customSuggestions.push({ value: path, description, kind: 'custom' });
-        addNestedSuggestions(path, item, description, depth + 1);
-      });
-      return;
+        addNestedSuggestions(path, child, description, depth + 1);
+      }
     }
-    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-      if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) || ['__proto__', 'prototype', 'constructor'].includes(key)) continue;
-      const path = `${root}.${key}`;
-      customSuggestions.push({ value: path, description, kind: 'custom' });
-      addNestedSuggestions(path, child, description, depth + 1);
-    }
-  }
-  const candidates: TemplateSuggestion[] = [
-    ...variables.flatMap(variable => {
+
+    const rootSuggestions = variables.flatMap(variable => {
       const description = `${variable.scope === 'global' ? 'globalVariable' : 'automationVariable'}|${variable.value}`;
       const entries: TemplateSuggestion[] = [{ value: variable.name, description, kind: 'custom' }];
       const serialized = variable.value.trim();
@@ -84,10 +85,15 @@ function TemplateTextarea({
         try { addNestedSuggestions(variable.name, JSON.parse(serialized) as unknown, description); } catch { /* Keep the root suggestion for plain text. */ }
       }
       return entries;
-    }),
-    ...customSuggestions,
-    ...DYNAMIC_VARIABLE_SUGGESTIONS,
-  ];
+    });
+
+    const seen = new Set<string>();
+    return [...rootSuggestions, ...customSuggestions, ...DYNAMIC_VARIABLE_SUGGESTIONS].filter(item => {
+      if (seen.has(item.value)) return false;
+      seen.add(item.value);
+      return true;
+    });
+  }, [variables]);
   const filtered = openToken && !dismissed
     ? candidates.filter((item, index, all) => all.findIndex(other => other.value === item.value) === index && item.value.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
     : [];
