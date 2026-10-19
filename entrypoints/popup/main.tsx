@@ -200,9 +200,14 @@ function Popup() {
   }
 
   async function refreshLogs() {
-    const data = await browser.storage.local.get('chatAutomationLogs');
-    const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
-    setLogs((entries as LogEntry[]).slice(-30).reverse());
+    try {
+      const data = await browser.storage.local.get('chatAutomationLogs');
+      const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
+      setLogs((entries as LogEntry[]).slice(-30).reverse());
+    } catch (error) {
+      console.error('[Chat Automation] Lecture des journaux échouée.', error);
+      setStatus(locale === 'fr' ? 'Impossible de lire les journaux enregistrés.' : 'Could not read saved logs.');
+    }
   }
 
   async function refreshHistory() {
@@ -253,11 +258,16 @@ function Popup() {
     void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => {
       const saved = data[LOCALE_STORAGE_KEY];
       if (saved === 'fr' || saved === 'en') setLocale(saved);
+    }).catch(error => {
+      console.error('[Chat Automation] Lecture de la langue échouée.', error);
     });
     void refreshLogs();
     void browser.storage.local.get(VARIABLES_STORAGE_KEY).then(data => {
       const saved = data[VARIABLES_STORAGE_KEY];
       setVariables(filterValidVariableDefinitions(saved));
+    }).catch(error => {
+      console.error('[Chat Automation] Lecture des variables échouée.', error);
+      setVariableError(locale === 'fr' ? 'Impossible de lire les variables enregistrées.' : 'Could not read saved variables.');
     });
     void browser.storage.local.get('chatAutomationSettings').then(({ chatAutomationSettings }) => {
       const saved = sanitizeSavedAutomationSettings(chatAutomationSettings);
@@ -294,8 +304,13 @@ function Popup() {
   useEffect(() => {
     let mounted = true;
     const refreshRuntimeStatus = async () => {
-      const data = await browser.storage.local.get('chatAutomationRuntimeStatus');
-      if (mounted) setRuntimeStatus((data.chatAutomationRuntimeStatus as RuntimeStatus | undefined) ?? null);
+      try {
+        const data = await browser.storage.local.get('chatAutomationRuntimeStatus');
+        if (mounted) setRuntimeStatus((data.chatAutomationRuntimeStatus as RuntimeStatus | undefined) ?? null);
+      } catch (error) {
+        console.error('[Chat Automation] Lecture de l’état d’exécution échouée.', error);
+        if (mounted) setStatus(locale === 'fr' ? 'Impossible de lire l’état de l’automatisation.' : 'Could not read automation status.');
+      }
     };
     void refreshRuntimeStatus();
     const timer = window.setInterval(() => {
