@@ -284,7 +284,7 @@ function Popup() {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <MantineProvider defaultColorScheme="auto" theme={{ primaryColor: 'dark', fontFamily: 'Inter, system-ui, sans-serif' }}>
+  <MantineProvider defaultColorScheme="auto" theme={{ primaryColor: 'blue', fontFamily: 'Inter, system-ui, sans-serif', defaultRadius: 'md' }}>
     <Popup />
   </MantineProvider>,
 );
