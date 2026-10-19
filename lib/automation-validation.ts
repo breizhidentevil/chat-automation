@@ -13,6 +13,7 @@ const MIN_INTERVAL_MS = 1_000;
 const MAX_INTERVAL_MS = 31 * 24 * 60 * 60 * 1_000;
 const MAX_MESSAGES = 100;
 const MAX_MESSAGE_LENGTH = 100_000;
+export const MAX_TOTAL_MESSAGE_LENGTH = 1_000_000;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export function isValidAutomationStartMessage(value: unknown): value is AutomationStartMessage {
@@ -24,7 +25,8 @@ export function isValidAutomationStartMessage(value: unknown): value is Automati
       message.messages.length > MAX_MESSAGES ||
       !message.messages.every((item: unknown) =>
         typeof item === 'string' && item.trim().length > 0 && item.length <= MAX_MESSAGE_LENGTH
-      )) return false;
+      ) ||
+      message.messages.reduce((total, item) => total + (typeof item === 'string' ? item.length : 0), 0) > MAX_TOTAL_MESSAGE_LENGTH) return false;
 
   if (typeof message.intervalMs !== 'number' ||
       !Number.isSafeInteger(message.intervalMs) ||
