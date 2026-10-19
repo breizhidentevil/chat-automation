@@ -45,7 +45,7 @@ jobs:
       - name: Install Chromium for browser integration tests
         run: npx playwright install --with-deps chromium
       - name: Run Chromium extension smoke test
-        run: npm run test:browser
+        run: RUN_BROWSER_INTEGRATION=1 npm run test:browser
       - name: Build Chrome package
         run: |
           npm run build:chrome
