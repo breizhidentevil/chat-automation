@@ -25,4 +25,12 @@ export default defineConfig({
       },
     } : {}),
   }),
+  hooks: {
+    // WXT may infer optional host access from runtime content-script registration.
+    // Override the generated manifest so access is granted at installation.
+    'build:manifestGenerated': (_wxt, manifest) => {
+      delete manifest.optional_host_permissions;
+      manifest.host_permissions = ['http://*/*', 'https://*/*'];
+    },
+  },
 });
