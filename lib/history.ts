@@ -53,6 +53,45 @@ export function deduplicateConversationMessages(messages: ConversationMessage[])
   return result;
 }
 
+const statusRank = (status: ConversationMessageStatus): number =>
+  status === 'complete' ? 2 : status === 'incomplete' ? 1 : 0;
+
+/** Merge updates without allowing a late streaming event to downgrade a final status. */
+export function mergeConversationMessage(previous: ConversationMessage, incoming: ConversationMessage): ConversationMessage {
+  const latest = incoming.lastUpdatedAt >= previous.lastUpdatedAt ? incoming : previous;
+  const status = statusRank(previous.status) >= statusRank(incoming.status) ? previous.status : incoming.status;
+  const completedAt = status === 'complete'
+    ? Math.max(previous.completedAt ?? 0, incoming.completedAt ?? 0) || latest.lastUpdatedAt
+    : undefined;
+  return {
+    ...previous,
+    ...latest,
+    id: previous.id,
+    firstSeenAt: Math.min(previous.firstSeenAt, incoming.firstSeenAt),
+    lastUpdatedAt: Math.max(previous.lastUpdatedAt, incoming.lastUpdatedAt),
+    status,
+    ...(completedAt !== undefined ? { completedAt } : {}),
+  };
+}
+
+/** Keep the newest entries under both count and approximate text-storage budgets. */
+export function limitConversationHistory(
+  messages: ConversationMessage[],
+  maxMessages = 2000,
+  maxTextBudget = 1_500_000,
+): ConversationMessage[] {
+  const newestFirst: ConversationMessage[] = [];
+  let budget = 0;
+  for (let i = messages.length - 1; i >= 0 && newestFirst.length < maxMessages; i--) {
+    const item = messages[i]!;
+    const cost = item.content.length + 400;
+    if (newestFirst.length > 0 && budget + cost > maxTextBudget) break;
+    newestFirst.push(item);
+    budget += cost;
+  }
+  return newestFirst.reverse();
+}
+
 export function historyStorageKey(_origin: string): string {
   return HISTORY_STORAGE_KEY;
 }
@@ -84,11 +123,11 @@ export async function upsertConversationMessage(message: ConversationMessage): P
     const index = current.findIndex(item => item.id === message.id && item.origin === message.origin);
     if (index >= 0) {
       const previous = current[index]!;
-      current[index] = { ...previous, ...message, firstSeenAt: previous.firstSeenAt };
+      current[index] = mergeConversationMessage(previous, message);
     } else {
       current.push(message);
     }
-    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: deduplicateConversationMessages(current).slice(-2000) });
+    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: limitConversationHistory(deduplicateConversationMessages(current)) });
   } catch (error) {
     console.error('[Chat Automation] Échec de la sauvegarde directe de l’historique.', error);
   }
@@ -122,25 +161,13 @@ export function backgroundUpsertConversationMessage(message: ConversationMessage
     const index = current.findIndex(item => item.id === message.id && item.origin === message.origin);
     if (index >= 0) {
       const old = current[index]!;
-      const merged: ConversationMessage = { ...old, ...message, firstSeenAt: old.firstSeenAt };
-      if (message.status === 'complete') merged.completedAt = message.completedAt ?? old.completedAt ?? Date.now();
-      else delete merged.completedAt;
-      current[index] = merged;
+      current[index] = mergeConversationMessage(old, message);
     } else {
       current.push({ ...message, ...(message.status === 'complete' ? { completedAt: message.completedAt ?? Date.now() } : {}) });
     }
 
-    // One global text budget keeps the extension's shared storage below common quotas.
-    const newestFirst: ConversationMessage[] = [];
-    let budget = 0;
-    for (let i = current.length - 1; i >= 0 && newestFirst.length < 2000; i--) {
-      const item = current[i]!;
-      const cost = item.content.length + 400;
-      if (newestFirst.length > 0 && budget + cost > 1_500_000) break;
-      newestFirst.push(item);
-      budget += cost;
-    }
-    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: deduplicateConversationMessages(newestFirst.reverse()) });
+    // Bound the shared history by both entry count and approximate text size.
+    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: limitConversationHistory(deduplicateConversationMessages(current)) });
   });
   backgroundWriteQueue = operation.catch(error => {
     console.error('[Chat Automation] Échec de persistance de l’historique', error);
