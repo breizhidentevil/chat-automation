@@ -26,10 +26,6 @@ interface SimulatorPageProps {
   simulationResult: SimulationResult | null;
 }
 
-function intervalAmountLabel(value: string, unit: 'seconds' | 'minutes', locale: Locale): string {
-  return `${value} ${unit === 'seconds' ? (locale === 'fr' ? 'seconde(s)' : 'second(s)') : (locale === 'fr' ? 'minute(s)' : 'minute(s)')}`;
-}
-
 function formatSimulationDuration(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -40,8 +36,7 @@ function formatSimulationDuration(ms: number): string {
 
 export default function SimulatorPage({
   t, locale, automationMessages, simulationStartAt, setSimulationStartAt,
-  simulationCycles, setSimulationCycles, interval, unit, timeWindowEnabled,
-  startTime, endTime, simulationContext, setSimulationContext, runSimulation,
+  simulationCycles, setSimulationCycles, simulationContext, setSimulationContext, runSimulation,
   simulationError, simulationResult,
 }: SimulatorPageProps) {
   return <>
