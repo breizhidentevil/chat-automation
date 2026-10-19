@@ -159,3 +159,93 @@ label { color: var(--ca-text); font-size: 11px; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* Final polish: theme every interactive state, including menus and status surfaces. */
+:root[data-mantine-color-scheme="dark"] .mantine-Select-dropdown,
+:root[data-mantine-color-scheme="dark"] .mantine-Popover-dropdown,
+:root[data-mantine-color-scheme="dark"] .mantine-Combobox-dropdown {
+  background: var(--ca-surface-raised);
+  border-color: var(--ca-border);
+  color: var(--ca-text);
+}
+.mantine-Select-option, .mantine-Combobox-option {
+  color: var(--ca-text);
+  border-radius: 7px;
+}
+.mantine-Select-option[data-combobox-selected],
+.mantine-Combobox-option[data-combobox-selected] {
+  background: var(--ca-accent-soft);
+  color: var(--ca-accent);
+}
+.mantine-Select-option[data-combobox-disabled],
+.mantine-Combobox-option[data-combobox-disabled] { color: var(--ca-muted); }
+.mantine-Input-label, .mantine-Textarea-label, .mantine-Select-label,
+.mantine-NumberInput-label, .mantine-Switch-label { color: var(--ca-text); }
+.mantine-Input-description, .mantine-Textarea-description, .mantine-Select-description,
+.mantine-NumberInput-description, .mantine-Switch-description { color: var(--ca-muted); }
+.mantine-Input-error, .mantine-Textarea-error, .mantine-Select-error,
+.mantine-NumberInput-error { color: #e5484d; }
+.mantine-Input-input::placeholder, .mantine-Textarea-input::placeholder { color: var(--ca-muted); opacity: .8; }
+.mantine-Button-root[data-variant="default"] {
+  background: var(--ca-surface-raised);
+  border-color: var(--ca-border);
+  color: var(--ca-text);
+}
+.mantine-Button-root[data-variant="light"] {
+  background: var(--ca-accent-soft);
+  color: var(--ca-accent);
+}
+.mantine-Alert-root {
+  background: var(--ca-surface-muted);
+  border-color: var(--ca-border);
+  color: var(--ca-text);
+}
+.mantine-Alert-title, .mantine-Alert-message { color: inherit; }
+.mantine-Paper-root, .mantine-Card-root {
+  color: var(--ca-text);
+  border-color: var(--ca-border);
+}
+.mantine-Badge-root { line-height: 1.35; }
+.mantine-Switch-track { border-color: var(--ca-border); }
+.mantine-Switch-input:checked + .mantine-Switch-track {
+  background: var(--ca-accent);
+  border-color: var(--ca-accent);
+}
+.mantine-Tabs-tab { color: var(--ca-muted); }
+.mantine-Tabs-tab[data-active] { color: var(--ca-accent); }
+.mantine-Tabs-list::before { border-color: var(--ca-border); }
+.logs .mantine-Paper-root { border-bottom-color: var(--ca-border); }
+.logs .mantine-Paper-root > span, .history-message-head span,
+.history-message-head em, .simulation-entry-head time,
+.simulation-template span, .simulation-rendered span,
+.simulation-entry > small, .variable-card-head span { color: var(--ca-muted); }
+.variable-error, .simulation-error {
+  color: #dc2626;
+  background: color-mix(in srgb, #ef4444 9%, var(--ca-surface));
+  border: 1px solid color-mix(in srgb, #ef4444 25%, var(--ca-border));
+}
+:root[data-mantine-color-scheme="dark"] .variable-error,
+:root[data-mantine-color-scheme="dark"] .simulation-error { color: #ff9a9e; }
+:root[data-mantine-color-scheme="dark"] .history-message.status-streaming {
+  background: color-mix(in srgb, #eab308 12%, var(--ca-surface));
+}
+:root[data-mantine-color-scheme="dark"] .history-message.status-incomplete,
+:root[data-mantine-color-scheme="dark"] .simulation-entry.failed {
+  background: color-mix(in srgb, #ef4444 11%, var(--ca-surface));
+}
+:root[data-mantine-color-scheme="dark"] .phase-ready,
+:root[data-mantine-color-scheme="dark"] .phase-sending { background: #123c2a; color: #8ce0ac; }
+:root[data-mantine-color-scheme="dark"] .phase-waiting-interval,
+:root[data-mantine-color-scheme="dark"] .phase-waiting-window,
+:root[data-mantine-color-scheme="dark"] .phase-waiting-llm { background: #473712; color: #f8d477; }
+:root[data-mantine-color-scheme="dark"] .phase-failed { background: #4b2026; color: #ff9a9e; }
+:root[data-mantine-color-scheme="dark"] .phase-finished { background: #17365e; color: #9fc5ff; }
+@media (max-width: 360px) {
+  .popup-shell { padding: 12px; }
+  .popup-header { gap: 7px; }
+  .popup-header .mark { width: 38px; height: 38px; flex-basis: 38px; }
+  .main-nav [role="tab"] { font-size: 9px; padding-inline: 1px; }
+  .cycle-grid { gap: 5px; }
+  .settings-section { padding: 10px; }
+}
