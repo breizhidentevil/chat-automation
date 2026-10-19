@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Badge, Button, MantineProvider, Select, Tabs, useMantineColorScheme } from '@mantine/core';
 import '@mantine/core/styles.css';
 import './style.css';
+import './theme.css';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
