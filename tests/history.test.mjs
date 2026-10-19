@@ -226,6 +226,43 @@ test('background site-history deletion preserves other origins', async () => {
   }
 });
 
+test('background upsert rejects stale writes after site history is cleared', async () => {
+  const previousBrowser = globalThis.browser;
+  const state = {
+    chatAutomationHistoryV1: [message({ id: 'old', firstSeenAt: 1000, lastUpdatedAt: 1000 })],
+  };
+  globalThis.browser = {
+    storage: { local: {
+      get: async keys => {
+        const requested = Array.isArray(keys) ? keys : [keys];
+        return Object.fromEntries(requested.filter(key => key in state).map(key => [key, state[key]]));
+      },
+      set: async values => { Object.assign(state, values); },
+    } },
+  };
+  try {
+    await backgroundClearSiteHistory('https://example.com');
+    await backgroundUpsertConversationMessage(message({
+      id: 'stale',
+      firstSeenAt: 1000,
+      lastUpdatedAt: 1000,
+      content: 'captured before deletion',
+    }));
+    assert.deepEqual(state.chatAutomationHistoryV1, []);
+
+    await backgroundUpsertConversationMessage(message({
+      id: 'fresh',
+      firstSeenAt: Date.now() + 1000,
+      lastUpdatedAt: Date.now() + 1000,
+      content: 'new message after deletion',
+    }));
+    assert.deepEqual(state.chatAutomationHistoryV1.map(item => item.id), ['fresh']);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
 test('background reconciliation ignores malformed persisted records', async () => {
   const previousBrowser = globalThis.browser;
   let written;
