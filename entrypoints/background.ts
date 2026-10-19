@@ -37,6 +37,39 @@ export default defineBackground(() => {
 
   browser.runtime.onMessage.addListener((message: unknown, sender) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
+
+    // Destructive storage actions are accepted only from this extension's own UI.
+    if (sender.id === browser.runtime.id && message.type === 'CHAT_HISTORY_CLEAR_SITE' && 'origin' in message && typeof message.origin === 'string') {
+      let origin: string;
+      try {
+        const parsed = new URL(message.origin);
+        if (!['http:', 'https:'].includes(parsed.protocol) || parsed.origin !== message.origin) return { ok: false };
+        origin = parsed.origin;
+      } catch {
+        return { ok: false };
+      }
+      const operation = backgroundWriteQueue.then(async () => {
+        const stored = await browser.storage.local.get('chatAutomationHistoryV1');
+        const current = Array.isArray(stored.chatAutomationHistoryV1)
+          ? stored.chatAutomationHistoryV1.filter(isValidConversationMessage)
+          : [];
+        await browser.storage.local.set({
+          chatAutomationHistoryV1: current.filter(item => item.origin !== origin),
+        });
+      });
+      backgroundWriteQueue = operation.catch(error => {
+        console.error('[Chat Automation] Effacement de l’historique impossible.', error);
+      });
+      return operation.then(() => ({ ok: true })).catch(() => ({ ok: false }));
+    }
+
+    if (sender.id === browser.runtime.id && message.type === 'CHAT_LOGS_CLEAR') {
+      const operation = logWriteQueue.then(() => browser.storage.local.remove(LOG_KEY));
+      logWriteQueue = operation.catch(error => {
+        console.error('[Chat Automation] Effacement des journaux impossible.', error);
+      });
+      return operation.then(() => ({ ok: true })).catch(() => ({ ok: false }));
+    }
     if (message.type === 'CHAT_AUTOMATION_LOG_EVENT' && 'entry' in message) {
       if (!isValidDiagnosticEvent(message.entry)) return { ok: false };
       if (!isSenderOriginAllowed(sender.tab?.url, message.entry.site)) return { ok: false };
