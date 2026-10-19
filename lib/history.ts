@@ -20,6 +20,17 @@ export interface ConversationMessage {
 export const HISTORY_STORAGE_KEY = 'chatAutomationHistoryV1';
 const HISTORY_CLEAR_MARKERS_KEY = 'chatAutomationHistoryClearedAtV1';
 const MAX_HISTORY_CLEAR_MARKERS = 500;
+const MAX_MESSAGE_CONTENT_LENGTH = 100_000;
+
+/** Bound individual DOM records before messaging or persistence. */
+function boundConversationMessage(message: ConversationMessage): ConversationMessage {
+  if (message.content.length <= MAX_MESSAGE_CONTENT_LENGTH) return message;
+  return {
+    ...message,
+    content: message.content.slice(0, MAX_MESSAGE_CONTENT_LENGTH),
+    contentTruncated: true,
+  };
+}
 
 function readHistoryClearMarkers(value: unknown): Record<string, number> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
@@ -133,8 +144,9 @@ export async function readConversationHistory(origin: string): Promise<Conversat
  * are serialized instead of racing to overwrite a shared storage snapshot.
  */
 export async function upsertConversationMessage(message: ConversationMessage): Promise<void> {
+  const boundedMessage = boundConversationMessage(message);
   try {
-    const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_UPSERT', message });
+    const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_UPSERT', message: boundedMessage });
     if (response?.ok !== true) {
       console.warn('[Chat Automation] Le contexte background a refusé ou n’a pas confirmé l’écriture de l’historique.');
     }
@@ -160,23 +172,24 @@ export async function markInterruptedMessagesIncomplete(origin: string): Promise
 let backgroundWriteQueue: Promise<void> = Promise.resolve();
 
 export function backgroundUpsertConversationMessage(message: ConversationMessage): Promise<void> {
+  const boundedMessage = boundConversationMessage(message);
   const operation = backgroundWriteQueue.then(async () => {
     const stored = await browser.storage.local.get([HISTORY_STORAGE_KEY, HISTORY_CLEAR_MARKERS_KEY]);
     const clearMarkers = readHistoryClearMarkers(stored[HISTORY_CLEAR_MARKERS_KEY]);
     // Reject writes captured before the latest clear, including writes from tabs
     // that missed the best-effort notification.
-    if (message.firstSeenAt <= (clearMarkers[message.origin] ?? -1)) return;
+    if (boundedMessage.firstSeenAt <= (clearMarkers[boundedMessage.origin] ?? -1)) return;
     const current = deduplicateConversationMessages(
       Array.isArray(stored[HISTORY_STORAGE_KEY])
         ? stored[HISTORY_STORAGE_KEY].filter(isValidConversationMessage)
         : [],
     );
-    const index = current.findIndex(item => item.id === message.id && item.origin === message.origin);
+    const index = current.findIndex(item => item.id === boundedMessage.id && item.origin === boundedMessage.origin);
     if (index >= 0) {
       const old = current[index]!;
-      current[index] = mergeConversationMessage(old, message);
+      current[index] = mergeConversationMessage(old, boundedMessage);
     } else {
-      current.push({ ...message, ...(message.status === 'complete' ? { completedAt: message.completedAt ?? Date.now() } : {}) });
+      current.push({ ...boundedMessage, ...(boundedMessage.status === 'complete' ? { completedAt: boundedMessage.completedAt ?? Date.now() } : {}) });
     }
 
     // Bound the shared history by both entry count and approximate text size.
