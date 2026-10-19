@@ -249,3 +249,21 @@ nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .simulation-rendered code { padding: 7px; border-radius: 6px; background: #f5f7fa; }
 .simulation-entry-error { color: #a50e0e; font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
 .simulation-entry > small { display: block; margin-top: 7px; color: #62676e; font-size: 9px; overflow-wrap: anywhere; }
+
+
+/* Mantine v8: compact tabs sized for the browser popup. */
+.popup-tabs { flex: 0 0 auto; margin-bottom: 16px; }
+.main-nav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+.main-nav [role="tab"] {
+  min-width: 0;
+  padding: 8px 3px;
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: normal;
+}
+.automation-actions .mantine-Button-root { min-height: 35px; }
+.site-access-control .mantine-Button-root { min-height: 30px; }
