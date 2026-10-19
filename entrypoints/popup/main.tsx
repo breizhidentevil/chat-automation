@@ -193,7 +193,7 @@ function Popup() {
       setStartTime={setStartTime}
       endTime={endTime}
       setEndTime={setEndTime}
-    />: page === 'simulator' ? <SimulatorPage t={t} locale={locale} variables={variables} > : page === 'variables' ? <VariablesPage
+    />: page === 'simulator' ? <SimulatorPage t={t} locale={locale} variables={variables} /> : page === 'variables' ? <VariablesPage
       t={t}
       locale={locale}
       editingVariableId={editingVariableId}
