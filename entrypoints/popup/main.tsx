@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Badge, Button, MantineProvider, Select, Tabs } from '@mantine/core';
+import { Badge, Button, MantineProvider, Select, Tabs, useMantineColorScheme } from '@mantine/core';
 import '@mantine/core/styles.css';
 import './style.css';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
@@ -21,13 +21,48 @@ import { useSimulation } from './hooks/useSimulation';
 import { useAutomationController } from './hooks/useAutomationController';
 
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
+type ColorSchemePreference = 'auto' | 'light' | 'dark';
+const COLOR_SCHEME_STORAGE_KEY = 'chatAutomationColorScheme';
+
+function isColorSchemePreference(value: unknown): value is ColorSchemePreference {
+  return value === 'auto' || value === 'light' || value === 'dark';
+}
 
 
 
 function Popup() {
+  const { setColorScheme, clearColorScheme } = useMantineColorScheme();
+  const [colorSchemePreference, setColorSchemePreference] = useState<ColorSchemePreference>('auto');
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
   const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
+
+  useEffect(() => {
+    let active = true;
+    void browser.storage.local.get(COLOR_SCHEME_STORAGE_KEY).then(stored => {
+      if (!active) return;
+      const saved = stored[COLOR_SCHEME_STORAGE_KEY];
+      const preference = isColorSchemePreference(saved) ? saved : 'auto';
+      setColorSchemePreference(preference);
+      if (preference === 'auto') clearColorScheme();
+      else setColorScheme(preference);
+    }).catch(() => {
+      if (active) clearColorScheme();
+    });
+    return () => { active = false; };
+  }, [clearColorScheme, setColorScheme]);
+
+  async function changeColorScheme(value: string | null) {
+    if (!isColorSchemePreference(value)) return;
+    setColorSchemePreference(value);
+    if (value === 'auto') clearColorScheme();
+    else setColorScheme(value);
+    try {
+      await browser.storage.local.set({ [COLOR_SCHEME_STORAGE_KEY]: value });
+    } catch {
+      setStatus(t('themeSaveError'));
+    }
+  }
 
 
   const [page, setPage] = useState<Page>('automation');
@@ -119,7 +154,7 @@ function Popup() {
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''} ${page === 'simulator' ? 'simulator-view' : ''}`}>
-    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><Select className="locale-picker" aria-label={t('language')} value={locale} onChange={value => { if (value === 'fr' || value === 'en') { setLocale(value); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: value }); } }} data={[{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }]} size="xs" /> <Button type="button" className="help-button" variant="default" size="compact-md" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</Button></header>
+    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><Select className="locale-picker" aria-label={t('language')} value={locale} onChange={value => { if (value === 'fr' || value === 'en') { setLocale(value); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: value }); } }} data={[{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }]} size="xs" /> <Select className="theme-picker" aria-label={t('appearance')} value={colorSchemePreference} onChange={value => void changeColorScheme(value)} data={[{ value: 'auto', label: t('themeAuto') }, { value: 'light', label: t('themeLight') }, { value: 'dark', label: t('themeDark') }]} size="xs" /> <Button type="button" className="help-button" variant="default" size="compact-md" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</Button></header>
     <Tabs value={page} onChange={value => { if (value) setPage(value as Page); }} className="popup-tabs">
       <Tabs.List className="main-nav" aria-label={t('mainNavigation')}>
         <Tabs.Tab value="automation">{t('automation')}</Tabs.Tab>
@@ -248,7 +283,7 @@ function Popup() {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <MantineProvider theme={{ primaryColor: 'dark', fontFamily: 'Inter, system-ui, sans-serif' }}>
+  <MantineProvider defaultColorScheme="auto" theme={{ primaryColor: 'dark', fontFamily: 'Inter, system-ui, sans-serif' }}>
     <Popup />
   </MantineProvider>,
 );
