@@ -3,7 +3,7 @@ import { logEvent } from '../../lib/logger';
 import { getProcedure, saveProcedure } from '../../lib/procedures';
 import type { Candidate, ChatSiteProcedure } from '../../lib/contracts';
 import { markInterruptedMessagesIncomplete, readConversationHistory, upsertConversationMessage, type ConversationMessage, type ConversationRole } from '../../lib/history';
-import { resolveMessageTemplate, type VariableDefinition } from '../../lib/variables';
+import { filterValidVariableDefinitions, resolveMessageTemplate, type VariableDefinition } from '../../lib/variables';
 import type { DiagnosticEvent } from '../../lib/contracts';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 
@@ -28,7 +28,7 @@ export default defineContentScript({
         }
         const procedure = await getProcedure(location.origin);
         if (!procedure) return { message: 'Aucune stratégie validée n’est enregistrée pour ce site. Allez dans Détection et validez une stratégie avant de démarrer.' };
-        const variables = 'variables' in message && Array.isArray(message.variables) ? message.variables as VariableDefinition[] : [];
+        const variables = filterValidVariableDefinitions('variables' in message ? message.variables : []);
         startAutomation({ messages: (message.messages as string[]).map(item => item.trim()), variables, intervalMs: message.intervalMs, repeatMode: message.repeatMode as 'infinite' | 'finite', repeatCount: message.repeatCount, timeWindowEnabled: message.timeWindowEnabled, startTime: message.startTime, endTime: message.endTime });
         return { message: `Automatisation démarrée avec ${message.messages.length} message(s) par séquence et la stratégie enregistrée « ${procedure.sendStrategy.method} ». Gardez la page ouverte.` };
       }
