@@ -7,12 +7,12 @@ function stripYamlComment(value: string): string {
   for (let index = 0; index < value.length; index += 1) {
     const character = value[index]!;
     if (quote === '"') {
-      if (character === '\\\\') { index += 1; continue; }
+      if (character === '\\') { index += 1; continue; }
       if (character === '"') quote = null;
       continue;
     }
     if (quote === "'") {
-      if (character === "'" && value[index + 1] === "'") { index += 1; continue; }
+      if (character === '\\') { index += 1; continue; }
       if (character === "'") quote = null;
       continue;
     }
