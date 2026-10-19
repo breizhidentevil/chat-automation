@@ -69,7 +69,7 @@ jobs:
       - name: Install Chromium for browser integration tests
         run: npx playwright install --with-deps chromium
       - name: Run Chromium extension smoke test
-        run: RUN_BROWSER_INTEGRATION=1 npm run test:browser
+        run: xvfb-run -a env RUN_BROWSER_INTEGRATION=1 npm run test:browser
       - name: Build Firefox package (Manifest V3)
         run: |
           npm run build:firefox
