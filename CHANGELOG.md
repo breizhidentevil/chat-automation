@@ -76,11 +76,13 @@
 - Validation status: workflow file updated; a successful GitHub Actions run has not yet been confirmed.
 
 
-## V5 — French/English localization (in progress)
+## V5 — French/English localization
 
 - Added a centralized French/English translation catalog with matching key sets.
 - Added a popup language selector; the chosen language is persisted in extension local storage and shared with the integrated documentation.
 - The initial language follows the browser locale (English for English browser locales, French otherwise) unless a saved preference exists.
 - Localized the primary automation controls, variable editor and autocomplete labels, history and logs views, runtime phase labels, and most help/error text in the popup.
 - Added an English version of the integrated documentation with a language selector; the French guide remains available.
-- Some messages returned by page scripts and a few remaining interface strings may still be French. Validation status: source files were reviewed for translation-key parity, but TypeScript typecheck and browser builds have not been run. Network access to the repository was unavailable for a local build.
+- Centralized the popup's storage, export, site-access, test, validation, and runtime-status messages in the French/English catalog. The catalog now has regression checks for key parity and the per-message history truncation limit.
+- The built-in French and English guides now document the 100,000-character per-message history limit. The guides remain parallel in structure, but are not yet generated from a shared source.
+- Some messages returned dynamically by page scripts or websites can still use the source site's language. The repository's CI workflow remains the authoritative source for typecheck and browser-build status.

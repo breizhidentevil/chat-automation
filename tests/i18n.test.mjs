@@ -26,3 +26,30 @@ test('translate returns the requested locale value and falls back to French', ()
   assert.equal(translate('en', 'startAutomation'), 'Start automation');
   assert.equal(translate('fr', 'startAutomation'), 'Démarrer l’automatisation');
 });
+
+test('history truncation message matches the per-message storage limit', () => {
+  assert.match(messages.fr.truncated, /100 000/);
+  assert.match(messages.en.truncated, /100,000/);
+  assert.doesNotMatch(messages.fr.truncated, /20 000/);
+  assert.doesNotMatch(messages.en.truncated, /20,000/);
+});
+
+test('newly centralized popup messages are present in both locales', () => {
+  const keys = [
+    'logsReadError', 'historyExportStarted', 'historyExportError',
+    'variablesReadError', 'settingsReadError', 'automationStatusReadError',
+    'settingsSaveError', 'variablesSaveError', 'siteAccessDenied',
+    'siteAccessEnabled', 'siteAccessEnabledScriptLoaded', 'siteAccessError',
+    'testMessageRequired', 'testConfirm', 'testRunning', 'testInconclusive',
+    'pageScriptUnavailable', 'sequenceTooLong', 'unknownVariables',
+    'invalidVariableSyntax', 'invalidSettings', 'pageScriptUnreachable',
+    'waiting', 'phaseReady', 'phaseCountdown', 'phaseWaitingWindow',
+    'phaseSending', 'phaseFinished', 'phaseFailed', 'phaseStopped',
+    'logsExportStarted', 'logsExportError', 'mainNavigation', 'siteAccess',
+    'enableOnSite',
+  ];
+  for (const key of keys) {
+    assert.equal(typeof messages.fr[key], 'string', `Missing French translation: ${key}`);
+    assert.equal(typeof messages.en[key], 'string', `Missing English translation: ${key}`);
+  }
+});
