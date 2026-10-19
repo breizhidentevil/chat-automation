@@ -2,6 +2,7 @@ import type { DiagnosticEvent } from '../lib/contracts';
 import {
   backgroundMarkInterruptedMessagesIncomplete,
   backgroundUpsertConversationMessage,
+  backgroundClearSiteHistory,
 } from '../lib/history';
 import { isValidConversationMessage } from '../lib/history-validation';
 import { isValidDiagnosticEvent, limitDiagnosticEvents } from '../lib/diagnostic-validation';
@@ -48,19 +49,10 @@ export default defineBackground(() => {
       } catch {
         return { ok: false };
       }
-      const operation = backgroundWriteQueue.then(async () => {
-        const stored = await browser.storage.local.get('chatAutomationHistoryV1');
-        const current = Array.isArray(stored.chatAutomationHistoryV1)
-          ? stored.chatAutomationHistoryV1.filter(isValidConversationMessage)
-          : [];
-        await browser.storage.local.set({
-          chatAutomationHistoryV1: current.filter(item => item.origin !== origin),
-        });
-      });
-      backgroundWriteQueue = operation.catch(error => {
+      return backgroundClearSiteHistory(origin).then(() => ({ ok: true })).catch(error => {
         console.error('[Chat Automation] Effacement de l’historique impossible.', error);
+        return { ok: false };
       });
-      return operation.then(() => ({ ok: true })).catch(() => ({ ok: false }));
     }
 
     if (sender.id === browser.runtime.id && message.type === 'CHAT_LOGS_CLEAR') {
