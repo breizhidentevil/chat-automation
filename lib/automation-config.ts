@@ -81,8 +81,15 @@ export function validateAutomationConfig(draft: AutomationConfigDraft): Automati
     const message = config.messages[index]!;
     const unknown = validateTemplateVariables(message, config.variables, 'automation');
     if (unknown.length > 0) return { ok: false, code: 'unknownVariables', messageIndex: index + 1, names: unknown };
-    const residual = message.replace(/{{\s*[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*\s*}}/g, '');
-    if (residual.includes('{{') || residual.includes('}}')) {
+
+    // LiquidJS expressions may contain filters and other valid syntax. Only reject
+    // structurally broken output delimiters here; the shared resolver handles parsing.
+    const openingCount = message.match(/{{/g)?.length ?? 0;
+    const closingCount = message.match(/}}/g)?.length ?? 0;
+    if (
+      openingCount !== closingCount ||
+      /{{\s*}}/.test(message)
+    ) {
       return { ok: false, code: 'invalidVariableSyntax', messageIndex: index + 1 };
     }
   }
