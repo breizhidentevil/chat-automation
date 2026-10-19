@@ -89,11 +89,11 @@ export function sanitizeSavedAutomationSettings(value: unknown): SavedAutomation
   const unit: 'seconds' | 'minutes' = value.unit === 'minutes' ? 'minutes' : 'seconds';
   const maxInterval = unit === 'minutes' ? 44_640 : 2_678_400;
   const rawInterval = typeof value.interval === 'string' || typeof value.interval === 'number' ? String(value.interval) : '30';
-  const parsedInterval = /^\\d+$/.test(rawInterval) ? Number(rawInterval) : 30;
+  const parsedInterval = /^\d+$/.test(rawInterval) ? Number(rawInterval) : 30;
   const interval = String(Number.isSafeInteger(parsedInterval) && parsedInterval >= 1 && parsedInterval <= maxInterval ? parsedInterval : 30);
 
   const savedCount = typeof value.repeatCount === 'number' || typeof value.repeatCount === 'string' ? String(value.repeatCount) : '0';
-  const countValid = /^\\d+$/.test(savedCount) && Number.isSafeInteger(Number(savedCount)) && Number(savedCount) >= 0;
+  const countValid = /^\d+$/.test(savedCount) && Number.isSafeInteger(Number(savedCount)) && Number(savedCount) >= 0;
   const repeatCount = countValid ? savedCount : '0';
   const repeatMode: 'infinite' | 'finite' = value.repeatMode === 'infinite' || Number(repeatCount) === 0 ? 'infinite' : 'finite';
 
