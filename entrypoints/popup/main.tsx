@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import { deduplicateConversationMessages, historyStorageKey, type ConversationMessage } from '../../lib/history';
+import { isValidConversationMessage } from '../../lib/history-validation';
+import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { validateTemplateVariables, VARIABLE_NAME_PATTERN, VARIABLES_STORAGE_KEY, type VariableDefinition, type VariableScope } from '../../lib/variables';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
-type LogEntry = { timestamp: number; level: string; site: string; event: string; details?: string };
+type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs';
 type SavedSettings = { message?: string; messages?: string[]; interval?: string; unit?: 'seconds' | 'minutes'; repeatMode?: 'infinite' | 'finite'; repeatCount?: string | number; timeWindowEnabled?: boolean; startTime?: string; endTime?: string };
 type RuntimeStatus = { phase: 'stopped' | 'ready' | 'waiting-interval' | 'waiting-window' | 'waiting-llm' | 'sending' | 'finished' | 'failed'; note: string; messageIndex: number; messagesCount: number; completedSequences: number; repeatMode: 'infinite' | 'finite'; repeatCount: number; nextSendAt: number | null; updatedAt: number };
@@ -195,7 +197,8 @@ function Popup() {
 
   async function refreshLogs() {
     const data = await browser.storage.local.get('chatAutomationLogs');
-    setLogs((data.chatAutomationLogs as LogEntry[] | undefined ?? []).slice(-30).reverse());
+    const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
+    setLogs((entries as LogEntry[]).slice(-30).reverse());
   }
 
   async function refreshHistory() {
@@ -209,8 +212,8 @@ function Popup() {
       setHistoryConversationId(conversationId);
       const key = historyStorageKey(origin);
       const data = await browser.storage.local.get(key);
-      const items = Array.isArray(data[key]) ? data[key] as ConversationMessage[] : [];
-      const siteItems = deduplicateConversationMessages(items.filter(item => item.origin === origin));
+      const items = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) : [];
+      const siteItems = deduplicateConversationMessages((items as ConversationMessage[]).filter(item => item.origin === origin));
       const exactConversation = siteItems.filter(item => item.conversationId === conversationId);
       // Les applications SPA peuvent modifier l’URL (paramètres, hash ou route interne)
       // après la capture. Si aucune entrée ne correspond à l’URL actuelle, ne pas
@@ -437,7 +440,8 @@ function Popup() {
 
   async function exportLogs() {
     const data = await browser.storage.local.get('chatAutomationLogs');
-    const blob = new Blob([JSON.stringify(data.chatAutomationLogs ?? [], null, 2)], { type: 'application/json' });
+    const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'chat-automation-logs.json'; anchor.click(); URL.revokeObjectURL(url);
   }
