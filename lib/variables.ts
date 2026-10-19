@@ -74,7 +74,7 @@ function isDynamicPath(name: string): boolean {
 }
 
 export function validateTemplateVariables(template: string, variables: VariableDefinition[], scope: VariableScope = 'automation'): string[] {
-  const available = new Set(variables
+  const available = new Set(filterValidVariableDefinitions(variables)
     .filter(variable => variable.scope === 'global' || variable.scope === scope)
     .map(variable => variable.name));
   return findTemplateVariables(template).filter(name => !isDynamicPath(name) && !available.has(name));
@@ -118,7 +118,7 @@ export async function resolveMessageTemplate(
   scope: VariableScope = 'automation',
   dynamicData: Record<string, unknown> = {},
 ): Promise<VariableResolutionResult> {
-  const applicable = variables.filter(variable => variable.scope === 'global' || variable.scope === scope);
+  const applicable = filterValidVariableDefinitions(variables).filter(variable => variable.scope === 'global' || variable.scope === scope);
   const byName = new Map<string, VariableDefinition>();
   for (const variable of applicable.filter(item => item.scope === 'global')) byName.set(variable.name, variable);
   for (const variable of applicable.filter(item => item.scope === scope && item.scope !== 'global')) byName.set(variable.name, variable);
