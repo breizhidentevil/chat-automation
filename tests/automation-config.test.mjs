@@ -70,6 +70,16 @@ test('reports empty messages, unknown variables and malformed token syntax', () 
     assert.equal(unknown.messageIndex, 1);
   }
   assert.equal(validateAutomationConfig(draft({ messages: ['Bonjour {{'] })).code, 'invalidVariableSyntax');
+  assert.equal(validateAutomationConfig(draft({ messages: ['Bonjour {{}}'] })).code, 'invalidVariableSyntax');
+});
+
+test('accepts Liquid filters and control tags in message templates', () => {
+  const filtered = validateAutomationConfig(draft({ messages: ['Bonjour {{ prenom | capitalize }}'] }));
+  assert.equal(filtered.ok, true);
+  const conditional = validateAutomationConfig(draft({
+    messages: ['{% if prenom %}Bonjour {{ prenom }}{% else %}Bonjour{% endif %}'],
+  }));
+  assert.equal(conditional.ok, true);
 });
 
 test('rejects invalid interval, repeat count and identical enabled window', () => {
