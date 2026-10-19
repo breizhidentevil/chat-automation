@@ -19,6 +19,8 @@ import { loadVisibleHistory } from '../../services/history-service';
 import { loadRecentLogs } from '../../services/logs-service';
 import TemplateTextarea from './components/TemplateTextarea';
 import SimulatorPage from './pages/SimulatorPage';
+import HistoryPage from './pages/HistoryPage';
+import LogsPage from './pages/LogsPage';
 import { downloadJsonFile } from '../../services/file-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -662,24 +664,23 @@ function Popup() {
       <section className="variable-preview"><h3>{t('previewResolution')}</h3><p className="helper">{t('previewHelp')}</p><label htmlFor="variable-preview-input">{t('testTemplate')}</label><TemplateTextarea t={t} id="variable-preview-input" value={variablePreviewText} onChange={setVariablePreviewText} variables={variables} placeholder="Bonjour {{prenom}}" rows={2} />
         {variablePreviewError ? <p className="variable-error" role="alert">{variablePreviewError}</p> : variablePreviewResult ? <div className="preview-result"><strong>{t('result')}</strong><p>{variablePreviewResult.text || t('enterTemplate')}</p>{variablePreviewResult.unknownVariables.length > 0 ? <small>{t('missingVariables', { names: variablePreviewResult.unknownVariables.map(name => `{{${name}}}`).join(', ') })}</small> : null}</div> : null}
       </section>
-    </> : page === 'history' ? <>
-      <div className="page-heading"><h2>{t('conversationHistory')}</h2><p>{t('historyIntro')}</p></div>
-      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><div className="history-actions"><button className="secondary" onClick={() => void refreshHistory()}>{t('refresh')}</button><button className="secondary danger-action" disabled={!historyOrigin} onClick={() => void clearSiteHistory()}>{t('clearSiteHistory')}</button></div></div>
-      {historyError ? <p className="notice">{historyError}</p> : historyMessages.length === 0 ? <p className="empty history-empty">{t('noCapturedMessages')}</p> : <div className="history-list">{historyMessages.map(item => <article className={`history-message role-${item.role} status-${item.status}`} key={item.id}>
-        <div className="history-message-head"><strong>{item.role === 'user' ? t('you') : item.role === 'assistant' ? 'Assistant' : item.role === 'system' ? t('system') : t('unknownAuthor')}</strong><span>{new Date(item.firstSeenAt).toLocaleString()}</span><em>{item.status === 'streaming' ? t('inProgress') : item.status === 'incomplete' ? t('interrupted') : t('completed')}</em></div>
-        <p>{item.content}</p>{item.contentTruncated ? <small className="history-truncated">{t('truncated')}</small> : null}
-      </article>)}</div>}
-      <p className="notice">{t('historyNotice')}</p>
-    </> : null}
+    </> : page === 'history' ? <HistoryPage
+      t={t}
+      historyConversationId={historyConversationId}
+      historyOrigin={historyOrigin}
+      historyError={historyError}
+      historyMessages={historyMessages}
+      refreshHistory={() => void refreshHistory()}
+      clearSiteHistory={() => void clearSiteHistory()}
+    /> : null
 
-    {page === 'logs' ? <>
-      <div className="page-heading"><h2>{t('eventLog')}</h2><p>{t('logIntro')}</p></div>
-      <section className="logs-section logs-page-section">
-        <div className="section-head"><h2>{t('recentEvents')}</h2><div className="logs-actions"><button className="secondary" onClick={() => void refreshLogs()}>{t('refresh')}</button><button className="secondary danger-action" onClick={() => void clearLogs()}>{t('clearLogs')}</button></div></div>
-        <div className="logs">{logs.length === 0 ? <p className="empty">{t('noEvents')}</p> : logs.map((log, index) => <article key={`${log.timestamp}-${index}`}><strong>{log.level}</strong><span>{new Date(log.timestamp).toLocaleString()} · {log.site}</span><p>{log.event}{log.details ? ` — ${log.details}` : ''}</p></article>)}</div>
-      </section>
-      <p className="notice">{t('logNotice')}</p>
-    </> : null}
+    {page === 'logs' ? <LogsPage
+      t={t}
+      logs={logs}
+      refreshLogs={() => void refreshLogs()}
+      clearLogs={() => void clearLogs()}
+      exportLogs={() => void exportLogs()}
+    /> : null}
     </div>
     {page === 'history' ? <div className="history-dock">
       <button className="secondary export-history-button" disabled={historyMessages.length === 0} onClick={() => void exportHistory()}>{t('exportHistory')}</button>
