@@ -24,7 +24,7 @@ const context = {
 };
 
 const variable = (name, value, scope = 'automation') => ({
-  id: name,
+  id: `${scope}:${name}`,
   name,
   type: 'static',
   value,
