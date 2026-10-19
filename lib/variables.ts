@@ -30,6 +30,8 @@ export const VARIABLE_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
 
 const MAX_VARIABLE_ID_LENGTH = 256;
 export const MAX_VARIABLE_VALUE_LENGTH = 100_000;
+export const MAX_VARIABLE_DEFINITIONS = 100;
+export const MAX_TOTAL_VARIABLE_VALUE_LENGTH = 1_000_000;
 
 export function isValidVariableDefinition(value: unknown): value is VariableDefinition {
   if (!value || typeof value !== 'object') return false;
@@ -47,12 +49,16 @@ export function filterValidVariableDefinitions(value: unknown): VariableDefiniti
   const seenIds = new Set<string>();
   const seenNames = new Set<string>();
   const valid: VariableDefinition[] = [];
+  let totalValueLength = 0;
   for (const candidate of value) {
+    if (valid.length >= MAX_VARIABLE_DEFINITIONS) break;
     if (!isValidVariableDefinition(candidate)) continue;
     const nameKey = `${candidate.scope}:${candidate.name}`;
     if (seenIds.has(candidate.id) || seenNames.has(nameKey)) continue;
+    if (totalValueLength + candidate.value.length > MAX_TOTAL_VARIABLE_VALUE_LENGTH) continue;
     seenIds.add(candidate.id);
     seenNames.add(nameKey);
+    totalValueLength += candidate.value.length;
     valid.push(candidate);
   }
   return valid;
