@@ -55,6 +55,7 @@ body { width: 390px; }
   content: "Automatisez vos messages";
   display: block; margin-top: 3px; color: var(--ca-muted); font-size: 10px;
 }
+:root[lang="en"] .popup-header .brand-copy::after { content: "Automate your messages"; }
 .locale-picker { width: 86px; min-width: 78px; }
 .theme-picker { width: 78px; min-width: 72px; }
 .locale-picker .mantine-Select-input, .theme-picker .mantine-Select-input {
