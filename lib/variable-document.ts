@@ -55,7 +55,7 @@ export function parseVariableDocument(source: string): Record<string, string> {
   }
 
   const entries = Object.entries(values);
-  if (entries.length === 0) throw new Error('Définissez au moins une variable.');
+  if (entries.length === 0 && !(input.startsWith('{') && input.endsWith('}'))) throw new Error('Définissez au moins une variable.');
   if (entries.length > MAX_VARIABLE_DEFINITIONS) throw new Error(`Limite de ${MAX_VARIABLE_DEFINITIONS} variables dépassée.`);
 
   const result: Record<string, string> = {};
