@@ -44,6 +44,14 @@ test('allows local data deletion only from the extension UI and serializes histo
 });
 
 
+test('prevents cleared visible history from being immediately captured again', () => {
+  assert.match(requireBackgroundSource, /type: 'CHAT_HISTORY_CLEARED', origin/);
+  assert.match(contentScript, /message\.type === 'CHAT_HISTORY_CLEARED'/);
+  assert.match(contentScript, /historyClearedContent\.set\(candidate\.element, candidate\.content\)/);
+  assert.match(contentScript, /if \(content === contentAtClear\) continue/);
+  assert.match(contentScript, /historyClearedContent\.delete\(element\)/);
+});
+
 test('stops active page scripts and history capture when host permission is revoked', () => {
   assert.match(requireBackgroundSource, /browser\.tabs\.query\(\{ url: origins \}\)/);
   assert.match(requireBackgroundSource, /CHAT_AUTOMATION_PERMISSION_REVOKED/);
