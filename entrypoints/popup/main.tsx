@@ -161,6 +161,7 @@ function Popup() {
   const [automationMessages, setAutomationMessages] = useState<string[]>(['']);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [status, setStatus] = useState(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr') === 'fr' ? 'Prêt. Ouvrez une page contenant un chat.' : 'Ready. Open a page containing a chat.');
+  const [siteAccessStatus, setSiteAccessStatus] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
@@ -400,6 +401,53 @@ function Popup() {
     return tab;
   }
 
+  async function ensureSiteAccess(tab: Browser.tabs.Tab): Promise<boolean> {
+    if (!tab.id || !tab.url) return false;
+    const origin = new URL(tab.url).origin;
+    const pattern = origin + '/*';
+    const granted = await browser.permissions.contains({ origins: [pattern] })
+      || await browser.permissions.request({ origins: [pattern] });
+    if (!granted) {
+      setSiteAccessStatus(locale === 'fr' ? `Accès refusé pour ${origin}. Autorisez ce site pour utiliser l’extension.` : `Access denied for ${origin}. Grant this site permission to use the extension.`);
+      return false;
+    }
+
+    const id = 'chat-automation-' + origin.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const registered = await browser.scripting.getRegisteredContentScripts({ ids: [id] });
+    if (registered.length === 0) {
+      await browser.scripting.registerContentScripts([{
+        id,
+        matches: [pattern],
+        js: ['content-scripts/content.js'],
+        runAt: 'document_idle',
+        persistAcrossSessions: true,
+      }]);
+    }
+
+    try {
+      const response = await browser.tabs.sendMessage(tab.id, { type: 'CHAT_AUTOMATION_PING' });
+      if (response?.ready === true) {
+        setSiteAccessStatus(locale === 'fr' ? `Accès activé pour ${origin}.` : `Access enabled for ${origin}.`);
+        return true;
+      }
+    } catch {
+      // Existing tabs do not receive a newly registered script until navigation.
+    }
+
+    await browser.scripting.executeScript({ target: { tabId: tab.id }, files: ['content-scripts/content.js'] });
+    setSiteAccessStatus(locale === 'fr' ? `Accès activé pour ${origin}. Le script est chargé dans l’onglet actif.` : `Access enabled for ${origin}. The script is loaded in the active tab.`);
+    return true;
+  }
+
+  async function enableActiveSite() {
+    try {
+      const tab = await activeTab();
+      await ensureSiteAccess(tab);
+    } catch (error) {
+      setSiteAccessStatus(error instanceof Error ? error.message : (locale === 'fr' ? 'Impossible d’activer ce site.' : 'Could not enable this site.'));
+    }
+  }
+
   async function validateStrategy() {
     const text = message.trim();
     if (!text) { setStatus(locale === 'fr' ? 'Saisissez le message qui servira au test.' : 'Enter the message to use for the test.'); return; }
@@ -407,6 +455,7 @@ function Popup() {
     if (!confirmed) return;
     try {
       const tab = await activeTab();
+      if (!await ensureSiteAccess(tab)) return;
       setStatus(locale === 'fr' ? 'Test en cours : l’extension observe la conversation avant d’enregistrer la stratégie…' : 'Test running: the extension is observing the conversation before saving the strategy…');
       const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_VALIDATE', text });
       setStatus(typeof response?.message === 'string' ? response.message : (locale === 'fr' ? 'Résultat du test indéterminé. Consultez les logs.' : 'Test result is inconclusive. Check the logs.'));
@@ -456,6 +505,7 @@ function Popup() {
     if (timeWindowEnabled && startTime === endTime) { setStatus(t('invalidTimeWindow')); return; }
     try {
       const tab = await activeTab();
+      if (!await ensureSiteAccess(tab)) return;
       const payload = {
         type: 'CHAT_AUTOMATION_START' as const, messages, variables,
         intervalMs: Math.round(amount * (unit === 'minutes' ? 60_000 : 1_000)),
@@ -535,6 +585,10 @@ function Popup() {
     </nav>
 
     <div className="popup-content">
+      <section className="site-access-control" aria-label={locale === 'fr' ? 'Accès au site' : 'Site access'}>
+        <button type="button" className="secondary" onClick={() => void enableActiveSite()}>{locale === 'fr' ? 'Activer sur ce site' : 'Enable on this site'}</button>
+        {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
+      </section>
     {page === 'automation' ? strategyReady === null ? <>
       <div className="page-heading"><h2>{t('automation')}</h2><p>{t('checkingStrategy')}</p></div>
       <p className="empty">{t('loadingSiteConfig')}</p>
