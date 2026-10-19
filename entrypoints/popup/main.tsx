@@ -244,20 +244,28 @@ function Popup() {
   }
 
   async function exportHistory() {
-    const key = historyStorageKey(historyOrigin);
-    const data = await browser.storage.local.get(key);
-    const allItems = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) as ConversationMessage[] : [];
-    const siteItems = deduplicateConversationMessages(allItems.filter(item => item.origin === historyOrigin));
-    const exactConversation = siteItems.filter(item => item.conversationId === historyConversationId);
-    const selectedItems = exactConversation.length > 0 ? exactConversation : siteItems;
-    const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems.sort((a, b) => a.firstSeenAt - b.firstSeenAt) };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    let url: string | undefined;
+    try {
+      const key = historyStorageKey(historyOrigin);
+      const data = await browser.storage.local.get(key);
+      const allItems = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) as ConversationMessage[] : [];
+      const siteItems = deduplicateConversationMessages(allItems.filter(item => item.origin === historyOrigin));
+      const exactConversation = siteItems.filter(item => item.conversationId === historyConversationId);
+      const selectedItems = exactConversation.length > 0 ? exactConversation : siteItems;
+      const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems.sort((a, b) => a.firstSeenAt - b.firstSeenAt) };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
+      setStatus(locale === 'fr' ? 'Export de l’historique lancé.' : 'History export started.');
+    } catch (error) {
+      if (url) URL.revokeObjectURL(url);
+      console.error('[Chat Automation] Export de l’historique échoué.', error);
+      setStatus(locale === 'fr' ? 'Impossible d’exporter l’historique.' : 'Could not export history.');
+    }
   }
 
   useEffect(() => {
@@ -498,11 +506,23 @@ function Popup() {
   }
 
   async function exportLogs() {
-    const data = await browser.storage.local.get('chatAutomationLogs');
-    const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
-    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'chat-automation-logs.json'; anchor.click(); URL.revokeObjectURL(url);
+    let url: string | undefined;
+    try {
+      const data = await browser.storage.local.get('chatAutomationLogs');
+      const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
+      const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+      url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'chat-automation-logs.json';
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
+      setStatus(locale === 'fr' ? 'Export des journaux lancé.' : 'Log export started.');
+    } catch (error) {
+      if (url) URL.revokeObjectURL(url);
+      console.error('[Chat Automation] Export des journaux échoué.', error);
+      setStatus(locale === 'fr' ? 'Impossible d’exporter les journaux.' : 'Could not export logs.');
+    }
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''}`}>
