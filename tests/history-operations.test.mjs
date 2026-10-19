@@ -46,14 +46,21 @@ test('merge keeps a completed status when a late streaming update arrives', () =
   assert.equal(merged.completedAt, 2500);
 });
 
-test('deduplication collapses near-simultaneous duplicate DOM messages', () => {
-  const first = message({ id: 'first', firstSeenAt: 1000, lastUpdatedAt: 1100 });
-  const duplicate = message({ id: 'second', firstSeenAt: 1500, lastUpdatedAt: 1600, status: 'complete', completedAt: 1500 });
-  const distinct = message({ id: 'third', firstSeenAt: 4000, lastUpdatedAt: 4000 });
-  const result = deduplicateConversationMessages([first, duplicate, distinct]);
-  assert.equal(result.length, 2);
-  assert.equal(result[0].id, 'first');
+test('deduplication merges repeated updates with the same identity', () => {
+  const first = message({ id: 'same', firstSeenAt: 1000, lastUpdatedAt: 1100 });
+  const update = message({ id: 'same', firstSeenAt: 1000, lastUpdatedAt: 1600, status: 'complete', completedAt: 1500, content: 'Final' });
+  const result = deduplicateConversationMessages([first, update]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, 'same');
   assert.equal(result[0].status, 'complete');
+  assert.equal(result[0].content, 'Final');
+});
+
+test('preserves distinct identical messages sent close together', () => {
+  const first = message({ id: 'first', firstSeenAt: 1000, lastUpdatedAt: 1100 });
+  const repeated = message({ id: 'second', firstSeenAt: 1500, lastUpdatedAt: 1600 });
+  const result = deduplicateConversationMessages([first, repeated]);
+  assert.equal(result.length, 2);
 });
 
 test('history limits retain the newest entries within count and text budgets', () => {
