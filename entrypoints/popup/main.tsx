@@ -12,6 +12,7 @@ import { contentScriptIdForOrigin } from '../../lib/content-script-id';
 import { selectHistoryExportMessages } from '../../lib/history-export';
 import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
+import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -586,32 +587,53 @@ function Popup() {
   }
 
   async function startAutomation() {
-    const messages = automationMessages.map(text => text.trim());
-    const amount = Number(interval);
-    if (messages.length === 0 || messages.some(text => !text)) { setStatus(t('sequenceEmpty')); return; }
-    if (messages.reduce((total, text) => total + text.length, 0) > MAX_TOTAL_MESSAGE_LENGTH) { setStatus(t('sequenceTooLong')); return; }
-    for (let index = 0; index < messages.length; index++) {
-      const unknown = validateTemplateVariables(messages[index]!, variables, 'automation');
-      if (unknown.length > 0) { setStatus(t('unknownVariables', { number: index + 1, names: unknown.map(name => `{{${name}}}`).join(', ') })); setPage('variables'); return; }
-      const residual = messages[index]!.replace(/{{\s*[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*\s*}}/g, '');
-      if (residual.includes('{{') || residual.includes('}}')) { setStatus(t('invalidVariableSyntax', { number: index + 1 })); return; }
+    const validation = validateAutomationConfig({
+      messages: automationMessages,
+      interval,
+      unit,
+      repeatCount,
+      timeWindowEnabled,
+      startTime,
+      endTime,
+      variables,
+    });
+    if (!validation.ok) {
+      switch (validation.code) {
+        case 'sequenceEmpty':
+          setStatus(t('sequenceEmpty'));
+          return;
+        case 'sequenceTooLong':
+          setStatus(t('sequenceTooLong'));
+          return;
+        case 'unknownVariables':
+          setStatus(t('unknownVariables', {
+            number: validation.messageIndex ?? 1,
+            names: (validation.names ?? []).map(name => `{{${name}}}`).join(', '),
+          }));
+          setPage('variables');
+          return;
+        case 'invalidVariableSyntax':
+          setStatus(t('invalidVariableSyntax', { number: validation.messageIndex ?? 1 }));
+          return;
+        case 'invalidInterval':
+          setStatus(t('invalidInterval'));
+          return;
+        case 'invalidRepeatCount':
+          setStatus(t('invalidRepeatCount'));
+          return;
+        case 'invalidTimeWindow':
+          setStatus(t('invalidTimeWindow'));
+          return;
+        case 'invalidSettings':
+          setStatus(t('invalidSettings'));
+          return;
+      }
     }
-    if (!Number.isFinite(amount) || amount <= 0) { setStatus(t('invalidInterval')); return; }
-    if (!/^\d+$/.test(repeatCount.trim()) || !Number.isSafeInteger(Number(repeatCount)) || Number(repeatCount) < 0) { setStatus(t('invalidRepeatCount')); return; }
-    if (timeWindowEnabled && startTime === endTime) { setStatus(t('invalidTimeWindow')); return; }
+
     try {
       const tab = await activeTab();
       if (!await ensureSiteAccess(tab)) return;
-      const payload = {
-        type: 'CHAT_AUTOMATION_START' as const, messages, variables,
-        intervalMs: Math.round(amount * (unit === 'minutes' ? 60_000 : 1_000)),
-        repeatMode: Number(repeatCount) === 0 ? 'infinite' as const : 'finite' as const,
-        repeatCount: Number(repeatCount), timeWindowEnabled, startTime, endTime,
-      };
-      if (!isValidAutomationStartMessage(payload)) {
-        setStatus(t('invalidSettings'));
-        return;
-      }
+      const payload = buildAutomationStartPayload(validation.config);
       if (!await persistSettings()) return;
       const response = await browser.tabs.sendMessage(tab.id!, payload);
       setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
@@ -620,7 +642,6 @@ function Popup() {
       setStatus(error instanceof Error && error.message.startsWith(locale === 'fr' ? 'Cette page' : 'This page') ? error.message : (locale === 'fr' ? 'Le script de page est indisponible. Rechargez la page puis réessayez.' : 'The page script is unavailable. Reload the page and try again.'));
     }
   }
-
   async function stopAutomation() {
     try {
       const tab = await activeTab();
