@@ -77,7 +77,7 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
       }), { origin, conversationId });
 
       const popupEvent = context.waitForEvent('page', { timeout: 15000 });
-      await serviceWorker.evaluate(() => chrome.action.openPopup());
+      await serviceWorker.evaluate(() => { void chrome.action.openPopup(); return true; });
       const actionPopup = await popupEvent;
       await actionPopup.getByRole('button', { name: /history|historique/i }).click();
       await actionPopup.getByRole('button', { name: /clear.*history|effacer.*historique/i }).waitFor();
