@@ -24,11 +24,12 @@ import LogsPage from './pages/LogsPage';
 import VariablesPage from './pages/VariablesPage';
 import AutomationPage from './pages/AutomationPage';
 import { usePagePolling } from './hooks/usePagePolling';
+import { useRuntimeStatus, type RuntimeStatus } from './hooks/useRuntimeStatus';
 import { downloadJsonFile } from '../../services/file-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
-type RuntimeStatus = { phase: 'stopped' | 'ready' | 'waiting-interval' | 'waiting-window' | 'waiting-llm' | 'sending' | 'finished' | 'failed'; note: string; messageIndex: number; messagesCount: number; completedSequences: number; repeatMode: 'infinite' | 'finite'; repeatCount: number; nextSendAt: number | null; updatedAt: number };
+
 
 
 function toLocalDateTimeInput(date: Date): string {
@@ -44,7 +45,6 @@ function Popup() {
 
   const [page, setPage] = useState<Page>('automation');
   const logReadErrorReported = useRef(false);
-  const runtimeReadErrorReported = useRef(false);
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
   const [message, setMessage] = useState('');
@@ -66,8 +66,6 @@ function Popup() {
   const [historyOrigin, setHistoryOrigin] = useState('');
   const [historyConversationId, setHistoryConversationId] = useState('');
   const [historyError, setHistoryError] = useState('');
-  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus | null>(null);
-  const [clockNow, setClockNow] = useState(Date.now());
   const [interval, setIntervalValue] = useState('30');
   const [unit, setUnit] = useState<'seconds' | 'minutes'>('seconds');
   // 0 signifie une répétition infinie ; toute valeur positive définit le nombre d’envois.
@@ -83,6 +81,7 @@ function Popup() {
   const [simulationCycles, setSimulationCycles] = useState('2');
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [simulationError, setSimulationError] = useState('');
+  const { runtimeStatus, clockNow } = useRuntimeStatus(() => setStatus(t('automationStatusReadError')));
 
   useEffect(() => {
     let active = true;
@@ -219,29 +218,6 @@ function Popup() {
   usePagePolling(page === 'history', refreshHistory, 1500);
 
   usePagePolling(page === 'logs', refreshLogs, 1000);
-
-  useEffect(() => {
-    let mounted = true;
-    const refreshRuntimeStatus = async () => {
-      try {
-        const data = await browser.storage.local.get('chatAutomationRuntimeStatus');
-        runtimeReadErrorReported.current = false;
-        if (mounted) setRuntimeStatus((data.chatAutomationRuntimeStatus as RuntimeStatus | undefined) ?? null);
-      } catch (error) {
-        if (!runtimeReadErrorReported.current) {
-          console.error('[Chat Automation] Lecture de l’état d’exécution échouée.', error);
-          if (mounted) setStatus(t('automationStatusReadError'));
-          runtimeReadErrorReported.current = true;
-        }
-      }
-    };
-    void refreshRuntimeStatus();
-    const timer = window.setInterval(() => {
-      setClockNow(Date.now());
-      void refreshRuntimeStatus();
-    }, 500);
-    return () => { mounted = false; window.clearInterval(timer); };
-  }, []);
 
   async function persistSettings(): Promise<boolean> {
     try {
