@@ -1,7 +1,7 @@
 {
   "name": "chat-site-automation",
   "description": "Extension navigateur pour détecter les champs de chat, apprendre les procédures par site et journaliser les tentatives.",
-  "version": "0.20.0",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
   "scripts": {
