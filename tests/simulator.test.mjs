@@ -71,6 +71,13 @@ test('supports overnight windows', () => {
   assert.equal(next.getHours(), 22);
 });
 
+test('caps the total rendered timeline to protect popup responsiveness', async () => {
+  await assert.rejects(
+    simulateAutomation(config({ messages: Array.from({ length: 100 }, (_, index) => `Message ${index + 1}`), repeatCount: 3 })),
+    /limitée à 200 rendus/,
+  );
+});
+
 test('rejects an excessive cycle count and invalid time windows', async () => {
   await assert.rejects(simulateAutomation(config({ repeatCount: 11 })), /1 à 10 cycles/);
   await assert.rejects(simulateAutomation(config({ timeWindowEnabled: true, startTime: '09:00', endTime: '09:00' })), /doivent être différentes/);
