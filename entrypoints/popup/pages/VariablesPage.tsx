@@ -58,10 +58,7 @@ export default function VariablesPage(props: VariablesPageProps) {
         maxRows={24}
         spellCheck={false}
         aria-describedby="variables-document-help"
-        placeholder={'{
-  "prenom": "Alexandre",
-  "ville": "Nantes"
-}'}
+        placeholder={`{\n  "prenom": "Alexandre",\n  "ville": "Nantes"\n}`}
       />
       <p id="variables-document-help" className="helper">{fr
         ? 'JSON : {"prenom": "Alexandre"} · YAML : prenom: Alexandre. Les valeurs doivent être des chaînes, nombres ou booléens. Les noms suivent les règles {{nom}}.'
