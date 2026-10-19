@@ -5,6 +5,8 @@ import test from 'node:test';
 const config = await readFile(new URL('../wxt.config.ts', import.meta.url), 'utf8');
 const contentScript = await readFile(new URL('../entrypoints/content/index.ts', import.meta.url), 'utf8');
 const popup = await readFile(new URL('../entrypoints/popup/main.tsx', import.meta.url), 'utf8');
+const historyHook = await readFile(new URL('../entrypoints/popup/hooks/useHistory.ts', import.meta.url), 'utf8');
+const logsHook = await readFile(new URL('../entrypoints/popup/hooks/useLogs.ts', import.meta.url), 'utf8');
 const requireBackgroundSource = await readFile(new URL('../entrypoints/background.ts', import.meta.url), 'utf8');
 
 test('does not request mandatory access to every website', () => {
@@ -40,10 +42,10 @@ test('allows local data deletion only from the extension UI and serializes histo
   assert.match(requireBackgroundSource, /backgroundClearSiteHistory\(origin\)/);
   assert.match(requireBackgroundSource, /isExtensionUiSender\(sender\) && message\.type === 'CHAT_LOGS_CLEAR'/);
   assert.match(requireBackgroundSource, /browser\.storage\.local\.remove\(LOG_KEY\)/);
-  assert.match(popup, /confirmClearHistory/);
-  assert.match(popup, /confirmClearLogs/);
-  assert.match(popup, /type: 'CHAT_HISTORY_CLEAR_SITE'/);
-  assert.match(popup, /type: 'CHAT_LOGS_CLEAR'/);
+  assert.match(historyHook, /confirmClearHistory/);
+  assert.match(logsHook, /confirmClearLogs/);
+  assert.match(historyHook, /type: 'CHAT_HISTORY_CLEAR_SITE'/);
+  assert.match(logsHook, /type: 'CHAT_LOGS_CLEAR'/);
 });
 
 
@@ -76,7 +78,7 @@ test('stops active page scripts and history capture when host permission is revo
 });
 
 test('history export delegates conversation scoping to the tested selection helper', () => {
-  const exportFunction = popup.match(/async function exportHistory\(\) \{[\s\S]*?\n  \}/)?.[0];
+  const exportFunction = historyHook.match(/async function exportHistory\(\) \{[\s\S]*?\n  \}/)?.[0];
   assert.ok(exportFunction, 'history export function should exist');
   assert.match(exportFunction, /selectHistoryExportMessages\(/);
   assert.doesNotMatch(exportFunction, /exactConversation\.length > 0 \? exactConversation : siteItems/);
@@ -118,6 +120,6 @@ test('history export selection scopes by origin and selected conversation and so
 });
 
 test('history export uses the tested selection helper', () => {
-  assert.match(popup, /selectHistoryExportMessages\(/);
-  assert.match(popup, /from '\.\.\/\.\.\/lib\/history-export'/);
+  assert.match(historyHook, /selectHistoryExportMessages\(/);
+  assert.match(historyHook, /from '\.\.\/\.\.\/lib\/history-export'/);
 });
