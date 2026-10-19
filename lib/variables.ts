@@ -74,8 +74,11 @@ const liquid = new Liquid({
   ownPropertyOnly: true,
   strictFilters: true,
   strictVariables: false,
-  parseLimit: 1_000,
-  renderLimit: 100,
+  dynamicPartials: false,
+  templates: {},
+  parseLimit: 100_000,
+  renderLimit: 250,
+  memoryLimit: 100_000,
 });
 
 export function isValidVariableName(value: unknown): value is string {
