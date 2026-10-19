@@ -244,6 +244,21 @@ function Popup() {
     }
   }
 
+  async function clearSiteHistory() {
+    if (!historyOrigin) return;
+    const confirmed = window.confirm(t('confirmClearHistory', { origin: historyOrigin }));
+    if (!confirmed) return;
+    try {
+      const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_CLEAR_SITE', origin: historyOrigin });
+      if (response?.ok !== true) throw new Error('Background refused history deletion');
+      setHistoryMessages([]);
+      setStatus(t('historyCleared'));
+    } catch (error) {
+      console.error('[Chat Automation] Effacement de l’historique échoué.', error);
+      setHistoryError(t('historyClearError'));
+    }
+  }
+
   async function exportHistory() {
     let url: string | undefined;
     try {
@@ -555,6 +570,19 @@ function Popup() {
     }
   }
 
+  async function clearLogs() {
+    if (!window.confirm(t('confirmClearLogs'))) return;
+    try {
+      const response = await browser.runtime.sendMessage({ type: 'CHAT_LOGS_CLEAR' });
+      if (response?.ok !== true) throw new Error('Background refused log deletion');
+      setLogs([]);
+      setStatus(t('logsCleared'));
+    } catch (error) {
+      console.error('[Chat Automation] Effacement des journaux échoué.', error);
+      setStatus(t('logsClearError'));
+    }
+  }
+
   async function exportLogs() {
     let url: string | undefined;
     try {
@@ -663,7 +691,7 @@ function Popup() {
       </section>
     </> : page === 'history' ? <>
       <div className="page-heading"><h2>{t('conversationHistory')}</h2><p>{t('historyIntro')}</p></div>
-      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><button className="secondary" onClick={() => void refreshHistory()}>{t('refresh')}</button></div>
+      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><div className="history-actions"><button className="secondary" onClick={() => void refreshHistory()}>{t('refresh')}</button><button className="secondary danger-action" disabled={!historyOrigin} onClick={() => void clearSiteHistory()}>{t('clearSiteHistory')}</button></div></div>
       {historyError ? <p className="notice">{historyError}</p> : historyMessages.length === 0 ? <p className="empty history-empty">{t('noCapturedMessages')}</p> : <div className="history-list">{historyMessages.map(item => <article className={`history-message role-${item.role} status-${item.status}`} key={item.id}>
         <div className="history-message-head"><strong>{item.role === 'user' ? t('you') : item.role === 'assistant' ? 'Assistant' : item.role === 'system' ? t('system') : t('unknownAuthor')}</strong><span>{new Date(item.firstSeenAt).toLocaleString()}</span><em>{item.status === 'streaming' ? t('inProgress') : item.status === 'incomplete' ? t('interrupted') : t('completed')}</em></div>
         <p>{item.content}</p>{item.contentTruncated ? <small className="history-truncated">{t('truncated')}</small> : null}
@@ -674,7 +702,7 @@ function Popup() {
     {page === 'logs' ? <>
       <div className="page-heading"><h2>{t('eventLog')}</h2><p>{t('logIntro')}</p></div>
       <section className="logs-section logs-page-section">
-        <div className="section-head"><h2>{t('recentEvents')}</h2><button className="secondary" onClick={() => void refreshLogs()}>Actualiser</button></div>
+        <div className="section-head"><h2>{t('recentEvents')}</h2><div className="logs-actions"><button className="secondary" onClick={() => void refreshLogs()}>{t('refresh')}</button><button className="secondary danger-action" onClick={() => void clearLogs()}>{t('clearLogs')}</button></div></div>
         <div className="logs">{logs.length === 0 ? <p className="empty">{t('noEvents')}</p> : logs.map((log, index) => <article key={`${log.timestamp}-${index}`}><strong>{log.level}</strong><span>{new Date(log.timestamp).toLocaleString()} · {log.site}</span><p>{log.event}{log.details ? ` — ${log.details}` : ''}</p></article>)}</div>
       </section>
       <p className="notice">{t('logNotice')}</p>
