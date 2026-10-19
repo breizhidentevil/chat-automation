@@ -50,10 +50,10 @@ export default function AutomationPage(props: AutomationPageProps) {
     startTime, setStartTime, endTime, setEndTime,
   } = props;
   return strategyReady === null ? <>
-      <div className="page-heading"><h2>{t('automation')}</h2><p>{t('checkingStrategy')}</p></div>
+      <div className="page-heading"><h2>{t('automation')}</h2></div>
       <p className="empty">{t('loadingSiteConfig')}</p>
     </> : strategyReady === false ? <>
-      <div className="page-heading"><h2>{t('setupStrategy')}</h2><p>{t('strategyDescription')}</p></div>
+      <div className="page-heading"><h2>{t('setupStrategy')}</h2></div>
       <label htmlFor="message">{t('testMessage')}</label>
       <TemplateTextarea t={t} id="message" value={message} onChange={setMessage} variables={variables} placeholder={t('writeTestMessage')} rows={4} />
       <p className="helper autocomplete-note">{t('variableHint')}</p>
@@ -61,8 +61,8 @@ export default function AutomationPage(props: AutomationPageProps) {
       <Alert color="yellow" variant="light">{t('testWarning')}</Alert>
       <Alert color="gray" variant="light" role="status">{status}</Alert>
     </> : <>
-      <div className="page-heading"><h2>{t('automateSending')}</h2><p>{t('siteStrategyDescription', { site: strategyOrigin })}</p></div>
-      <div className="sequence-heading"><div><h3>{t('sequence')}</h3><p className="helper">{t('sequenceHelp')}</p></div><Button className="add-message" variant="default" size="compact-sm" onClick={addAutomationMessage}>{t('add')}</Button></div>
+      <div className="page-heading"><h2>{t('automateSending')}</h2><span className="site-origin">{strategyOrigin}</span></div>
+      <div className="sequence-heading"><div><h3>{t('sequence')}</h3></div><Button className="add-message" variant="default" size="compact-sm" onClick={addAutomationMessage}>{t('add')}</Button></div>
       <div className="message-sequence" aria-label={t('sequence')}>
         {automationMessages.map((text, index) => <div
           className={draggingIndex === index ? 'sequence-item dragging' : 'sequence-item'}
@@ -86,19 +86,19 @@ export default function AutomationPage(props: AutomationPageProps) {
           <div className="cycle-field"><Select id="unit" label={t('unit')} value={unit} onChange={value => { if (value === 'seconds' || value === 'minutes') setUnit(value); }} data={[{ value: 'seconds', label: t('seconds') }, { value: 'minutes', label: t('minutes') }]} /></div>
           <div className="cycle-field"><TextInput id="repeat-count" label={t('cycleCount')} inputMode="numeric" pattern="[0-9]*" value={repeatCount} onChange={e => setRepeatCount(e.currentTarget.value)} aria-describedby="repeat-count-help" /></div>
         </div>
-        <p id="repeat-count-help" className="helper cycle-help">{t('infiniteHelp')}</p>
+
         <h3>{t('dailyWindow')}</h3>
         <Switch id="time-window-enabled" className="toggle-row" checked={timeWindowEnabled} onChange={e => setTimeWindowEnabled(e.currentTarget.checked)} label={t('limitWindow')} />
         {timeWindowEnabled ? <>
-          <p className="helper">{t('outsideWindow')}</p>
+
           <div className="field-row time-row">
             <div><TextInput id="start-time" type="time" label={t('start')} value={startTime} onChange={e => setStartTime(e.currentTarget.value)} /></div>
             <span className="time-separator">{locale === 'fr' ? 'à' : 'to'}</span>
             <div><TextInput id="end-time" type="time" label={t('end')} value={endTime} onChange={e => setEndTime(e.currentTarget.value)} /></div>
           </div>
-          <p className="helper">{t('windowOvernight')}</p>
-        </> : <p className="helper">{t('noTimeRestriction')}</p>}
+
+        </> : null}
       </section>
-      <Alert color="gray" variant="light">{t('variableUsageNotice')}</Alert>
+
     </>;
 }
