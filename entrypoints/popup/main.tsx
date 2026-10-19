@@ -61,6 +61,22 @@ function Popup() {
     setStatus,
   });
 
+  function updateAutomationMessage(index: number, value: string) {
+    setAutomationMessages(current => updateMessage(current, index, value));
+  }
+
+  function addAutomationMessage() {
+    setAutomationMessages(current => addMessage(current));
+  }
+
+  function removeAutomationMessage(index: number) {
+    setAutomationMessages(current => removeMessage(current, index));
+  }
+
+  function moveAutomationMessage(from: number, to: number) {
+    setAutomationMessages(current => moveMessage(current, from, to));
+  }
+
   useEffect(() => {
     if (page === 'automation') void refreshStrategyStatus();
   }, [page]);
