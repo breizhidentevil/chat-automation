@@ -15,8 +15,10 @@ export async function ensureSiteAccessForTab(tab: Browser.tabs.Tab): Promise<Sit
   if (!origin) return { granted: false, origin: '' };
 
   const pattern = origin + '/*';
-  const granted = await browser.permissions.contains({ origins: [pattern] })
-    || await browser.permissions.request({ origins: [pattern] });
+  // Call request directly from the click-triggered path, before any await.
+  // Chromium requires permissions.request() to run during a user gesture;
+  // awaiting permissions.contains() first loses that transient activation.
+  const granted = await browser.permissions.request({ origins: [pattern] });
   if (!granted) return { granted: false, origin };
 
   const id = contentScriptIdForOrigin(origin);
