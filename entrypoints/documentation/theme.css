@@ -3,7 +3,7 @@
 html,body{background:var(--docs-bg);color:var(--docs-text)}
 .docs-shell{max-width:1080px}.docs-header{border-color:var(--docs-border)}.docs-mark{background:linear-gradient(140deg,#0b9cff,#245bff 54%,#6b3ff2);box-shadow:0 8px 20px #245bff2b}
 .eyebrow,.subtitle,.docs-footer,.docs-footer p{color:var(--docs-muted)}.docs-header h1,h2,h3{color:var(--docs-text)}
-.docs-language{width:124px;min-width:124px}.docs-language .mantine-Select-input{background:var(--docs-surface);border-color:var(--docs-border);color:var(--docs-text)}
+.docs-language{width:124px;min-width:124px;margin-left:auto}.docs-language .mantine-Select-input{background:var(--docs-surface);border-color:var(--docs-border);color:var(--docs-text)}.docs-language .mantine-Select-dropdown{background:var(--docs-surface);border-color:var(--docs-border)}.docs-language .mantine-Select-option{color:var(--docs-text)}.docs-language .mantine-Select-option[data-combobox-selected],.docs-language .mantine-Select-option[data-combobox-active]{background:var(--docs-soft);color:var(--docs-accent)}.docs-footer .mantine-Button-root{color:var(--docs-accent)}
 .toc{position:sticky;top:0;z-index:2;padding:10px 0;background:color-mix(in srgb,var(--docs-bg) 92%,transparent);backdrop-filter:blur(12px)}
 .toc a{color:var(--docs-text);background:var(--docs-surface);border-color:var(--docs-border);border-radius:10px;transition:color .15s,border-color .15s,background .15s}
 .toc a:hover,.toc a:focus-visible{color:var(--docs-accent);background:var(--docs-soft);border-color:var(--docs-accent)}
