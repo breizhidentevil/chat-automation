@@ -305,14 +305,29 @@ function Popup() {
     return () => { mounted = false; window.clearInterval(timer); };
   }, []);
 
-  async function persistSettings() {
-    await browser.storage.local.set({ chatAutomationSettings: { message, messages: automationMessages, interval, unit, repeatCount, timeWindowEnabled, startTime, endTime } });
+  async function persistSettings(): Promise<boolean> {
+    try {
+      await browser.storage.local.set({ chatAutomationSettings: { message, messages: automationMessages, interval, unit, repeatCount, timeWindowEnabled, startTime, endTime } });
+      return true;
+    } catch (error) {
+      console.error('[Chat Automation] Écriture des paramètres échouée.', error);
+      setStatus(locale === 'fr' ? 'Impossible d’enregistrer les paramètres. Vérifiez l’espace de stockage disponible.' : 'Could not save settings. Check available storage space.');
+      return false;
+    }
   }
 
-  async function persistVariables(next: VariableDefinition[]) {
+  async function persistVariables(next: VariableDefinition[]): Promise<boolean> {
     const safeNext = filterValidVariableDefinitions(next);
-    setVariables(safeNext);
-    await browser.storage.local.set({ [VARIABLES_STORAGE_KEY]: safeNext });
+    try {
+      await browser.storage.local.set({ [VARIABLES_STORAGE_KEY]: safeNext });
+      setVariables(safeNext);
+      setVariableError('');
+      return true;
+    } catch (error) {
+      console.error('[Chat Automation] Écriture des variables échouée.', error);
+      setVariableError(locale === 'fr' ? 'Impossible d’enregistrer les variables. Vérifiez l’espace de stockage disponible.' : 'Could not save variables. Check available storage space.');
+      return false;
+    }
   }
 
   async function saveVariable() {
@@ -331,7 +346,7 @@ function Popup() {
         : 'Limit reached: at most 100 variables and 1,000,000 combined characters.');
       return;
     }
-    await persistVariables(next);
+    if (!await persistVariables(next)) return;
     setVariableName(''); setVariableValue(''); setVariableScope('global'); setEditingVariableId(null);
     setStatus(t('testSaved', { name }));
   }
@@ -418,7 +433,7 @@ function Popup() {
         setStatus(locale === 'fr' ? 'Paramètres invalides : vérifiez le nombre, la taille et la fréquence des messages ainsi que le créneau horaire.' : 'Invalid settings: check message count, message size, interval and time window.');
         return;
       }
-      await persistSettings();
+      if (!await persistSettings()) return;
       const response = await browser.tabs.sendMessage(tab.id!, payload);
       setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
       await refreshLogs();
