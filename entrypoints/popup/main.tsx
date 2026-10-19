@@ -5,7 +5,7 @@ import { deduplicateConversationMessages, historyStorageKey, type ConversationMe
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
-import { validateTemplateVariables, VARIABLE_NAME_PATTERN, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { validateTemplateVariables, isValidVariableName, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -318,7 +318,7 @@ function Popup() {
   async function saveVariable() {
     setVariableError('');
     const name = variableName.trim();
-    if (!VARIABLE_NAME_PATTERN.test(name)) { setVariableError(t('invalidVariableName')); return; }
+    if (!isValidVariableName(name)) { setVariableError(t('invalidVariableName')); return; }
     if (!variableValue.trim()) { setVariableError(t('emptyVariableValue')); return; }
     if (variables.some(item => item.name === name && item.scope === variableScope && item.id !== editingVariableId)) { setVariableError(t('duplicateVariable')); return; }
     const item: VariableDefinition = { id: editingVariableId ?? `var-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, type: 'static', value: variableValue, scope: variableScope, updatedAt: Date.now() };

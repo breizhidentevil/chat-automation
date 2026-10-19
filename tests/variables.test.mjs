@@ -13,6 +13,7 @@ const {
   findTemplateVariables,
   filterValidVariableDefinitions,
   isValidVariableDefinition,
+  isValidVariableName,
   resolveMessageTemplate,
   validateTemplateVariables,
 } = await import(moduleUrl);
@@ -115,6 +116,8 @@ test('dynamic array indexes outside the available range fail explicitly', async 
 test('variable validation rejects malformed, oversized and duplicate persisted definitions', () => {
   const valid = variable('first', 'value');
   assert.equal(isValidVariableDefinition(valid), true);
+  assert.equal(isValidVariableName('__proto__'), false);
+  assert.equal(isValidVariableName('normal_name'), true);
   assert.equal(isValidVariableDefinition({ ...valid, updatedAt: Number.NaN }), false);
   assert.equal(isValidVariableDefinition({ ...valid, name: '__proto__' }), false);
   assert.equal(isValidVariableDefinition({ ...valid, value: 'x'.repeat(100_001) }), false);
