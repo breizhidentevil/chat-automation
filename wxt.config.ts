@@ -1,8 +1,8 @@
 import { defineConfig } from 'wxt';
 
 export default defineConfig({
-  // Cible Manifest V3 par défaut pour tous les navigateurs, y compris Firefox.
-  // Une cible MV2 reste possible explicitement via `--mv2` si nécessaire.
+  // Les cibles prises en charge et testées par la CI utilisent Manifest V3.
+  // Firefox MV2 n’est pas pris en charge par le flux d’enregistrement dynamique des scripts.
   manifestVersion: 3,
   modules: ['@wxt-dev/module-react'],
   // Preserve the relative base for documentation hosted under a GitHub Pages project path.
