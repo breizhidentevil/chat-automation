@@ -213,7 +213,7 @@ function Popup() {
     } catch (error) {
       if (!logReadErrorReported.current) {
         console.error('[Chat Automation] Lecture des journaux échouée.', error);
-        setStatus(locale === 'fr' ? 'Impossible de lire les journaux enregistrés.' : 'Could not read saved logs.');
+        setStatus(t('logsReadError'));
         logReadErrorReported.current = true;
       }
     }
@@ -281,11 +281,11 @@ function Popup() {
       anchor.download = `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`;
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
-      setStatus(locale === 'fr' ? 'Export de l’historique lancé.' : 'History export started.');
+      setStatus(t('historyExportStarted'));
     } catch (error) {
       if (url) URL.revokeObjectURL(url);
       console.error('[Chat Automation] Export de l’historique échoué.', error);
-      setStatus(locale === 'fr' ? 'Impossible d’exporter l’historique.' : 'Could not export history.');
+      setStatus(t('historyExportError'));
     }
   }
 
@@ -302,7 +302,7 @@ function Popup() {
       setVariables(filterValidVariableDefinitions(saved));
     }).catch(error => {
       console.error('[Chat Automation] Lecture des variables échouée.', error);
-      setVariableError(locale === 'fr' ? 'Impossible de lire les variables enregistrées.' : 'Could not read saved variables.');
+      setVariableError(t('variablesReadError'));
     });
     void browser.storage.local.get('chatAutomationSettings').then(({ chatAutomationSettings }) => {
       const saved = sanitizeSavedAutomationSettings(chatAutomationSettings);
@@ -314,7 +314,7 @@ function Popup() {
       setTimeWindowEnabled(saved.timeWindowEnabled);
       setStartTime(saved.startTime); setEndTime(saved.endTime);
     }).catch(() => {
-      setStatus(locale === 'fr' ? 'Impossible de lire les paramètres sauvegardés.' : 'Could not read saved settings.');
+      setStatus(t('settingsReadError'));
     });
   }, []);
 
@@ -346,7 +346,7 @@ function Popup() {
       } catch (error) {
         if (!runtimeReadErrorReported.current) {
           console.error('[Chat Automation] Lecture de l’état d’exécution échouée.', error);
-          if (mounted) setStatus(locale === 'fr' ? 'Impossible de lire l’état de l’automatisation.' : 'Could not read automation status.');
+          if (mounted) setStatus(t('automationStatusReadError'));
           runtimeReadErrorReported.current = true;
         }
       }
@@ -365,7 +365,7 @@ function Popup() {
       return true;
     } catch (error) {
       console.error('[Chat Automation] Écriture des paramètres échouée.', error);
-      setStatus(locale === 'fr' ? 'Impossible d’enregistrer les paramètres. Vérifiez l’espace de stockage disponible.' : 'Could not save settings. Check available storage space.');
+      setStatus(t('settingsSaveError'));
       return false;
     }
   }
@@ -379,7 +379,7 @@ function Popup() {
       return true;
     } catch (error) {
       console.error('[Chat Automation] Écriture des variables échouée.', error);
-      setVariableError(locale === 'fr' ? 'Impossible d’enregistrer les variables. Vérifiez l’espace de stockage disponible.' : 'Could not save variables. Check available storage space.');
+      setVariableError(t('variablesSaveError'));
       return false;
     }
   }
@@ -428,7 +428,7 @@ function Popup() {
     const granted = await browser.permissions.contains({ origins: [pattern] })
       || await browser.permissions.request({ origins: [pattern] });
     if (!granted) {
-      setSiteAccessStatus(locale === 'fr' ? `Accès refusé pour ${origin}. Autorisez ce site pour utiliser l’extension.` : `Access denied for ${origin}. Grant this site permission to use the extension.`);
+      setSiteAccessStatus(t('siteAccessDenied', { origin }));
       return false;
     }
 
@@ -455,7 +455,7 @@ function Popup() {
     try {
       const response = await browser.tabs.sendMessage(tab.id, { type: 'CHAT_AUTOMATION_PING' });
       if (response?.ready === true) {
-        setSiteAccessStatus(locale === 'fr' ? `Accès activé pour ${origin}.` : `Access enabled for ${origin}.`);
+        setSiteAccessStatus(t('siteAccessEnabled', { origin }));
         return true;
       }
     } catch {
@@ -463,7 +463,7 @@ function Popup() {
     }
 
     await browser.scripting.executeScript({ target: { tabId: tab.id }, files: ['/content-scripts/content.js'] });
-    setSiteAccessStatus(locale === 'fr' ? `Accès activé pour ${origin}. Le script est chargé dans l’onglet actif.` : `Access enabled for ${origin}. The script is loaded in the active tab.`);
+    setSiteAccessStatus(t('siteAccessEnabledScriptLoaded', { origin }));
     return true;
   }
 
@@ -472,25 +472,25 @@ function Popup() {
       const tab = await activeTab();
       await ensureSiteAccess(tab);
     } catch (error) {
-      setSiteAccessStatus(error instanceof Error ? error.message : (locale === 'fr' ? 'Impossible d’activer ce site.' : 'Could not enable this site.'));
+      setSiteAccessStatus(error instanceof Error ? error.message : (t('siteAccessError')));
     }
   }
 
   async function validateStrategy() {
     const text = message.trim();
-    if (!text) { setStatus(locale === 'fr' ? 'Saisissez le message qui servira au test.' : 'Enter the message to use for the test.'); return; }
-    const confirmed = window.confirm(locale === 'fr' ? 'Ce test va réellement envoyer le texte saisi dans le chat de l’onglet actif. La stratégie ne sera enregistrée que si un nouveau message correspondant est détecté dans la conversation. Continuer?' : 'This test will send the entered text to the active chat. The strategy is saved only if a matching new message is detected. Continue?');
+    if (!text) { setStatus(t('testMessageRequired')); return; }
+    const confirmed = window.confirm(t('testConfirm'));
     if (!confirmed) return;
     try {
       const tab = await activeTab();
       if (!await ensureSiteAccess(tab)) return;
-      setStatus(locale === 'fr' ? 'Test en cours : l’extension observe la conversation avant d’enregistrer la stratégie…' : 'Test running: the extension is observing the conversation before saving the strategy…');
+      setStatus(t('testRunning'));
       const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_VALIDATE', text });
-      setStatus(typeof response?.message === 'string' ? response.message : (locale === 'fr' ? 'Résultat du test indéterminé. Consultez les logs.' : 'Test result is inconclusive. Check the logs.'));
+      setStatus(typeof response?.message === 'string' ? response.message : (t('testInconclusive')));
       await refreshStrategyStatus();
       await refreshLogs();
     } catch (error) {
-      setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : locale === 'fr' ? 'Le script de page est indisponible. Rechargez la page puis réessayez.' : 'The page script is unavailable. Reload the page and try again.');
+      setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : t('pageScriptUnavailable'));
     }
   }
 
@@ -521,12 +521,12 @@ function Popup() {
     const messages = automationMessages.map(text => text.trim());
     const amount = Number(interval);
     if (messages.length === 0 || messages.some(text => !text)) { setStatus(t('sequenceEmpty')); return; }
-    if (messages.reduce((total, text) => total + text.length, 0) > MAX_TOTAL_MESSAGE_LENGTH) { setStatus(locale === 'fr' ? 'La séquence dépasse la limite totale de 1 000 000 caractères.' : 'The sequence exceeds the 1,000,000-character total limit.'); return; }
+    if (messages.reduce((total, text) => total + text.length, 0) > MAX_TOTAL_MESSAGE_LENGTH) { setStatus(t('sequenceTooLong')); return; }
     for (let index = 0; index < messages.length; index++) {
       const unknown = validateTemplateVariables(messages[index]!, variables, 'automation');
-      if (unknown.length > 0) { setStatus(locale === 'fr' ? `Message ${index + 1} : variable(s) inconnue(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.` : `Message ${index + 1}: unknown variable(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Create them on the Variables page.`); setPage('variables'); return; }
+      if (unknown.length > 0) { setStatus(t('unknownVariables', { number: index + 1, names: unknown.map(name => `{{${name}}}`).join(', ') })); setPage('variables'); return; }
       const residual = messages[index]!.replace(/{{\s*[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*\s*}}/g, '');
-      if (residual.includes('{{') || residual.includes('}}')) { setStatus(locale === 'fr' ? `Message ${index + 1} : syntaxe de variable invalide. Utilisez {{nom}}.` : `Message ${index + 1}: invalid variable syntax. Use {{name}}.`); return; }
+      if (residual.includes('{{') || residual.includes('}}')) { setStatus(t('invalidVariableSyntax', { number: index + 1 })); return; }
     }
     if (!Number.isFinite(amount) || amount <= 0) { setStatus(t('invalidInterval')); return; }
     if (!/^\d+$/.test(repeatCount.trim()) || !Number.isSafeInteger(Number(repeatCount)) || Number(repeatCount) < 0) { setStatus(t('invalidRepeatCount')); return; }
@@ -541,7 +541,7 @@ function Popup() {
         repeatCount: Number(repeatCount), timeWindowEnabled, startTime, endTime,
       };
       if (!isValidAutomationStartMessage(payload)) {
-        setStatus(locale === 'fr' ? 'Paramètres invalides : vérifiez le nombre, la taille et la fréquence des messages ainsi que le créneau horaire.' : 'Invalid settings: check message count, message size, interval and time window.');
+        setStatus(t('invalidSettings'));
         return;
       }
       if (!await persistSettings()) return;
@@ -559,11 +559,11 @@ function Popup() {
       const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_STOP' });
       setStatus(typeof response?.message === 'string' ? response.message : t('automationStopped'));
       await refreshLogs();
-    } catch { setStatus(locale === 'fr' ? 'Impossible de joindre le script de page. Vérifiez que l’onglet est toujours ouvert.' : 'Could not reach the page script. Make sure the tab is still open.'); }
+    } catch { setStatus(t('pageScriptUnreachable')); }
   }
 
   function countdownLabel(target: number | null | undefined): string {
-    if (typeof target !== 'number') return locale === 'fr' ? 'En attente' : 'Waiting';
+    if (typeof target !== 'number') return t('waiting');
     const secondsLeft = Math.max(0, Math.ceil((target - clockNow) / 1000));
     const minutes = Math.floor(secondsLeft / 60);
     const seconds = secondsLeft % 60;
@@ -572,14 +572,14 @@ function Popup() {
 
   function phaseLabel(phase: RuntimeStatus['phase']): string {
     switch (phase) {
-      case 'ready': return locale === 'fr' ? 'Prêt à envoyer' : 'Ready to send';
-      case 'waiting-interval': return locale === 'fr' ? 'Compte à rebours' : 'Countdown';
-      case 'waiting-window': return locale === 'fr' ? 'En attente du créneau' : 'Waiting for time window';
+      case 'ready': return t('phaseReady');
+      case 'waiting-interval': return t('phaseCountdown');
+      case 'waiting-window': return t('phaseWaitingWindow');
       case 'waiting-llm': return t('waitingLLM');
-      case 'sending': return locale === 'fr' ? 'Envoi en cours' : 'Sending';
-      case 'finished': return locale === 'fr' ? 'Terminé' : 'Finished';
-      case 'failed': return locale === 'fr' ? 'Arrêt sur erreur' : 'Stopped due to error';
-      default: return locale === 'fr' ? 'Arrêté' : 'Stopped';
+      case 'sending': return t('phaseSending');
+      case 'finished': return t('phaseFinished');
+      case 'failed': return t('phaseFailed');
+      default: return t('phaseStopped');
     }
   }
 
@@ -608,17 +608,17 @@ function Popup() {
       anchor.download = 'chat-automation-logs.json';
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
-      setStatus(locale === 'fr' ? 'Export des journaux lancé.' : 'Log export started.');
+      setStatus(t('logsExportStarted'));
     } catch (error) {
       if (url) URL.revokeObjectURL(url);
       console.error('[Chat Automation] Export des journaux échoué.', error);
-      setStatus(locale === 'fr' ? 'Impossible d’exporter les journaux.' : 'Could not export logs.');
+      setStatus(t('logsExportError'));
     }
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''}`}>
     <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><label className="locale-picker"><span>{t('language')}</span><select aria-label={t('language')} value={locale} onChange={event => { const next = event.target.value as Locale; setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); }}><option value="fr">Français</option><option value="en">English</option></select></label><button type="button" className="help-button" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
-    <nav className="main-nav" aria-label={locale === 'fr' ? 'Navigation principale' : 'Main navigation'}>
+    <nav className="main-nav" aria-label={t('mainNavigation')}>
       <button className={page === 'automation' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('automation')}>{t('automation')}</button>
       <button className={page === 'variables' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('variables')}>{t('variables')}</button>
       <button className={page === 'history' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('history')}>{t('history')}</button>
@@ -626,8 +626,8 @@ function Popup() {
     </nav>
 
     <div className="popup-content">
-      <section className="site-access-control" aria-label={locale === 'fr' ? 'Accès au site' : 'Site access'}>
-        <button type="button" className="secondary" onClick={() => void enableActiveSite()}>{locale === 'fr' ? 'Activer sur ce site' : 'Enable on this site'}</button>
+      <section className="site-access-control" aria-label={t('siteAccess')}>
+        <button type="button" className="secondary" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</button>
         {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
       </section>
     {page === 'automation' ? strategyReady === null ? <>
