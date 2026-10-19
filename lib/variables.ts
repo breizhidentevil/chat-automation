@@ -36,6 +36,7 @@ export function isValidVariableDefinition(value: unknown): value is VariableDefi
   const item = value as Partial<VariableDefinition>;
   return typeof item.id === 'string' && item.id.length > 0 && item.id.length <= MAX_VARIABLE_ID_LENGTH &&
     typeof item.name === 'string' && VARIABLE_NAME_PATTERN.test(item.name) &&
+    !BLOCKED_PATH_PARTS.has(item.name) &&
     item.type === 'static' && typeof item.value === 'string' &&
     item.value.length <= MAX_VARIABLE_VALUE_LENGTH &&
     (item.scope === 'global' || item.scope === 'automation') &&
