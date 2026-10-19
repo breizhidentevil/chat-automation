@@ -24,6 +24,7 @@ const {
   markInterruptedMessagesIncomplete,
   backgroundUpsertConversationMessage,
   backgroundMarkInterruptedMessagesIncomplete,
+  backgroundClearSiteHistory,
 } = await import(moduleUrl);
 
 function message(overrides = {}) {
@@ -197,6 +198,28 @@ test('background upsert removes malformed persisted records before writing', asy
   try {
     await backgroundUpsertConversationMessage(message({ id: 'new-message', firstSeenAt: 3000, lastUpdatedAt: 3000 }));
     assert.deepEqual(written.map(item => item.id), ['valid-existing', 'new-message']);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
+test('background site-history deletion preserves other origins', async () => {
+  const previousBrowser = globalThis.browser;
+  let written;
+  globalThis.browser = {
+    storage: { local: {
+      get: async () => ({ chatAutomationHistoryV1: [
+        message({ id: 'site-a', origin: 'https://example.com' }),
+        message({ id: 'site-b', origin: 'https://other.example' }),
+        { id: 'malformed', origin: 'https://example.com' },
+      ] }),
+      set: async value => { written = value.chatAutomationHistoryV1; },
+    } },
+  };
+  try {
+    await backgroundClearSiteHistory('https://example.com');
+    assert.deepEqual(written.map(item => item.id), ['site-b']);
   } finally {
     if (previousBrowser === undefined) delete globalThis.browser;
     else globalThis.browser = previousBrowser;
