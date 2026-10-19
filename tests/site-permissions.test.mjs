@@ -7,6 +7,7 @@ const contentScript = await readFile(new URL('../entrypoints/content/index.ts', 
 const popup = await readFile(new URL('../entrypoints/popup/main.tsx', import.meta.url), 'utf8');
 const historyHook = await readFile(new URL('../entrypoints/popup/hooks/useHistory.ts', import.meta.url), 'utf8');
 const logsHook = await readFile(new URL('../entrypoints/popup/hooks/useLogs.ts', import.meta.url), 'utf8');
+const siteAccessService = await readFile(new URL('../services/site-access.ts', import.meta.url), 'utf8');
 const requireBackgroundSource = await readFile(new URL('../entrypoints/background.ts', import.meta.url), 'utf8');
 
 test('does not request mandatory access to every website', () => {
@@ -18,12 +19,12 @@ test('does not request mandatory access to every website', () => {
 test('registers the page script dynamically only after per-site permission', () => {
   assert.match(contentScript, /registration:\s*['"]runtime['"]/);
   assert.match(contentScript, /matches:\s*\[['"]<all_urls>['"]\]/);
-  assert.match(popup, /browser\.permissions\.request\(\{ origins: \[pattern\] \}\)/);
-  assert.match(popup, /browser\.scripting\.registerContentScripts/);
-  assert.match(popup, /contentScriptIdForOrigin\(origin\)/);
-  assert.match(popup, /const legacyId = 'chat-automation-' \+ origin\.replace/);
-  assert.match(popup, /browser\.scripting\.unregisterContentScripts\(\{ ids: \[legacyId\] \}\)/);
-  assert.match(popup, /files: \[['"]\/?content-scripts\/content\.js['"]\]/);
+  assert.match(siteAccessService, /browser\.permissions\.request\(\{ origins: \[pattern\] \}\)/);
+  assert.match(siteAccessService, /browser\.scripting\.registerContentScripts/);
+  assert.match(siteAccessService, /contentScriptIdForOrigin\(origin\)/);
+  assert.match(siteAccessService, /const legacyId = 'chat-automation-' \+ origin\.replace/);
+  assert.match(siteAccessService, /browser\.scripting\.unregisterContentScripts\(\{ ids: \[legacyId\] \}\)/);
+  assert.match(siteAccessService, /files: \[['"]\/?content-scripts\/content\.js['"]\]/);
   assert.match(popup, /t\('enableOnSite'\)/);
 });
 
