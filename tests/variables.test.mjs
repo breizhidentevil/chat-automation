@@ -11,6 +11,8 @@ const compiled = ts.transpile(source, {
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
 const {
   findTemplateVariables,
+  filterValidVariableDefinitions,
+  isValidVariableDefinition,
   resolveMessageTemplate,
   validateTemplateVariables,
 } = await import(moduleUrl);
@@ -107,4 +109,32 @@ test('dynamic array indexes outside the available range fail explicitly', async 
     resolveMessageTemplate('{{data.items[2]}}', [], context, 'automation', { data: { items: ['only'] } }),
     /Index hors limites/,
   );
+});
+
+
+test('variable validation rejects malformed, oversized and duplicate persisted definitions', () => {
+  const valid = variable('first', 'value');
+  assert.equal(isValidVariableDefinition(valid), true);
+  assert.equal(isValidVariableDefinition({ ...valid, updatedAt: Number.NaN }), false);
+  assert.equal(isValidVariableDefinition({ ...valid, name: '__proto__' }), false);
+  assert.equal(isValidVariableDefinition({ ...valid, value: 'x'.repeat(100_001) }), false);
+  assert.deepEqual(
+    filterValidVariableDefinitions([
+      valid,
+      { ...valid, id: 'duplicate-id', name: 'second' },
+      { ...valid, id: 'second-id' },
+      { ...valid, id: 'bad-scope', scope: 'other' },
+      null,
+    ]).map(item => item.id),
+    ['first'],
+  );
+});
+
+test('template resolution ignores malformed persisted variable definitions', async () => {
+  const result = await resolveMessageTemplate(
+    'Hello {{name}}',
+    [variable('name', 'World'), { id: 'broken', name: 'broken', type: 'static', value: 42, scope: 'global', updatedAt: 0 }],
+    context,
+  );
+  assert.equal(result.text, 'Hello World');
 });
