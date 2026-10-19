@@ -47,3 +47,70 @@ export function isValidAutomationStartMessage(value: unknown): value is Automati
 
   return true;
 }
+
+
+export interface SavedAutomationSettings {
+  message: string;
+  messages: string[];
+  interval: string;
+  unit: 'seconds' | 'minutes';
+  repeatMode: 'infinite' | 'finite';
+  repeatCount: string;
+  timeWindowEnabled: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function validClock(value: unknown): value is string {
+  return typeof value === 'string' && TIME_PATTERN.test(value);
+}
+
+/** Normalize untrusted persisted settings to bounded, UI-safe values. */
+export function sanitizeSavedAutomationSettings(value: unknown): SavedAutomationSettings | null {
+  if (!isRecord(value)) return null;
+
+  const rawMessage = typeof value.message === 'string' ? value.message.slice(0, MAX_MESSAGE_LENGTH) : '';
+  const candidateMessages = Array.isArray(value.messages)
+    ? value.messages.filter((item): item is string => typeof item === 'string' && item.trim().length > 0 && item.length <= MAX_MESSAGE_LENGTH).slice(0, MAX_MESSAGES)
+    : [];
+  const messages: string[] = [];
+  let totalLength = 0;
+  for (const item of candidateMessages) {
+    if (totalLength + item.length > MAX_TOTAL_MESSAGE_LENGTH) break;
+    messages.push(item);
+    totalLength += item.length;
+  }
+  if (messages.length === 0 && rawMessage.trim()) messages.push(rawMessage);
+
+  const unit: 'seconds' | 'minutes' = value.unit === 'minutes' ? 'minutes' : 'seconds';
+  const maxInterval = unit === 'minutes' ? 44_640 : 2_678_400;
+  const rawInterval = typeof value.interval === 'string' || typeof value.interval === 'number' ? String(value.interval) : '30';
+  const parsedInterval = /^\\d+$/.test(rawInterval) ? Number(rawInterval) : 30;
+  const interval = String(Number.isSafeInteger(parsedInterval) && parsedInterval >= 1 && parsedInterval <= maxInterval ? parsedInterval : 30);
+
+  const savedCount = typeof value.repeatCount === 'number' || typeof value.repeatCount === 'string' ? String(value.repeatCount) : '0';
+  const countValid = /^\\d+$/.test(savedCount) && Number.isSafeInteger(Number(savedCount)) && Number(savedCount) >= 0;
+  const repeatCount = countValid ? savedCount : '0';
+  const repeatMode: 'infinite' | 'finite' = value.repeatMode === 'infinite' || Number(repeatCount) === 0 ? 'infinite' : 'finite';
+
+  const startTime = validClock(value.startTime) ? value.startTime : '09:00';
+  let endTime = validClock(value.endTime) ? value.endTime : '18:00';
+  const timeWindowEnabled = typeof value.timeWindowEnabled === 'boolean' ? value.timeWindowEnabled : true;
+  if (timeWindowEnabled && startTime === endTime) endTime = startTime === '18:00' ? '19:00' : '18:00';
+
+  return {
+    message: rawMessage,
+    messages: messages.length > 0 ? messages : [rawMessage],
+    interval,
+    unit,
+    repeatMode,
+    repeatCount: repeatMode === 'infinite' ? '0' : repeatCount,
+    timeWindowEnabled,
+    startTime,
+    endTime,
+  };
+}
