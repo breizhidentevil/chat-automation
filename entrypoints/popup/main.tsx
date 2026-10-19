@@ -44,12 +44,6 @@ function Popup() {
   const { simulationContext, setSimulationContext, simulationStartAt, setSimulationStartAt, simulationCycles, setSimulationCycles, simulationResult, simulationError, runSimulation } = useSimulation({
     automationMessages, variables, interval, unit, timeWindowEnabled, startTime, endTime, t,
   });
-  const { historyMessages, historyOrigin, historyConversationId, historyError, refreshHistory, clearSiteHistory, exportHistory } = useHistory({
-    enabled: page === 'history',
-    t,
-    activeTab,
-    setStatus,
-  });
   const { logs, refreshLogs, clearLogs, exportLogs } = useLogs({
     enabled: page === 'logs',
     t,
@@ -59,6 +53,12 @@ function Popup() {
     t, locale, message, automationMessages, interval, unit, repeatCount,
     timeWindowEnabled, startTime, endTime, variables, persistSettings, refreshLogs,
     setStatus, setPage,
+  });
+  const { historyMessages, historyOrigin, historyConversationId, historyError, refreshHistory, clearSiteHistory, exportHistory } = useHistory({
+    enabled: page === 'history',
+    t,
+    activeTab,
+    setStatus,
   });
 
   useEffect(() => {
