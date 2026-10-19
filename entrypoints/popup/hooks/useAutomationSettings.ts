@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SavedAutomationSettings } from '../../../lib/automation-validation';
 import { loadAutomationSettings, saveAutomationSettings } from '../../../services/automation-settings';
-import { translate } from '../../../lib/i18n';
 
 type SettingsErrorHandler = () => void;
 
