@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
-import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
-import { ensureSiteAccessForTab } from '../../services/site-access';
 
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
-import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
 import TemplateTextarea from './components/TemplateTextarea';
 import SimulatorPage from './pages/SimulatorPage';
@@ -20,6 +17,7 @@ import { useAutomationSettings } from './hooks/useAutomationSettings';
 import { useHistory } from './hooks/useHistory';
 import { useLogs } from './hooks/useLogs';
 import { useSimulation } from './hooks/useSimulation';
+import { useAutomationController } from './hooks/useAutomationController';
 
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
 
@@ -32,11 +30,8 @@ function Popup() {
 
 
   const [page, setPage] = useState<Page>('automation');
-  const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
-  const [strategyOrigin, setStrategyOrigin] = useState('');
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [status, setStatus] = useState(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr') === 'fr' ? 'Prêt. Ouvrez une page contenant un chat.' : 'Ready. Open a page containing a chat.');
-  const [siteAccessStatus, setSiteAccessStatus] = useState('');
   const [variablePreviewText, setVariablePreviewText] = useState('Bonjour {{prenom}}');
   const [variablePreviewResult, setVariablePreviewResult] = useState<TemplatePreviewResult | null>(null);
   const [variablePreviewError, setVariablePreviewError] = useState('');
@@ -60,6 +55,15 @@ function Popup() {
     t,
     setStatus,
   });
+  const { strategyReady, strategyOrigin, siteAccessStatus, activeTab, refreshStrategyStatus, enableActiveSite, validateStrategy, startAutomation, stopAutomation } = useAutomationController({
+    t, locale, message, automationMessages, interval, unit, repeatCount,
+    timeWindowEnabled, startTime, endTime, variables, persistSettings, refreshLogs,
+    setStatus, setPage,
+  });
+
+  useEffect(() => {
+    if (page === 'automation') void refreshStrategyStatus();
+  }, [page]);
 
   useEffect(() => {
     let active = true;
@@ -75,167 +79,6 @@ function Popup() {
       });
     return () => { active = false; };
   }, [variablePreviewText, variables]);
-
-  async function refreshStrategyStatus() {
-    try {
-      const tab = await activeTab();
-      const origin = new URL(tab.url!).origin;
-      setStrategyOrigin(origin);
-      const data = await browser.storage.local.get('chatAutomationProcedures');
-      const procedures = data.chatAutomationProcedures;
-      setStrategyReady(
-        Boolean(procedures && typeof procedures === 'object' &&
-          isValidChatSiteProcedure((procedures as Record<string, unknown>)[origin], origin)),
-      );
-    } catch {
-      setStrategyOrigin('');
-      setStrategyReady(false);
-      setStatus(t('openChatTab'));
-    }
-  }
-
-
-  useEffect(() => {
-    void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => {
-      const saved = data[LOCALE_STORAGE_KEY];
-      if (saved === 'fr' || saved === 'en') setLocale(saved);
-    }).catch(error => {
-      console.error('[Chat Automation] Lecture de la langue échouée.', error);
-    });
-
-  }, []);
-
-  useEffect(() => {
-    if (page === 'automation') void refreshStrategyStatus();
-  }, [page]);
-
-  async function activeTab() {
-    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url || !/^https?:/.test(tab.url)) throw new Error(t('strategyUnavailable'));
-    return tab;
-  }
-
-  async function ensureSiteAccess(tab: Browser.tabs.Tab): Promise<boolean> {
-    const result = await ensureSiteAccessForTab(tab);
-    if (!result.granted) {
-      if (result.origin) setSiteAccessStatus(t('siteAccessDenied', { origin: result.origin }));
-      return false;
-    }
-    setSiteAccessStatus(result.pageScriptInjected
-      ? t('siteAccessEnabledScriptLoaded', { origin: result.origin })
-      : t('siteAccessEnabled', { origin: result.origin }));
-    return true;
-  }
-
-  async function enableActiveSite() {
-    try {
-      const tab = await activeTab();
-      await ensureSiteAccess(tab);
-    } catch (error) {
-      setSiteAccessStatus(error instanceof Error ? error.message : (t('siteAccessError')));
-    }
-  }
-
-  async function validateStrategy() {
-    const text = message.trim();
-    if (!text) { setStatus(t('testMessageRequired')); return; }
-    const confirmed = window.confirm(t('testConfirm'));
-    if (!confirmed) return;
-    try {
-      const tab = await activeTab();
-      if (!await ensureSiteAccess(tab)) return;
-      setStatus(t('testRunning'));
-      const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_VALIDATE', text });
-      setStatus(typeof response?.message === 'string' ? response.message : (t('testInconclusive')));
-      await refreshStrategyStatus();
-      await refreshLogs();
-    } catch (error) {
-      setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : t('pageScriptUnavailable'));
-    }
-  }
-
-  function updateAutomationMessage(index: number, value: string) {
-    setAutomationMessages(current => updateMessage(current, index, value));
-  }
-
-  function addAutomationMessage() {
-    setAutomationMessages(current => addMessage(current));
-  }
-
-  function removeAutomationMessage(index: number) {
-    setAutomationMessages(current => removeMessage(current, index));
-  }
-
-  function moveAutomationMessage(from: number, to: number) {
-    setAutomationMessages(current => moveMessage(current, from, to));
-  }
-
-  async function startAutomation() {
-    const validation = validateAutomationConfig({
-      messages: automationMessages,
-      interval,
-      unit,
-      repeatCount,
-      timeWindowEnabled,
-      startTime,
-      endTime,
-      variables,
-    });
-    if (!validation.ok) {
-      switch (validation.code) {
-        case 'sequenceEmpty':
-          setStatus(t('sequenceEmpty'));
-          return;
-        case 'sequenceTooLong':
-          setStatus(t('sequenceTooLong'));
-          return;
-        case 'unknownVariables':
-          setStatus(t('unknownVariables', {
-            number: validation.messageIndex ?? 1,
-            names: (validation.names ?? []).map(name => `{{${name}}}`).join(', '),
-          }));
-          setPage('variables');
-          return;
-        case 'invalidVariableSyntax':
-          setStatus(t('invalidVariableSyntax', { number: validation.messageIndex ?? 1 }));
-          return;
-        case 'invalidInterval':
-          setStatus(t('invalidInterval'));
-          return;
-        case 'invalidRepeatCount':
-          setStatus(t('invalidRepeatCount'));
-          return;
-        case 'invalidTimeWindow':
-          setStatus(t('invalidTimeWindow'));
-          return;
-        case 'invalidSettings':
-          setStatus(t('invalidSettings'));
-          return;
-        default:
-          return;
-      }
-    }
-
-    try {
-      const tab = await activeTab();
-      if (!await ensureSiteAccess(tab)) return;
-      const payload = buildAutomationStartPayload(validation.config);
-      if (!await persistSettings()) return;
-      const response = await browser.tabs.sendMessage(tab.id!, payload);
-      setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
-      await refreshLogs();
-    } catch (error) {
-      setStatus(error instanceof Error && error.message.startsWith(locale === 'fr' ? 'Cette page' : 'This page') ? error.message : (locale === 'fr' ? 'Le script de page est indisponible. Rechargez la page puis réessayez.' : 'The page script is unavailable. Reload the page and try again.'));
-    }
-  }
-  async function stopAutomation() {
-    try {
-      const tab = await activeTab();
-      const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_STOP' });
-      setStatus(typeof response?.message === 'string' ? response.message : t('automationStopped'));
-      await refreshLogs();
-    } catch { setStatus(t('pageScriptUnreachable')); }
-  }
 
   function countdownLabel(target: number | null | undefined): string {
     if (typeof target !== 'number') return t('waiting');
