@@ -3,13 +3,11 @@ import type { SavedAutomationSettings } from '../../../lib/automation-validation
 import { loadAutomationSettings, saveAutomationSettings } from '../../../services/automation-settings';
 import { translate } from '../../../lib/i18n';
 
-type Translate = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => string;
 type SettingsErrorHandler = () => void;
 
 export function useAutomationSettings(
   onReadError: SettingsErrorHandler,
   onSaveError: SettingsErrorHandler,
-  t: Translate,
 ) {
   const [message, setMessage] = useState('');
   const [automationMessages, setAutomationMessages] = useState<string[]>(['']);
