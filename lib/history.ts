@@ -146,7 +146,7 @@ export async function markInterruptedMessagesIncomplete(origin: string): Promise
     const updated = current.map(message => message.origin === origin && message.status === 'streaming'
       ? { ...message, status: 'incomplete' as const, lastUpdatedAt: Date.now() }
       : message);
-    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: updated });
+    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: limitConversationHistory(updated) });
   } catch (error) {
     console.error('[Chat Automation] Échec de la réconciliation directe de l’historique.', error);
   }
@@ -185,7 +185,7 @@ export function backgroundMarkInterruptedMessagesIncomplete(origin: string): Pro
       changed = true;
       return { ...message, status: 'incomplete' as const, lastUpdatedAt: Date.now() };
     });
-    if (changed) await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: updated });
+    if (changed) await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: limitConversationHistory(updated) });
   });
   backgroundWriteQueue = operation.catch(error => {
     console.error('[Chat Automation] Échec de réconciliation de l’historique', error);
