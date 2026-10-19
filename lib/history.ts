@@ -18,6 +18,16 @@ export interface ConversationMessage {
 }
 
 export const HISTORY_STORAGE_KEY = 'chatAutomationHistoryV1';
+const HISTORY_CLEAR_MARKERS_KEY = 'chatAutomationHistoryClearedAtV1';
+const MAX_HISTORY_CLEAR_MARKERS = 500;
+
+function readHistoryClearMarkers(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] >= 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_HISTORY_CLEAR_MARKERS));
+}
 
 /** Collapse duplicate DOM representations of the same visible message.
  * Distinct messages with identical text remain separate when they were first seen
@@ -151,7 +161,11 @@ let backgroundWriteQueue: Promise<void> = Promise.resolve();
 
 export function backgroundUpsertConversationMessage(message: ConversationMessage): Promise<void> {
   const operation = backgroundWriteQueue.then(async () => {
-    const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
+    const stored = await browser.storage.local.get([HISTORY_STORAGE_KEY, HISTORY_CLEAR_MARKERS_KEY]);
+    const clearMarkers = readHistoryClearMarkers(stored[HISTORY_CLEAR_MARKERS_KEY]);
+    // Reject writes captured before the latest clear, including writes from tabs
+    // that missed the best-effort notification.
+    if (message.firstSeenAt <= (clearMarkers[message.origin] ?? -1)) return;
     const current = deduplicateConversationMessages(
       Array.isArray(stored[HISTORY_STORAGE_KEY])
         ? stored[HISTORY_STORAGE_KEY].filter(isValidConversationMessage)
@@ -199,12 +213,18 @@ export function backgroundMarkInterruptedMessagesIncomplete(origin: string): Pro
 /** Delete one site's retained messages through the same queue as history writes. */
 export function backgroundClearSiteHistory(origin: string): Promise<void> {
   const operation = backgroundWriteQueue.then(async () => {
-    const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
+    const stored = await browser.storage.local.get([HISTORY_STORAGE_KEY, HISTORY_CLEAR_MARKERS_KEY]);
     const current = Array.isArray(stored[HISTORY_STORAGE_KEY])
       ? stored[HISTORY_STORAGE_KEY].filter(isValidConversationMessage)
       : [];
+    const markers = readHistoryClearMarkers(stored[HISTORY_CLEAR_MARKERS_KEY]);
+    markers[origin] = Date.now();
+    const boundedMarkers = Object.fromEntries(Object.entries(markers)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_HISTORY_CLEAR_MARKERS));
     await browser.storage.local.set({
       [HISTORY_STORAGE_KEY]: current.filter(message => message.origin !== origin),
+      [HISTORY_CLEAR_MARKERS_KEY]: boundedMarkers,
     });
   });
   backgroundWriteQueue = operation.catch(error => {
