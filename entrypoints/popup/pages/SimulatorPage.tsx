@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Badge, Button, Card, NumberInput, Paper, Textarea, TextInput } from '@mantine/core';
+import { Alert, Button, Card, NumberInput, Paper, Textarea, TextInput } from '@mantine/core';
 import type { Locale } from '../../../lib/i18n';
 import { translate } from '../../../lib/i18n';
 import type { SimulationResult } from '../../../lib/simulator';
@@ -47,7 +47,7 @@ export default function SimulatorPage({
   return <>
 
       <div className="page-heading"><h2>{t('simulator')}</h2><p>{t('simulatorIntro')}</p></div>
-      <p className="simulator-safety-note">{t('simulatorIsolation')}</p>
+      <Alert className="simulator-safety-note" color="teal" variant="light">{t('simulatorIsolation')}</Alert>
       <section className="simulator-settings">
         <h3>{t('simulationMessages')}</h3>
         {automationMessages.length === 0 ? <p className="empty">{t('sequenceEmpty')}</p> : <ol className="simulation-message-list">{automationMessages.map((item, index) => <li key={index}><strong>{index + 1}.</strong><code>{item || t('emptyMessage')}</code></li>)}</ol>}
