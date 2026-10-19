@@ -81,3 +81,9 @@ test('does not export other conversations when the selected conversation has no 
   assert.match(exportFunction, /const selectedItems = historyConversationId \? exactConversation : siteItems/);
   assert.doesNotMatch(exportFunction, /exactConversation\.length > 0 \? exactConversation : siteItems/);
 });
+
+test('declares Firefox MV3 identity and no external data collection', () => {
+  assert.match(config, /browser === 'firefox' \? \{/);
+  assert.match(config, /browser_specific_settings:\s*\{[\s\S]*?gecko:\s*\{[\s\S]*?id:\s*'chat-automation@breizhidentevil\.github\.io'/);
+  assert.match(config, /data_collection_permissions:\s*\{\s*required:\s*\['none'\]\s*\}/);
+});
