@@ -205,7 +205,10 @@ function Popup() {
   const [timeWindowEnabled, setTimeWindowEnabled] = useState(true);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
-  const [simulationContext, setSimulationContext] = useState('{\n  "chat": { "session": { "title": "Conversation de test", "url": "https://example.test/chat" } },\n  "data": { "ticket": "A-123", "items": [{ "name": "Exemple", "value": "123" }] }\n}');
+  const [simulationContext, setSimulationContext] = useState(`{
+  "chat": { "session": { "title": "Conversation de test", "url": "https://example.test/chat" } },
+  "data": { "ticket": "A-123", "items": [{ "name": "Exemple", "value": "123" }] }
+}`);
   const [simulationStartAt, setSimulationStartAt] = useState(() => toLocalDateTimeInput(new Date()));
   const [simulationCycles, setSimulationCycles] = useState('2');
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
