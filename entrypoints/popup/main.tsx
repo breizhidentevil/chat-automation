@@ -5,7 +5,7 @@ import { deduplicateConversationMessages, historyStorageKey, type ConversationMe
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
-import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
 import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
@@ -310,8 +310,9 @@ function Popup() {
   }
 
   async function persistVariables(next: VariableDefinition[]) {
-    setVariables(next);
-    await browser.storage.local.set({ [VARIABLES_STORAGE_KEY]: next });
+    const safeNext = filterValidVariableDefinitions(next);
+    setVariables(safeNext);
+    await browser.storage.local.set({ [VARIABLES_STORAGE_KEY]: safeNext });
   }
 
   async function saveVariable() {
@@ -323,6 +324,13 @@ function Popup() {
     if (variables.some(item => item.name === name && item.scope === variableScope && item.id !== editingVariableId)) { setVariableError(t('duplicateVariable')); return; }
     const item: VariableDefinition = { id: editingVariableId ?? `var-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, type: 'static', value: variableValue, scope: variableScope, updatedAt: Date.now() };
     const next = editingVariableId ? variables.map(existing => existing.id === editingVariableId ? item : existing) : [...variables, item];
+    const totalValueLength = next.reduce((total, variable) => total + variable.value.length, 0);
+    if (next.length > MAX_VARIABLE_DEFINITIONS || totalValueLength > MAX_TOTAL_VARIABLE_VALUE_LENGTH) {
+      setVariableError(locale === 'fr'
+        ? 'Limite atteinte : 100 variables et 1 000 000 caractères cumulés au maximum.'
+        : 'Limit reached: at most 100 variables and 1,000,000 combined characters.');
+      return;
+    }
     await persistVariables(next);
     setVariableName(''); setVariableValue(''); setVariableScope('global'); setEditingVariableId(null);
     setStatus(t('testSaved', { name }));
