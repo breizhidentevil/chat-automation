@@ -95,6 +95,13 @@ test('prototype-related path segments are blocked', async () => {
   );
 });
 
+test('dynamic paths cannot read inherited object properties', async () => {
+  await assert.rejects(
+    resolveMessageTemplate('{{data.toString}}', [], context, 'automation', { data: {} }),
+    /Propriété « toString » introuvable/,
+  );
+});
+
 test('dynamic array indexes outside the available range fail explicitly', async () => {
   await assert.rejects(
     resolveMessageTemplate('{{data.items[2]}}', [], context, 'automation', { data: { items: ['only'] } }),
