@@ -5,7 +5,6 @@ import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../
 
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
-import TemplateTextarea from './components/TemplateTextarea';
 import SimulatorPage from './pages/SimulatorPage';
 import HistoryPage from './pages/HistoryPage';
 import LogsPage from './pages/LogsPage';
