@@ -1,3 +1,12 @@
+## 5.3.0 — React architecture refactor
+
+- Extracted pure message-sequence operations and centralized automation configuration normalization, validation, and runtime payload creation.
+- Replaced manual variable preview substitution with the shared LiquidJS resolver; dynamic runtime paths are shown as placeholders and unknown variables remain visible.
+- Extracted storage and infrastructure services for variables, automation settings, history, logs, site permissions/content-script registration, and JSON exports.
+- Split the popup into dedicated Automation, Variables, History, Logs, and Simulator pages, with a shared TemplateTextarea component.
+- Added hooks for automation settings, variable management, simulation, automation control, history/log loading, runtime status, and page polling.
+- Added unit tests for extracted business logic and service boundaries.
+
 ## 5.2.0 — Automation simulator
 
 - Added a dedicated simulator tab in the popup.
