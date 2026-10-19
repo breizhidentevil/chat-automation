@@ -9,6 +9,21 @@ import { isValidDiagnosticEvent, limitDiagnosticEvents } from '../lib/diagnostic
 import { isSenderOriginAllowed } from '../lib/message-origin-validation';
 
 const LOG_KEY = 'chatAutomationLogs';
+const CONTENT_SCRIPT_ID = 'chat-automation-all-sites';
+const CONTENT_SCRIPT_MATCHES = ['http://*/*', 'https://*/*'];
+
+async function registerContentScriptForAllSites(): Promise<void> {
+  const existing = await browser.scripting.getRegisteredContentScripts({ ids: [CONTENT_SCRIPT_ID] });
+  if (existing.length > 0) return;
+  await browser.scripting.registerContentScripts([{
+    id: CONTENT_SCRIPT_ID,
+    matches: CONTENT_SCRIPT_MATCHES,
+    js: ['/content-scripts/content.js'],
+    runAt: 'document_idle',
+    persistAcrossSessions: true,
+  }]);
+}
+
 let logWriteQueue: Promise<void> = Promise.resolve();
 
 function isExtensionUiSender(sender: { id?: string; tab?: unknown; url?: string }): boolean {
@@ -32,25 +47,14 @@ function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }
 }
 
 export default defineBackground(() => {
-  // Remove dynamically registered page scripts as soon as a user revokes a site
-  // permission. This keeps the registered-script state aligned with granted access.
-  browser.permissions.onRemoved.addListener(({ origins = [] }) => {
-    if (origins.length === 0) return;
-
-    // Un already-injected script can remain alive in an open tab after its host
-    // permission is revoked. Stop automation and DOM capture in matching tabs too.
-    void browser.tabs.query({ url: origins })
-      .then(tabs => Promise.all(tabs.filter(tab => tab.id !== undefined).map(tab =>
-        browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_PERMISSION_REVOKED' }).catch(() => undefined),
-      )))
-      .catch(error => console.error('[Chat Automation] Arrêt des scripts actifs après révocation impossible.', error));
-
-    void browser.scripting.getRegisteredContentScripts()
-      .then(scripts => scripts.filter(script => script.matches?.some(match => origins.includes(match)))
-        .map(script => script.id))
-      .then(ids => ids.length > 0 ? browser.scripting.unregisterContentScripts({ ids }) : undefined)
-      .catch(error => console.error('[Chat Automation] Nettoyage des scripts après révocation impossible.', error));
-  });
+  const registerAllSites = () => {
+    void registerContentScriptForAllSites().catch(error =>
+      console.error('[Chat Automation] Enregistrement du script global impossible.', error),
+    );
+  };
+  browser.runtime.onInstalled.addListener(registerAllSites);
+  browser.runtime.onStartup.addListener(registerAllSites);
+  registerAllSites();
 
   browser.runtime.onMessage.addListener((message: unknown, sender) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
