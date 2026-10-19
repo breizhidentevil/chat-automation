@@ -347,31 +347,6 @@ function Popup() {
     }
   }
 
-  async function clearLogs() {
-    if (!window.confirm(t('confirmClearLogs'))) return;
-    try {
-      const response = await browser.runtime.sendMessage({ type: 'CHAT_LOGS_CLEAR' });
-      if (response?.ok !== true) throw new Error('Background refused log deletion');
-      setLogs([]);
-      setStatus(t('logsCleared'));
-    } catch (error) {
-      console.error('[Chat Automation] Effacement des journaux échoué.', error);
-      setStatus(t('logsClearError'));
-    }
-  }
-
-  async function exportLogs() {
-    try {
-      const data = await browser.storage.local.get('chatAutomationLogs');
-      const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
-      downloadJsonFile(entries, 'chat-automation-logs.json');
-      setStatus(t('logsExportStarted'));
-    } catch (error) {
-      console.error('[Chat Automation] Export des journaux échoué.', error);
-      setStatus(t('logsExportError'));
-    }
-  }
-
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''} ${page === 'simulator' ? 'simulator-view' : ''}`}>
     <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><label className="locale-picker"><span>{t('language')}</span><select aria-label={t('language')} value={locale} onChange={event => { const next = event.target.value as Locale; setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); }}><option value="fr">Français</option><option value="en">English</option></select></label><button type="button" className="help-button" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
     <nav className="main-nav" aria-label={t('mainNavigation')}>
