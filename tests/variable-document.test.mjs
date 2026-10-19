@@ -30,10 +30,10 @@ test('allows an empty JSON object to clear the variable set', () => {
   assert.deepEqual(parseVariableDocument('{}'), {});
 });
 
-test('rejects invalid names, nested values, duplicate YAML keys, and malformed documents', () => {
+test('parses nested JSON and YAML objects and rejects malformed documents', () => {
   assert.throws(() => parseVariableDocument('{"nom invalide":"x"}'), /Nom de variable invalide/);
   assert.throws(() => parseVariableDocument('{"personne":{"prenom":"Alex"}}'), /tableau ou d’objet imbriqué/);
   assert.throws(() => parseVariableDocument('prenom: Alex\nprenom: Sam'), /dupliquée/);
   assert.throws(() => parseVariableDocument('{oops'), /JSON invalide/);
-  assert.throws(() => parseVariableDocument('ligne invalide'), /Syntaxe YAML invalide/);
+  assert.throws(() => parseVariableDocument('ligne invalide'), /Syntaxe YAML invalide/);\n  assert.throws(() => parseVariableDocument('personne:\\n   prenom: Alex'), /multiples de deux/);
 });
