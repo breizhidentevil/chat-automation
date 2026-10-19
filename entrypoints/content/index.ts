@@ -598,8 +598,6 @@ async function startConversationHistoryObserver(): Promise<void> {
     if (historyLastRoute !== `${location.pathname}${location.search}${location.hash}`) {
       historyLastRoute = `${location.pathname}${location.search}${location.hash}`;
       historyClaimedExisting = new Set<string>();
-      // A route change starts a new conversation context; establish a fresh DOM baseline.
-      historyClearedExistingElements = new WeakMap<HTMLElement, boolean>();
       void readConversationHistory(location.origin).then(items => { historyKnownEntries = items; scanConversationHistory(); });
     } else {
       scanConversationHistory();
