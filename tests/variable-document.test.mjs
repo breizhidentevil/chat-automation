@@ -32,8 +32,16 @@ test('allows an empty JSON object to clear the variable set', () => {
 
 test('parses nested JSON and YAML objects and rejects malformed documents', () => {
   assert.throws(() => parseVariableDocument('{"nom invalide":"x"}'), /Nom de variable invalide/);
-  assert.throws(() => parseVariableDocument('{"personne":{"prenom":"Alex"}}'), /tableau ou d’objet imbriqué/);
-  assert.throws(() => parseVariableDocument('prenom: Alex\nprenom: Sam'), /dupliquée/);
+  assert.deepEqual(parseVariableDocument('{"personne":{"prenom":"Alex","adresse":{"ville":"Nantes"}},"articles":[{"id":1}]}'), {
+    personne: '{"prenom":"Alex","adresse":{"ville":"Nantes"}}',
+    articles: '[{"id":1}]',
+  });
+  assert.deepEqual(parseVariableDocument('personne:\\n  prenom: Alex\\n  adresse:\\n    ville: Nantes\\narticles:\\n  premier:\\n    id: 1'), {
+    personne: '{"prenom":"Alex","adresse":{"ville":"Nantes"}}',
+    articles: '{"premier":{"id":1}}',
+  });
+  assert.throws(() => parseVariableDocument('prenom: Alex\\nprenom: Sam'), /dupliquée/);
   assert.throws(() => parseVariableDocument('{oops'), /JSON invalide/);
-  assert.throws(() => parseVariableDocument('ligne invalide'), /Syntaxe YAML invalide/);\n  assert.throws(() => parseVariableDocument('personne:\\n   prenom: Alex'), /multiples de deux/);
+  assert.throws(() => parseVariableDocument('ligne invalide'), /Syntaxe YAML invalide/);
+  assert.throws(() => parseVariableDocument('personne:\\n   prenom: Alex'), /multiples de deux/);
 });
