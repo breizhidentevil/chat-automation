@@ -618,6 +618,7 @@ function Popup() {
       simulationResult={simulationResult}
     /> : page === 'variables' ? <VariablesPage
       t={t}
+      locale={locale}
       editingVariableId={editingVariableId}
       variableName={variableName}
       setVariableName={setVariableName}
