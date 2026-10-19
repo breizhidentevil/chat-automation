@@ -61,6 +61,7 @@ async function sendText(
   options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
 ): Promise<{ message: string; success: boolean }> {
   const text = rawText.trim();
+  if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant tout envoi.', success: false };
   if (!text) return { message: 'Le message est vide.', success: false };
   const origin = location.origin;
   await logEvent(origin, 'INFO', 'send-request-received');
@@ -108,6 +109,9 @@ async function sendText(
   const baselineMatches = getMatchingMessageElements(text);
   try {
     await insertText(chosen, text);
+    if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+      return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+    }
     await logEvent(origin, 'INFO', 'text-inserted', `element=${chosen.tagName.toLowerCase()}; selector=${procedure?.inputSelector ?? stableSelector(chosen)}`);
   } catch (error) {
     await logEvent(origin, 'ERROR', 'text-insertion-failed', error instanceof Error ? error.message : 'unknown error');
@@ -175,6 +179,7 @@ async function sendText(
 
 async function validateAndSaveStrategy(rawText: string): Promise<{ message: string; validated?: boolean }> {
   const text = rawText.trim();
+  if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant de valider une stratégie.', validated: false };
   const origin = location.origin;
   await logEvent(origin, 'INFO', 'strategy-validation-started', 'Le test va envoyer le texte saisi dans le chat.');
 
@@ -209,7 +214,9 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
   // Do not select the send button before typing: many chat apps keep it
   // disabled/absent until their framework has processed the new text.
   await waitForUiUpdate();
+  if (siteAccessRevoked) return { message: 'Validation annulée car l’accès au site a été révoqué.', validated: false };
   const button = await waitForEnabledSendButton(input, 1800);
+  if (siteAccessRevoked) return { message: 'Validation annulée car l’accès au site a été révoqué.', validated: false };
   if (button) {
     const buttonSelector = stableSelector(button);
     strategy = { method: 'button', selector: buttonSelector, confidence: 1 };
