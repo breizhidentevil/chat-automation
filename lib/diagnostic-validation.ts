@@ -1,0 +1,19 @@
+import type { DiagnosticEvent } from './contracts';
+
+const MAX_SITE_LENGTH = 2048;
+const MAX_EVENT_LENGTH = 256;
+const MAX_DETAILS_LENGTH = 10_000;
+const MAX_STRATEGY_LENGTH = 128;
+
+export function isValidDiagnosticEvent(value: unknown): value is DiagnosticEvent {
+  if (!value || typeof value !== 'object') return false;
+  const event = value as Partial<DiagnosticEvent>;
+  if (typeof event.timestamp !== 'number' || !Number.isFinite(event.timestamp) || event.timestamp < 0) return false;
+  if (!['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(event.level as string)) return false;
+  if (typeof event.site !== 'string' || event.site.length === 0 || event.site.length > MAX_SITE_LENGTH) return false;
+  if (typeof event.event !== 'string' || event.event.length === 0 || event.event.length > MAX_EVENT_LENGTH) return false;
+  if (event.details !== undefined && (typeof event.details !== 'string' || event.details.length > MAX_DETAILS_LENGTH)) return false;
+  if (event.strategy !== undefined && (typeof event.strategy !== 'string' || event.strategy.length > MAX_STRATEGY_LENGTH)) return false;
+  if (event.durationMs !== undefined && (typeof event.durationMs !== 'number' || !Number.isFinite(event.durationMs) || event.durationMs < 0)) return false;
+  return true;
+}
