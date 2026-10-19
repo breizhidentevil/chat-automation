@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import type { VariableDefinition } from '../../../lib/variables';
-import { Textarea } from '@mantine/core';
+import { Button, Textarea } from '@mantine/core';
 import { translate } from '../../../lib/i18n';
 
 type TemplateSuggestion = { value: string; description: string; kind: 'custom' | 'dynamic' };
@@ -124,15 +124,18 @@ function TemplateTextarea({
       autoComplete="off"
     />
     {filtered.length > 0 ? <div className="variable-autocomplete" role="listbox" aria-label={t('suggestions')}>
-      {filtered.map((item, index) => <button
+      {filtered.map((item, index) => <Button
         type="button"
+        variant="subtle"
+        color="gray"
+        size="compact-sm"
         role="option"
         aria-selected={index === activeIndex}
         className={index === activeIndex ? 'variable-suggestion active' : 'variable-suggestion'}
         key={`${item.kind}-${item.value}`}
         onMouseDown={event => event.preventDefault()}
         onClick={() => insertSuggestion(item)}
-      ><span className="suggestion-main"><code>{`{{${item.value}}}`}</code><small>{t(item.kind === 'custom' ? 'variableCustom' : 'dynamicPath')}</small></span><span className="suggestion-description">{item.description.includes('|') ? `${t(item.description.split('|')[0] as Parameters<typeof translate>[1])} · ${item.description.split('|').slice(1).join('|')}` : t(item.description as Parameters<typeof translate>[1])}</span></button>)}
+      ><span className="suggestion-main"><code>{`{{${item.value}}}`}</code><small>{t(item.kind === 'custom' ? 'variableCustom' : 'dynamicPath')}</small></span><span className="suggestion-description">{item.description.includes('|') ? `${t(item.description.split('|')[0] as Parameters<typeof translate>[1])} · ${item.description.split('|').slice(1).join('|')}` : t(item.description as Parameters<typeof translate>[1])}</span></Button>)}
       <p className="autocomplete-help">{t('navigateSuggestions')}</p>
     </div> : null}
   </div>;
