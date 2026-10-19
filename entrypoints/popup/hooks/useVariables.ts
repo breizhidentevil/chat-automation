@@ -26,9 +26,7 @@ function serializeVariables(variables: VariableDefinition[]): string {
 
 export function useVariables({ t, locale, onSaved }: UseVariablesOptions) {
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
-  const [variablesDocument, setVariablesDocument] = useState('{
-  "prenom": "Alexandre"
-}');
+  const [variablesDocument, setVariablesDocument] = useState(`{\n  "prenom": "Alexandre"\n}`);
   const [variableName, setVariableName] = useState('');
   const [variableValue, setVariableValue] = useState('');
   const [variableScope, setVariableScope] = useState<VariableScope>('global');
