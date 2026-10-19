@@ -31,6 +31,7 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 
 - **Per-site sending strategies**: validate and save the input selector and sending method for each website origin.
 - **Message automation**: compose and reorder multi-message sequences, configure an interval, choose a finite number of cycles or repeat indefinitely, and optionally restrict execution to a daily time window.
+- **Isolated simulator**: preview LiquidJS output, sequence timing, cycle variables, and template errors against a fictitious JSON context without sending messages or changing real history and logs.
 - **Generation-aware scheduling**: pause sending when supported page signals indicate that a response is still being generated.
 - **Variables**: define reusable static variables and use variable suggestions while editing message templates.
 - **LiquidJS message templates**: use filters, default values, conditionals, and loops alongside existing `{{variable}}` and dynamic data-path tokens.
@@ -57,6 +58,12 @@ Voici les informations demandées.
 ```
 
 Available data includes saved variables, runtime and automation context, and the existing dynamic roots (`chat`, `history`, `logs`, `strategy`, and `data`). Liquid filters such as `default`, `capitalize`, and `upcase`, plus `if`, `unless`, and `for`, can be used directly in message text. Existing templates continue to work unchanged. Template rendering is local to the extension; do not place secrets in messages or expose data you would not want sent to the active chat.
+
+## Automation simulator
+
+Open the **Simulator** tab to preview the configured message sequence before starting a real run. It uses the current sequence, saved variables, interval, and time-window settings, and lets you provide a start date, up to 10 simulated cycles, and a fictitious JSON context for dynamic data.
+
+The simulator renders each template and shows a timestamped timeline with successful output or the specific rendering error. Scheduling is calculated without waiting for the interval to elapse. The simulator does not send messages, call the page script, write automation history/logs, or persist the JSON test context. It is a rendering and schedule preview, not a full browser-site integration test; page-specific input detection and actual delivery still require a separate real-site test.
 
 ## Requirements
 
@@ -91,8 +98,8 @@ To package builds manually, use the build output for the relevant browser. The C
 
 The extension version follows Semantic Versioning and is kept in sync between `package.json` and `package-lock.json`; WXT uses this package version in the generated browser manifest.
 
-- Current release baseline: `5.1.0`.
-- Each development iteration that changes the project increments the patch version (for example, `5.0.0` → `5.0.1` → `5.0.2`).
+- Current release baseline: `5.2.0`.
+- Each development iteration that changes the project increments the patch version (for example, `5.2.0` → `5.2.1` → `5.2.2`).
 - The minor or major component changes only when the scope of a release justifies it.
 - GitHub Actions adds its run number to development prerelease tags (for example, `v5.0.1-dev.201`); that build number does not replace the extension version.
 
