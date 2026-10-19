@@ -165,3 +165,16 @@ actif: true
 ```
 
 Les clés de premier niveau doivent respecter les règles de nommage des variables utilisées dans les modèles. Les objets imbriqués sont pris en charge ; accédez à leurs propriétés avec la notation pointée, par exemple `{{personne.adresse.ville}}`. Les tableaux JSON sont également pris en charge et peuvent être indexés, par exemple `{{articles[0].titre}}`. Les mappings YAML imbriqués utilisent une indentation par multiples de deux espaces. Lors de l’enregistrement, les variables existantes conservent leur portée ; la portée sélectionnée s’applique aux nouvelles variables. Un objet JSON vide (`{}`) permet de supprimer toutes les variables.
+
+
+### Valeurs par défaut et filtres de template
+
+Le moteur de modèles prend également en charge les filtres Liquid. Utilisez `default` pour fournir une valeur de remplacement quand une variable est absente ou vide, et les filtres de texte pour normaliser l’affichage :
+
+```liquid
+Bonjour {{ prenom | default: "Client" }}
+Nom : {{ nom | upcase }}
+Ville : {{ ville | strip | downcase }}
+```
+
+Les filtres peuvent être chaînés. Les noms de filtres suivent la syntaxe Liquid (par exemple `upcase`, `downcase` et `strip`).
