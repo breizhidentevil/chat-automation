@@ -9,7 +9,7 @@ const compiled = ts.transpile(source, {
   target: ts.ScriptTarget.ES2022,
 });
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
-const { deduplicateConversationMessages, mergeConversationMessage, limitConversationHistory } = await import(moduleUrl);
+const { deduplicateConversationMessages, mergeConversationMessage, limitConversationHistory, upsertConversationMessage, markInterruptedMessagesIncomplete } = await import(moduleUrl);
 
 function message(overrides = {}) {
   return {
@@ -107,4 +107,43 @@ test('history limits retain the newest entry when it alone exceeds the approxima
     message({ id: 'new', content: 'x'.repeat(100) }),
   ], 10, 50);
   assert.deepEqual(result.map(item => item.id), ['new']);
+});
+
+
+test('a rejected background upsert never falls back to direct storage writes', async () => {
+  const previousBrowser = globalThis.browser;
+  let writes = 0;
+  globalThis.browser = {
+    runtime: { sendMessage: async () => ({ ok: false }) },
+    storage: { local: {
+      get: async () => ({ chatAutomationHistoryV1: [] }),
+      set: async () => { writes += 1; },
+    } },
+  };
+  try {
+    await upsertConversationMessage(message());
+    assert.equal(writes, 0);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
+test('a rejected background reconciliation never falls back to direct storage writes', async () => {
+  const previousBrowser = globalThis.browser;
+  let writes = 0;
+  globalThis.browser = {
+    runtime: { sendMessage: async () => ({ ok: false }) },
+    storage: { local: {
+      get: async () => ({ chatAutomationHistoryV1: [message()] }),
+      set: async () => { writes += 1; },
+    } },
+  };
+  try {
+    await markInterruptedMessagesIncomplete('https://example.com');
+    assert.equal(writes, 0);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
 });
