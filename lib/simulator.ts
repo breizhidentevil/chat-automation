@@ -33,7 +33,7 @@ export interface SimulationResult {
 
 export const MAX_SIMULATION_CYCLES = 10;
 export const MAX_SIMULATION_MESSAGES = 100;
-export const MAX_SIMULATION_ENTRIES = MAX_SIMULATION_CYCLES * MAX_SIMULATION_MESSAGES;
+export const MAX_SIMULATION_ENTRIES = 200;
 
 function parseClock(value: string): number {
   const match = /^(\\d{2}):(\\d{2})$/.exec(value);
@@ -83,6 +83,9 @@ export async function simulateAutomation(config: SimulationConfig): Promise<Simu
   }
   if (!Number.isSafeInteger(config.repeatCount) || config.repeatCount < 1 || config.repeatCount > MAX_SIMULATION_CYCLES) {
     throw new Error(`Le simulateur accepte de 1 à ${MAX_SIMULATION_CYCLES} cycles pour éviter les simulations trop volumineuses.`);
+  }
+  if (config.messages.length * config.repeatCount > MAX_SIMULATION_ENTRIES) {
+    throw new Error(`La simulation est limitée à ${MAX_SIMULATION_ENTRIES} rendus de message par exécution.`);
   }
   if (!(config.startAt instanceof Date) || !Number.isFinite(config.startAt.getTime())) {
     throw new Error('Date de début de simulation invalide.');
