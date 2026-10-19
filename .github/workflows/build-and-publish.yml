@@ -32,6 +32,8 @@ jobs:
         run: npm install --global npm@10.8.2
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+      - name: Audit npm dependencies for high-severity vulnerabilities
+        run: npm audit --audit-level=high
       - name: Generate WXT types
         run: npx wxt prepare
       - name: Type-check

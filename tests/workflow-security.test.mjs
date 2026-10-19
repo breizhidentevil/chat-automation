@@ -31,3 +31,8 @@ test('checks npm and GitHub Actions dependencies weekly with Dependabot', () => 
   assert.match(dependabot, /package-ecosystem:\s*github-actions[\s\S]*?directory:\s*["']\/["'][\s\S]*?interval:\s*weekly/);
   assert.match(dependabot, /open-pull-requests-limit:\s*5/);
 });
+
+
+test('audits npm dependencies for high-severity vulnerabilities in CI', () => {
+  assert.match(workflow, /name: Audit npm dependencies for high-severity vulnerabilities\s+run: npm audit --audit-level=high/);
+});
