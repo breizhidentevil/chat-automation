@@ -8,7 +8,7 @@ const compiled = ts.transpile(source, {
   module: ts.ModuleKind.ESNext,
   target: ts.ScriptTarget.ES2022,
 });
-const moduleUrl = \`data:text/javascript;base64,\${Buffer.from(compiled).toString('base64')}\`;
+const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
 const { isValidAutomationStartMessage } = await import(moduleUrl);
 
 function config(overrides = {}) {
