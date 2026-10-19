@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { LOCALE_STORAGE_KEY, preferredLocale, type Locale } from '../../lib/i18n';
 import { EnglishDocumentation } from './English';
 import { createRoot } from 'react-dom/client';
+import { Button, MantineProvider, Select } from '@mantine/core';
+import '@mantine/core/styles.css';
 import './style.css';
+import './theme.css';
 
 function Documentation() {
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
@@ -13,7 +16,7 @@ function Documentation() {
   return <main className="docs-shell">
     <header className="docs-header">
       <div className="docs-mark" aria-hidden="true">CA</div>
-      <div><p className="eyebrow">CHAT AUTOMATION · V5</p><h1>Documentation</h1><p className="subtitle">Guide d’utilisation, variables et fonctionnement de l’extension.</p></div><label className="docs-language"><span>Langue</span><select value={locale} onChange={event => changeLocale(event.target.value as Locale)}><option value="fr">Français</option><option value="en">English</option></select></label>
+      <div><p className="eyebrow">CHAT AUTOMATION · V5</p><h1>Documentation</h1><p className="subtitle">Guide d’utilisation, variables et fonctionnement de l’extension.</p></div><Select className="docs-language" aria-label="Langue" value={locale} onChange={value => { if (value === "fr" || value === "en") changeLocale(value); }} data={[{ value: "fr", label: "Français" }, { value: "en", label: "English" }]} size="sm" />
     </header>
     <nav className="toc" aria-label="Sommaire">
       <a href="#demarrage">Démarrage</a><a href="#automation">Automatisation</a><a href="#strategie">Stratégie d’envoi</a><a href="#variables">Variables</a><a href="#chemins">Chemins dynamiques</a><a href="#simulateur">Simulateur</a><a href="#historique">Historique</a><a href="#logs">Logs</a><a href="#limites">Limites et dépannage</a><a href="#confidentialite">Données et confidentialité</a>
@@ -62,4 +65,4 @@ function Documentation() {
   </main>;
 }
 
-createRoot(document.getElementById('root')!).render(<Documentation />);
+createRoot(document.getElementById("root")!).render(<MantineProvider defaultColorScheme="auto" theme={{ primaryColor: "blue", fontFamily: "Inter, system-ui, sans-serif", defaultRadius: "md" }}><Documentation /></MantineProvider>);
