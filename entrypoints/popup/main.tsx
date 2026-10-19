@@ -1,19 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
-import { deduplicateConversationMessages, historyStorageKey, type ConversationMessage } from '../../lib/history';
-import { isValidConversationMessage } from '../../lib/history-validation';
-import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
-import { selectHistoryExportMessages } from '../../lib/history-export';
 import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
-import { loadVisibleHistory } from '../../services/history-service';
-import { loadRecentLogs } from '../../services/logs-service';
 import TemplateTextarea from './components/TemplateTextarea';
 import SimulatorPage from './pages/SimulatorPage';
 import HistoryPage from './pages/HistoryPage';
@@ -24,7 +18,8 @@ import { usePagePolling } from './hooks/usePagePolling';
 import { useRuntimeStatus, type RuntimeStatus } from './hooks/useRuntimeStatus';
 import { useVariables } from './hooks/useVariables';
 import { useAutomationSettings } from './hooks/useAutomationSettings';
-import { downloadJsonFile } from '../../services/file-export';
+import { useHistory } from './hooks/useHistory';
+import { useLogs } from './hooks/useLogs';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -43,20 +38,14 @@ function Popup() {
 
 
   const [page, setPage] = useState<Page>('automation');
-  const logReadErrorReported = useRef(false);
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [status, setStatus] = useState(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr') === 'fr' ? 'Prêt. Ouvrez une page contenant un chat.' : 'Ready. Open a page containing a chat.');
   const [siteAccessStatus, setSiteAccessStatus] = useState('');
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
   const [variablePreviewText, setVariablePreviewText] = useState('Bonjour {{prenom}}');
   const [variablePreviewResult, setVariablePreviewResult] = useState<TemplatePreviewResult | null>(null);
   const [variablePreviewError, setVariablePreviewError] = useState('');
-  const [historyOrigin, setHistoryOrigin] = useState('');
-  const [historyConversationId, setHistoryConversationId] = useState('');
-  const [historyError, setHistoryError] = useState('');
   const [simulationContext, setSimulationContext] = useState(`{
   "chat": { "session": { "title": "Conversation de test", "url": "https://example.test/chat" } },
   "data": { "ticket": "A-123", "items": [{ "name": "Exemple", "value": "123" }] }
@@ -71,6 +60,17 @@ function Popup() {
     () => setStatus(t('settingsSaveError')),
   );
   const { variables, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
+  const { historyMessages, historyOrigin, historyConversationId, historyError, refreshHistory, clearSiteHistory, exportHistory } = useHistory({
+    enabled: page === 'history',
+    t,
+    activeTab,
+    setStatus,
+  });
+  const { logs, refreshLogs, clearLogs, exportLogs } = useLogs({
+    enabled: page === 'logs',
+    t,
+    setStatus,
+  });
 
   useEffect(() => {
     let active = true;
@@ -105,73 +105,6 @@ function Popup() {
     }
   }
 
-  async function refreshLogs() {
-    try {
-      const entries = await loadRecentLogs(key => browser.storage.local.get(key));
-      setLogs(entries as LogEntry[]);
-      logReadErrorReported.current = false;
-    } catch (error) {
-      if (!logReadErrorReported.current) {
-        console.error('[Chat Automation] Lecture des journaux échouée.', error);
-        setStatus(t('logsReadError'));
-        logReadErrorReported.current = true;
-      }
-    }
-  }
-
-  async function refreshHistory() {
-    setHistoryError('');
-    try {
-      const tab = await activeTab();
-      const currentUrl = new URL(tab.url!);
-      const origin = currentUrl.origin;
-      const conversationId = `${origin}${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`;
-      setHistoryOrigin(origin);
-      setHistoryConversationId(conversationId);
-      const visibleItems = await loadVisibleHistory(key => browser.storage.local.get(key), origin, conversationId);
-      setHistoryMessages(visibleItems);
-    } catch (error) {
-      setHistoryMessages([]);
-      setHistoryOrigin('');
-      setHistoryConversationId('');
-      setHistoryError(error instanceof Error ? error.message : t('historyLoadError'));
-    }
-  }
-
-  async function clearSiteHistory() {
-    if (!historyOrigin) return;
-    const confirmed = window.confirm(t('confirmClearHistory', { origin: historyOrigin }));
-    if (!confirmed) return;
-    try {
-      const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_CLEAR_SITE', origin: historyOrigin });
-      if (response?.ok !== true) throw new Error('Background refused history deletion');
-      setHistoryMessages([]);
-      setStatus(t('historyCleared'));
-    } catch (error) {
-      console.error('[Chat Automation] Effacement de l’historique échoué.', error);
-      setHistoryError(t('historyClearError'));
-    }
-  }
-
-  async function exportHistory() {
-    try {
-      const key = historyStorageKey(historyOrigin);
-      const data = await browser.storage.local.get(key);
-      const allItems = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) as ConversationMessage[] : [];
-      // Keep export scope explicit even when the selected conversation has no stored messages.
-      const selectedItems = selectHistoryExportMessages(
-        deduplicateConversationMessages(allItems),
-        historyOrigin,
-        historyConversationId,
-      );
-      const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems };
-      downloadJsonFile(payload, `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`);
-      setStatus(t('historyExportStarted'));
-    } catch (error) {
-      console.error('[Chat Automation] Export de l’historique échoué.', error);
-      setStatus(t('historyExportError'));
-    }
-  }
 
   useEffect(() => {
     void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => {
@@ -180,17 +113,12 @@ function Popup() {
     }).catch(error => {
       console.error('[Chat Automation] Lecture de la langue échouée.', error);
     });
-    void refreshLogs();
 
   }, []);
 
   useEffect(() => {
     if (page === 'automation') void refreshStrategyStatus();
   }, [page]);
-
-  usePagePolling(page === 'history', refreshHistory, 1500);
-
-  usePagePolling(page === 'logs', refreshLogs, 1000);
 
   async function activeTab() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
