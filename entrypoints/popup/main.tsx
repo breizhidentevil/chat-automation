@@ -5,7 +5,7 @@ import { deduplicateConversationMessages, historyStorageKey, type ConversationMe
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
-import { validateTemplateVariables, VARIABLE_NAME_PATTERN, VARIABLES_STORAGE_KEY, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { validateTemplateVariables, VARIABLE_NAME_PATTERN, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -257,7 +257,7 @@ function Popup() {
     void refreshLogs();
     void browser.storage.local.get(VARIABLES_STORAGE_KEY).then(data => {
       const saved = data[VARIABLES_STORAGE_KEY];
-      if (Array.isArray(saved)) setVariables(saved.filter((item): item is VariableDefinition => !!item && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.value === 'string' && item.type === 'static' && (item.scope === 'global' || item.scope === 'automation')));
+      setVariables(filterValidVariableDefinitions(saved));
     });
     void browser.storage.local.get('chatAutomationSettings').then(({ chatAutomationSettings }) => {
       const saved = chatAutomationSettings as SavedSettings | undefined;
