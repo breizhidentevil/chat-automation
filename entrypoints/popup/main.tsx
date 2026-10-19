@@ -17,14 +17,13 @@ import { loadStoredVariables, saveStoredVariables } from '../../services/variabl
 import { loadAutomationSettings, saveAutomationSettings } from '../../services/automation-settings';
 import { loadVisibleHistory } from '../../services/history-service';
 import { loadRecentLogs } from '../../services/logs-service';
+import TemplateTextarea from './components/TemplateTextarea';
 import { downloadJsonFile } from '../../services/file-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
 type RuntimeStatus = { phase: 'stopped' | 'ready' | 'waiting-interval' | 'waiting-window' | 'waiting-llm' | 'sending' | 'finished' | 'failed'; note: string; messageIndex: number; messagesCount: number; completedSequences: number; repeatMode: 'infinite' | 'finite'; repeatCount: number; nextSendAt: number | null; updatedAt: number };
 
-
-type TemplateSuggestion = { value: string; description: string; kind: 'custom' | 'dynamic' };
 
 function toLocalDateTimeInput(date: Date): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -44,37 +43,6 @@ function formatSimulationDuration(ms: number, locale: Locale): string {
     ? [hours ? `${hours} h` : '', minutes ? `${minutes} min` : '', `${seconds} s`].filter(Boolean).join(' ')
     : [hours ? `${hours} h` : '', minutes ? `${minutes} min` : '', `${seconds} s`].filter(Boolean).join(' ');
 }
-
-const DYNAMIC_VARIABLE_SUGGESTIONS: TemplateSuggestion[] = [
-  { value: 'system.runtime.timestamp', description: 'currentTimestamp', kind: 'dynamic' },
-  { value: 'system.runtime.date', description: 'currentDate', kind: 'dynamic' },
-  { value: 'system.runtime.time', description: 'currentTime', kind: 'dynamic' },
-  { value: 'system.runtime.timezone', description: 'timezone', kind: 'dynamic' },
-  { value: 'automation.sequence.iteration', description: 'currentIteration', kind: 'dynamic' },
-  { value: 'automation.sequence.total_iterations', description: 'totalIterations', kind: 'dynamic' },
-  { value: 'automation.message.index', description: 'currentMessageIndex', kind: 'dynamic' },
-  { value: 'automation.message.total', description: 'messageCountSequence', kind: 'dynamic' },
-  { value: 'automation.config.interval', description: 'configuredInterval', kind: 'dynamic' },
-  { value: 'automation.messages[0].content', description: 'firstConfiguredMessage', kind: 'dynamic' },
-  { value: 'chat.messages[0].content', description: 'firstChatMessage', kind: 'dynamic' },
-  { value: 'chat.session.url', description: 'activeConversationUrl', kind: 'dynamic' },
-  { value: 'chat.session.title', description: 'activeConversationTitle', kind: 'dynamic' },
-  { value: 'chat.sent[0].content', description: 'firstSentMessage', kind: 'dynamic' },
-  { value: 'chat.received[0].content', description: 'firstReceivedMessage', kind: 'dynamic' },
-  { value: 'history.messages[0].content', description: 'firstHistoryMessage', kind: 'dynamic' },
-  { value: 'history.messages[0].author', description: 'firstHistoryAuthor', kind: 'dynamic' },
-  { value: 'history.messages[0].timestamp', description: 'firstHistoryDate', kind: 'dynamic' },
-  { value: 'history.message.count', description: 'historyMessageCount', kind: 'dynamic' },
-  { value: 'history.sent[0].content', description: 'firstHistorySent', kind: 'dynamic' },
-  { value: 'history.received[0].content', description: 'firstHistoryReceived', kind: 'dynamic' },
-  { value: 'logs.events[0].message', description: 'firstLogMessage', kind: 'dynamic' },
-  { value: 'logs.events[0].level', description: 'firstLogLevel', kind: 'dynamic' },
-  { value: 'logs.events[0].timestamp', description: 'firstLogDate', kind: 'dynamic' },
-  { value: 'logs.errors[0].message', description: 'firstError', kind: 'dynamic' },
-  { value: 'logs.warnings[0].message', description: 'firstWarning', kind: 'dynamic' },
-  { value: 'strategy.site.domain', description: 'currentDomain', kind: 'dynamic' },
-  { value: 'data.records[0].id', description: 'firstRecordId', kind: 'dynamic' },
-];
 
 function TemplateTextarea({
   value, onChange, variables, placeholder, rows = 3, id, ariaLabel, className = '', t,
