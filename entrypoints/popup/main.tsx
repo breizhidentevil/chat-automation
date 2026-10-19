@@ -418,7 +418,7 @@ function Popup() {
       await browser.scripting.registerContentScripts([{
         id,
         matches: [pattern],
-        js: ['content-scripts/content.js'],
+        js: ['/content-scripts/content.js'],
         runAt: 'document_idle',
         persistAcrossSessions: true,
       }]);
@@ -434,7 +434,7 @@ function Popup() {
       // Existing tabs do not receive a newly registered script until navigation.
     }
 
-    await browser.scripting.executeScript({ target: { tabId: tab.id }, files: ['content-scripts/content.js'] });
+    await browser.scripting.executeScript({ target: { tabId: tab.id }, files: ['/content-scripts/content.js'] });
     setSiteAccessStatus(locale === 'fr' ? `Accès activé pour ${origin}. Le script est chargé dans l’onglet actif.` : `Access enabled for ${origin}. The script is loaded in the active tab.`);
     return true;
   }
