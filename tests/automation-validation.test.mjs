@@ -9,7 +9,7 @@ const compiled = ts.transpile(source, {
   target: ts.ScriptTarget.ES2022,
 });
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
-const { isValidAutomationStartMessage } = await import(moduleUrl);
+const { isValidAutomationStartMessage, sanitizeSavedAutomationSettings } = await import(moduleUrl);
 
 function config(overrides = {}) {
   return {
@@ -57,4 +57,32 @@ test('rejects malformed time windows', () => {
   assert.equal(isValidAutomationStartMessage(config({ endTime: '25:00' })), false);
   assert.equal(isValidAutomationStartMessage(config({ timeWindowEnabled: 'yes' })), false);
   assert.equal(isValidAutomationStartMessage(config({ startTime: '09:00', endTime: '09:00', timeWindowEnabled: true })), false);
+});
+
+
+test('sanitizes malformed persisted automation settings and enforces aggregate limits', () => {
+  assert.equal(sanitizeSavedAutomationSettings(null), null);
+  assert.equal(sanitizeSavedAutomationSettings([]), null);
+
+  const sanitized = sanitizeSavedAutomationSettings({
+    message: 'fallback',
+    messages: ['ok', '', 12, 'x'.repeat(100_001), 'y'.repeat(100_000), 'z'.repeat(100_000)],
+    interval: '-1',
+    unit: 'minutes',
+    repeatMode: 'finite',
+    repeatCount: 'not-a-number',
+    timeWindowEnabled: true,
+    startTime: '25:00',
+    endTime: '25:00',
+  });
+
+  assert.ok(sanitized);
+  assert.deepEqual(sanitized.messages, ['y'.repeat(100_000), 'z'.repeat(100_000)]);
+  assert.equal(sanitized.interval, '30');
+  assert.equal(sanitized.unit, 'minutes');
+  assert.equal(sanitized.repeatMode, 'infinite');
+  assert.equal(sanitized.repeatCount, '0');
+  assert.equal(sanitized.startTime, '09:00');
+  assert.notEqual(sanitized.startTime, sanitized.endTime);
+  assert.equal(sanitized.messages.reduce((total, item) => total + item.length, 0) <= 1_000_000, true);
 });
