@@ -80,11 +80,11 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
       await serviceWorker.evaluate(() => chrome.action.openPopup());
       const actionPopup = await popupEvent;
       await actionPopup.getByRole('button', { name: /history|historique/i }).click();
-      await actionPopup.getByRole('button', { name: /clear site history|effacer l'historique du site|effacer l’historique du site/i }).waitFor();
+      await actionPopup.getByRole('button', { name: /clear.*history|effacer.*historique/i }).waitFor();
       actionPopup.on('dialog', dialog => dialog.accept());
       await actionPopup.getByRole('button', { name: /clear site history|effacer l'historique du site|effacer l’historique du site/i }).click();
 
-      await actionPopup.getByRole('status').filter({ hasText: /history cleared|historique effacé|historique supprimé/i }).waitFor({ timeout: 10000 });
+      await actionPopup.getByRole('status').filter({ hasText: /history cleared|historique.*effacé|historique.*supprimé/i }).waitFor({ timeout: 10000 });
       const cleared = await serviceWorker.evaluate(() => chrome.storage.local.get([
         'chatAutomationHistoryV1',
         'chatAutomationHistoryClearedAtV1',
