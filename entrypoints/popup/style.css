@@ -295,3 +295,15 @@ nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .mark { user-select: none; }
 .site-origin { display: block; margin-top: 3px; color: #777; font-size: 10px; overflow-wrap: anywhere; }
 :root[data-mantine-color-scheme="dark"] .site-origin { color: #a6a7ab; }
+
+
+/* Conversation-pair simulator */
+.conversation-pairs { display: grid; gap: 10px; }
+.conversation-pair .sequence-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.conversation-pair .sequence-heading h3 { margin: 0; font-size: 12px; }
+.conversation-pair .mantine-Textarea-input { font-size: 12px; }
+.conversation-results { display: grid; gap: 8px; margin-top: 16px; }
+.conversation-results > h3 { margin-bottom: 0; }
+.conversation-result-pair > p { display: grid; gap: 4px; margin: 9px 0 0; }
+.conversation-result-pair > p > span { color: #62676e; font-size: 10px; font-weight: 600; }
+.conversation-result-pair code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 11px; }

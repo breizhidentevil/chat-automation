@@ -18,7 +18,6 @@ import { useVariables } from './hooks/useVariables';
 import { useAutomationSettings } from './hooks/useAutomationSettings';
 import { useHistory } from './hooks/useHistory';
 import { useLogs } from './hooks/useLogs';
-import { useSimulation } from './hooks/useSimulation';
 import { useAutomationController } from './hooks/useAutomationController';
 
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -78,9 +77,7 @@ function Popup() {
     () => setStatus(t('settingsSaveError')),
   );
   const { variables, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
-  const { simulationContext, setSimulationContext, simulationStartAt, setSimulationStartAt, simulationCycles, setSimulationCycles, simulationResult, simulationError, runSimulation } = useSimulation({
-    automationMessages, variables, interval, unit, timeWindowEnabled, startTime, endTime, t,
-  });
+
   const { logs, refreshLogs, clearLogs, exportLogs } = useLogs({
     enabled: page === 'logs',
     t,
@@ -196,25 +193,7 @@ function Popup() {
       setStartTime={setStartTime}
       endTime={endTime}
       setEndTime={setEndTime}
-    />: page === 'simulator' ? <SimulatorPage
-      t={t}
-      locale={locale}
-      automationMessages={automationMessages}
-      simulationStartAt={simulationStartAt}
-      setSimulationStartAt={setSimulationStartAt}
-      simulationCycles={simulationCycles}
-      setSimulationCycles={setSimulationCycles}
-      interval={interval}
-      unit={unit}
-      timeWindowEnabled={timeWindowEnabled}
-      startTime={startTime}
-      endTime={endTime}
-      simulationContext={simulationContext}
-      setSimulationContext={setSimulationContext}
-      runSimulation={() => void runSimulation()}
-      simulationError={simulationError}
-      simulationResult={simulationResult}
-    /> : page === 'variables' ? <VariablesPage
+    />: page === 'simulator' ? <SimulatorPage t={t} locale={locale} variables={variables} /> : page === 'variables' ? <VariablesPage
       t={t}
       locale={locale}
       editingVariableId={editingVariableId}

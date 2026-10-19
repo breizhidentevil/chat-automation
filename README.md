@@ -31,7 +31,7 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 
 - **Per-site sending strategies**: validate and save the input selector and sending method for each website origin.
 - **Message automation**: compose and reorder multi-message sequences, configure an interval, choose a finite number of cycles or repeat indefinitely, and optionally restrict execution to a daily time window.
-- **Isolated simulator**: preview LiquidJS output, sequence timing, cycle variables, and template errors against a fictitious JSON context without sending messages or changing real history and logs.
+- **Conversation simulator**: define an ordered, extendable list of sent-message / expected-reply pairs; preview rendered outgoing templates and simulate received replies locally, without contacting an LLM or sending real messages.
 - **Generation-aware scheduling**: pause sending when supported page signals indicate that a response is still being generated.
 - **Variables**: define reusable static variables and use variable suggestions while editing message templates.
 - **LiquidJS message templates**: use filters, default values, conditionals, and loops alongside existing `{{variable}}` and dynamic data-path tokens.
