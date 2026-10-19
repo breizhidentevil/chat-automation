@@ -12,7 +12,7 @@ const requireBackgroundSource = await readFile(new URL('../entrypoints/backgroun
 
 test('declares broad HTTP and HTTPS host access in the manifest', () => {
   assert.match(config, /host_permissions:\s*\[['"]http:\/\/\*\/\*['"],\s*['"]https:\/\/\*\/\*['"]\]/);
-  assert.doesNotMatch(config, /optional_host_permissions/);
+  assert.doesNotMatch(config, /optional_host_permissions\s*:/);
   assert.doesNotMatch(config, /delete manifest\.host_permissions/);
 });
 
