@@ -17,7 +17,7 @@ function stripYamlComment(value: string): string {
       continue;
     }
     if (character === '"' || character === "'") quote = character;
-    else if (character === '#' && (index === 0 || /\\s/.test(value[index - 1]!))) return value.slice(0, index).trimEnd();
+    else if (character === '#' && (index === 0 || /\s/.test(value[index - 1]!))) return value.slice(0, index).trimEnd();
   }
   return value.trimEnd();
 }
