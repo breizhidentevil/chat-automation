@@ -220,3 +220,32 @@ nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 /* V5 locale selector */
 .locale-picker { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; margin-left: auto; color: #62676e; font-size: 10px; }
 .locale-picker select { max-width: 94px; padding: 4px 5px; border: 1px solid #cfd3d8; border-radius: 5px; background: #fff; color: #202124; font: inherit; font-size: 11px; }
+
+
+/* Isolated automation simulator */
+.simulator-view .popup-content { min-width: 0; }
+.simulator-safety-note { padding: 9px 10px; border: 1px solid #b7d7c5; border-radius: 8px; background: #f1faf4; color: #215b39; font-size: 11px; line-height: 1.45; }
+.simulator-settings h3, .simulation-summary h3, .simulation-timeline h3 { margin: 0 0 8px; font-size: 12px; }
+.simulation-message-list { display: grid; gap: 6px; margin: 0; padding-left: 22px; }
+.simulation-message-list li { padding-left: 2px; font-size: 10px; line-height: 1.4; }
+.simulation-message-list code { display: block; overflow-wrap: anywhere; white-space: pre-wrap; margin-top: 3px; color: #303134; }
+.simulation-cycle-field { width: 100px; flex: 0 0 100px; }
+.simulation-cycle-field input { width: 100%; }
+.simulation-context-input { min-height: 150px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; line-height: 1.45; }
+.simulation-error { padding: 8px; border-radius: 7px; background: #fce8e6; color: #a50e0e; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.simulation-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.simulation-metrics > div { display: grid; gap: 5px; padding: 8px; border: 1px solid #e1e3e6; border-radius: 7px; min-width: 0; }
+.simulation-metrics span { color: #62676e; font-size: 9px; line-height: 1.3; }
+.simulation-metrics strong { font-size: 15px; overflow-wrap: anywhere; }
+.simulation-timeline { display: grid; gap: 8px; }
+.simulation-entry { min-width: 0; border: 1px solid #e1e3e6; border-radius: 8px; padding: 9px; }
+.simulation-entry.failed { border-color: #e5b8b5; background: #fffafa; }
+.simulation-entry-head { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+.simulation-entry-head strong { font-size: 11px; }
+.simulation-entry-head time { font-size: 9px; color: #62676e; }
+.simulation-template, .simulation-rendered { display: grid; gap: 4px; margin: 7px 0 0; }
+.simulation-template span, .simulation-rendered span { font-size: 9px; font-weight: 700; color: #62676e; }
+.simulation-template code, .simulation-rendered code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.simulation-rendered code { padding: 7px; border-radius: 6px; background: #f5f7fa; }
+.simulation-entry-error { color: #a50e0e; font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+.simulation-entry > small { display: block; margin-top: 7px; color: #62676e; font-size: 9px; overflow-wrap: anywhere; }

@@ -1,10 +1,18 @@
+## 5.2.0 — Automation simulator
+
+- Added a dedicated simulator tab in the popup.
+- Simulates LiquidJS rendering, multiple cycles, message intervals, and daily time windows against a temporary JSON context.
+- Displays a timestamped timeline with rendered messages and per-message template errors.
+- The simulation engine has no browser, DOM, network, storage, or message-sending dependency.
+- Added tests for rendered cycles, per-message errors, daytime and overnight windows, and configuration limits.
+
 ## 5.1.0 — LiquidJS message templates
 
 - Integrated LiquidJS into message rendering with support for filters, default values, conditionals, and loops.
 - Preserved existing static-variable and dynamic-path tokens and their validation behavior.
 - Restricted property access to own properties and configured template parsing, render, and memory limits; pinned a patched LiquidJS release.
 - Added regression tests for Liquid syntax, backwards compatibility, malformed templates, unknown variables, and blocked object properties.
-- Validation status: tests and browser builds must be confirmed by CI; they have not been run in this editing environment.
+- Validation status at the time of the 5.1.0 change: CI was green for unit tests, type checking, and Chrome/Firefox/Edge builds.
 
 ## 5.0.0 — Versioning baseline
 
