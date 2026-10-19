@@ -46,22 +46,21 @@ export default function SimulatorPage({
 }: SimulatorPageProps) {
   return <>
 
-      <div className="page-heading"><h2>{t('simulator')}</h2><p>{t('simulatorIntro')}</p></div>
-      <Alert className="simulator-safety-note" color="teal" variant="light">{t('simulatorIsolation')}</Alert>
+      <div className="page-heading"><h2>{t('simulator')}</h2></div>
+      <p className="simulator-safety-note">{locale === 'fr' ? 'Aucun message ne sera envoyé.' : 'No messages will be sent.'}</p>
       <section className="simulator-settings">
         <h3>{t('simulationMessages')}</h3>
         {automationMessages.length === 0 ? <p className="empty">{t('sequenceEmpty')}</p> : <ol className="simulation-message-list">{automationMessages.map((item, index) => <li key={index}><strong>{index + 1}.</strong><code>{item || t('emptyMessage')}</code></li>)}</ol>}
-        <p className="helper">{t('simulationFromSettings')}</p>
+
         <div className="field-row">
           <div className="field-grow"><TextInput id="simulation-start" type="datetime-local" label={t('simulationStart')} value={simulationStartAt} onChange={event => setSimulationStartAt(event.currentTarget.value)} /></div>
           <div className="simulation-cycle-field"><NumberInput id="simulation-cycles" label={t('simulationCycles')} min={1} max={10} step={1} allowDecimal={false} allowNegative={false} value={simulationCycles} onChange={value => setSimulationCycles(String(value))} /></div>
         </div>
-        <p className="helper">{t('simulationInterval', { interval: intervalAmountLabel(interval, unit, locale) })}</p>
-        {timeWindowEnabled ? <p className="helper">{t('simulationWindow', { start: startTime, end: endTime })}</p> : <p className="helper">{t('noTimeRestriction')}</p>}
+
       </section>
       <section className="simulator-context">
         <label htmlFor="simulation-context">{t('simulationContext')}</label>
-        <p className="helper">{t('simulationContextHelp')}</p>
+
         <Textarea id="simulation-context" className="simulation-context-input" rows={7} spellCheck={false} autosize minRows={7} maxRows={14} value={simulationContext} onChange={event => setSimulationContext(event.currentTarget.value)} />
       </section>
       <Button className="primary" onClick={() => void runSimulation()}>{t('runSimulation')}</Button>
