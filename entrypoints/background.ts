@@ -59,6 +59,26 @@ export default defineBackground(() => {
   browser.runtime.onStartup.addListener(registerAllSites);
   registerAllSites();
 
+  // If the browser reports that host access was revoked, stop active scripts and
+  // remove the global registration until the extension's permissions are restored.
+  browser.permissions.onRemoved.addListener(({ origins = [] }) => {
+    if (origins.length === 0) return;
+
+    void browser.tabs.query({ url: origins })
+      .then(tabs => Promise.all(tabs.filter(tab => tab.id !== undefined).map(tab =>
+        browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_PERMISSION_REVOKED' }).catch(() => undefined),
+      )))
+      .catch(error => console.error('[Chat Automation] Arrêt des scripts actifs après révocation impossible.', error));
+
+    void browser.scripting.getRegisteredContentScripts()
+      .then(scripts => scripts.filter(script =>
+        script.id === CONTENT_SCRIPT_ID ||
+        script.matches?.some(match => origins.includes(match)),
+      ).map(script => script.id))
+      .then(ids => ids.length > 0 ? browser.scripting.unregisterContentScripts({ ids }) : undefined)
+      .catch(error => console.error('[Chat Automation] Nettoyage des scripts après révocation impossible.', error));
+  });
+
   browser.runtime.onMessage.addListener((message: unknown, sender) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
 
