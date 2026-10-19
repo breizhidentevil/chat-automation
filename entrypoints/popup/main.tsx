@@ -235,7 +235,7 @@ function Popup() {
   async function exportHistory() {
     const key = historyStorageKey(historyOrigin);
     const data = await browser.storage.local.get(key);
-    const allItems = Array.isArray(data[key]) ? data[key] as ConversationMessage[] : [];
+    const allItems = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) as ConversationMessage[] : [];
     const siteItems = deduplicateConversationMessages(allItems.filter(item => item.origin === historyOrigin));
     const exactConversation = siteItems.filter(item => item.conversationId === historyConversationId);
     const selectedItems = exactConversation.length > 0 ? exactConversation : siteItems;
