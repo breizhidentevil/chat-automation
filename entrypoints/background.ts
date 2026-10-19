@@ -24,6 +24,17 @@ function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }
 }
 
 export default defineBackground(() => {
+  // Remove dynamically registered page scripts as soon as a user revokes a site
+  // permission. This keeps the registered-script state aligned with granted access.
+  browser.permissions.onRemoved.addListener(({ origins = [] }) => {
+    if (origins.length === 0) return;
+    void browser.scripting.getRegisteredContentScripts()
+      .then(scripts => scripts.filter(script => script.matches?.some(match => origins.includes(match)))
+        .map(script => script.id))
+      .then(ids => ids.length > 0 ? browser.scripting.unregisterContentScripts({ ids }) : undefined)
+      .catch(error => console.error('[Chat Automation] Nettoyage des scripts après révocation impossible.', error));
+  });
+
   browser.runtime.onMessage.addListener((message: unknown, sender) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
     if (message.type === 'CHAT_AUTOMATION_LOG_EVENT' && 'entry' in message) {
