@@ -6,6 +6,11 @@ export const messages = {
   fr: {
     subtitle: "Détection et automatisation de messages",
     language: "Langue",
+    appearance: "Apparence",
+    themeAuto: "Automatique",
+    themeLight: "Clair",
+    themeDark: "Sombre",
+    themeSaveError: "Impossible d’enregistrer la préférence d’apparence.",
     automation: "Automatisation",
     variables: "Variables",
     history: "Historique",
@@ -225,6 +230,11 @@ export const messages = {
   en: {
     subtitle: "Chat detection and message automation",
     language: "Language",
+    appearance: "Appearance",
+    themeAuto: "Automatic",
+    themeLight: "Light",
+    themeDark: "Dark",
+    themeSaveError: "Could not save the appearance preference.",
     automation: "Automation",
     variables: "Variables",
     history: "History",
