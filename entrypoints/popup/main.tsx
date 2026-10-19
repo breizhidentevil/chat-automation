@@ -6,12 +6,11 @@ import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
-import { MAX_TOTAL_MESSAGE_LENGTH, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
+import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs';
-type SavedSettings = { message?: string; messages?: string[]; interval?: string; unit?: 'seconds' | 'minutes'; repeatMode?: 'infinite' | 'finite'; repeatCount?: string | number; timeWindowEnabled?: boolean; startTime?: string; endTime?: string };
 type RuntimeStatus = { phase: 'stopped' | 'ready' | 'waiting-interval' | 'waiting-window' | 'waiting-llm' | 'sending' | 'finished' | 'failed'; note: string; messageIndex: number; messagesCount: number; completedSequences: number; repeatMode: 'infinite' | 'finite'; repeatCount: number; nextSendAt: number | null; updatedAt: number };
 
 
@@ -401,12 +400,18 @@ function Popup() {
     if (timeWindowEnabled && startTime === endTime) { setStatus(t('invalidTimeWindow')); return; }
     try {
       const tab = await activeTab();
-      await persistSettings();
-      const response = await browser.tabs.sendMessage(tab.id!, {
-        type: 'CHAT_AUTOMATION_START', messages, variables,
+      const payload = {
+        type: 'CHAT_AUTOMATION_START' as const, messages, variables,
         intervalMs: Math.round(amount * (unit === 'minutes' ? 60_000 : 1_000)),
-        repeatMode: Number(repeatCount) === 0 ? 'infinite' : 'finite', repeatCount: Number(repeatCount), timeWindowEnabled, startTime, endTime,
-      });
+        repeatMode: Number(repeatCount) === 0 ? 'infinite' as const : 'finite' as const,
+        repeatCount: Number(repeatCount), timeWindowEnabled, startTime, endTime,
+      };
+      if (!isValidAutomationStartMessage(payload)) {
+        setStatus(locale === 'fr' ? 'Paramètres invalides : vérifiez le nombre, la taille et la fréquence des messages ainsi que le créneau horaire.' : 'Invalid settings: check message count, message size, interval and time window.');
+        return;
+      }
+      await persistSettings();
+      const response = await browser.tabs.sendMessage(tab.id!, payload);
       setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
       await refreshLogs();
     } catch (error) {
