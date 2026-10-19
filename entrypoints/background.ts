@@ -14,7 +14,9 @@ let logWriteQueue: Promise<void> = Promise.resolve();
 function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }> {
   const write = logWriteQueue.then(async () => {
     const stored = await browser.storage.local.get(LOG_KEY);
-    const previous = Array.isArray(stored[LOG_KEY]) ? stored[LOG_KEY] as DiagnosticEvent[] : [];
+    const previous = Array.isArray(stored[LOG_KEY])
+      ? stored[LOG_KEY].filter(isValidDiagnosticEvent)
+      : [];
     await browser.storage.local.set({ [LOG_KEY]: [...previous, entry].slice(-MAX_LOGS) });
   });
   logWriteQueue = write.catch(() => undefined);
