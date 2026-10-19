@@ -49,7 +49,7 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
     await popup.reload();
     await popup.getByRole('heading', { name: 'Chat Automation' }).waitFor();
     await popup.waitForFunction(() => document.documentElement.getAttribute('data-mantine-color-scheme') === 'dark');
-    assert.equal(await popup.getByRole('combobox', { name: 'Appearance' }).inputValue(), 'dark');
+    assert.equal(await popup.getByRole('combobox', { name: 'Appearance' }).inputValue(), 'Dark');
   } finally {
     await context.close();
   }
