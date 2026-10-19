@@ -6,7 +6,7 @@ import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
-import { MAX_TOTAL_MESSAGE_LENGTH } from '../../lib/automation-validation';
+import { MAX_TOTAL_MESSAGE_LENGTH, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -261,17 +261,16 @@ function Popup() {
       setVariables(filterValidVariableDefinitions(saved));
     });
     void browser.storage.local.get('chatAutomationSettings').then(({ chatAutomationSettings }) => {
-      const saved = chatAutomationSettings as SavedSettings | undefined;
+      const saved = sanitizeSavedAutomationSettings(chatAutomationSettings);
       if (!saved) return;
-      setMessage(saved.message ?? '');
-      setAutomationMessages(Array.isArray(saved.messages) && saved.messages.length > 0 ? saved.messages : [saved.message ?? '']);
-      setIntervalValue(saved.interval ?? '30'); setUnit(saved.unit ?? 'seconds');
-      const savedCount = saved.repeatCount;
-      // Migration des paramètres des versions précédentes qui utilisaient un choix Infini/Fini.
-      const migratedCount = saved.repeatMode === 'infinite' ? '0' : (savedCount !== undefined ? String(savedCount) : '0');
-      setRepeatCount(migratedCount);
-      setTimeWindowEnabled(saved.timeWindowEnabled ?? true);
-      setStartTime(saved.startTime ?? '09:00'); setEndTime(saved.endTime ?? '18:00');
+      setMessage(saved.message);
+      setAutomationMessages(saved.messages);
+      setIntervalValue(saved.interval); setUnit(saved.unit);
+      setRepeatCount(saved.repeatCount);
+      setTimeWindowEnabled(saved.timeWindowEnabled);
+      setStartTime(saved.startTime); setEndTime(saved.endTime);
+    }).catch(() => {
+      setStatus(locale === 'fr' ? 'Impossible de lire les paramètres sauvegardés.' : 'Could not read saved settings.');
     });
   }, []);
 
