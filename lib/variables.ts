@@ -81,6 +81,12 @@ const liquid = new Liquid({
   memoryLimit: 100_000,
 });
 
+// Message templates are self-contained: never load filesystem, URL, or extension partials.
+delete liquid.tags.include;
+delete liquid.tags.render;
+delete liquid.tags.layout;
+delete liquid.tags.block;
+
 export function isValidVariableName(value: unknown): value is string {
   return typeof value === 'string' && VARIABLE_NAME_PATTERN.test(value) && !BLOCKED_PATH_PARTS.has(value);
 }
