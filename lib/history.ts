@@ -165,7 +165,11 @@ export function backgroundUpsertConversationMessage(message: ConversationMessage
 export function backgroundMarkInterruptedMessagesIncomplete(origin: string): Promise<void> {
   const operation = backgroundWriteQueue.then(async () => {
     const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
-    const current = deduplicateConversationMessages(Array.isArray(stored[HISTORY_STORAGE_KEY]) ? stored[HISTORY_STORAGE_KEY] as ConversationMessage[] : []);
+    const current = deduplicateConversationMessages(
+      Array.isArray(stored[HISTORY_STORAGE_KEY])
+        ? stored[HISTORY_STORAGE_KEY].filter(isValidConversationMessage)
+        : [],
+    );
     let changed = false;
     const updated = current.map(message => {
       if (message.origin !== origin || message.status !== 'streaming') return message;
