@@ -6,6 +6,7 @@ import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { MAX_TOTAL_MESSAGE_LENGTH } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -389,6 +390,7 @@ function Popup() {
     const messages = automationMessages.map(text => text.trim());
     const amount = Number(interval);
     if (messages.length === 0 || messages.some(text => !text)) { setStatus(t('sequenceEmpty')); return; }
+    if (messages.reduce((total, text) => total + text.length, 0) > MAX_TOTAL_MESSAGE_LENGTH) { setStatus(locale === 'fr' ? 'La séquence dépasse la limite totale de 1 000 000 caractères.' : 'The sequence exceeds the 1,000,000-character total limit.'); return; }
     for (let index = 0; index < messages.length; index++) {
       const unknown = validateTemplateVariables(messages[index]!, variables, 'automation');
       if (unknown.length > 0) { setStatus(locale === 'fr' ? `Message ${index + 1} : variable(s) inconnue(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.` : `Message ${index + 1}: unknown variable(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Create them on the Variables page.`); setPage('variables'); return; }
