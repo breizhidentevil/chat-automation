@@ -70,9 +70,9 @@ export default function SimulatorPage({
         <section className="simulation-summary" aria-live="polite">
           <h3>{t('simulationResults')}</h3>
           <div className="simulation-metrics">
-            <Paper component="div" padding="xs" withBorder><span>{t('simulationSuccessful')}</span><strong>{simulationResult.successful}</strong></Paper>
-            <Paper component="div" padding="xs" withBorder><span>{t('simulationFailed')}</span><strong>{simulationResult.failed}</strong></Paper>
-            <Paper component="div" padding="xs" withBorder><span>{t('simulationDuration')}</span><strong>{formatSimulationDuration(simulationResult.simulatedDurationMs)}</strong></Paper>
+            <Paper component="div" p="xs" withBorder><span>{t('simulationSuccessful')}</span><strong>{simulationResult.successful}</strong></Paper>
+            <Paper component="div" p="xs" withBorder><span>{t('simulationFailed')}</span><strong>{simulationResult.failed}</strong></Paper>
+            <Paper component="div" p="xs" withBorder><span>{t('simulationDuration')}</span><strong>{formatSimulationDuration(simulationResult.simulatedDurationMs)}</strong></Paper>
           </div>
           <p className="helper">{new Date(simulationResult.startedAt).toLocaleString()} → {new Date(simulationResult.finishedAt).toLocaleString()}</p>
         </section>
