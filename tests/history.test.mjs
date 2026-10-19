@@ -284,3 +284,70 @@ test('background reconciliation ignores malformed persisted records', async () =
     else globalThis.browser = previousBrowser;
   }
 });
+
+
+test('concurrent background upserts are serialized without losing messages', async () => {
+  const previousBrowser = globalThis.browser;
+  const state = { chatAutomationHistoryV1: [], chatAutomationHistoryClearedAtV1: {} };
+  globalThis.browser = {
+    storage: { local: {
+      get: async keys => {
+        const requested = Array.isArray(keys) ? keys : [keys];
+        return Object.fromEntries(requested.filter(key => key in state).map(key => [key, state[key]]));
+      },
+      set: async values => {
+        // Yield to expose overlapping read/modify/write operations if the queue regresses.
+        await new Promise(resolve => setTimeout(resolve, 1));
+        Object.assign(state, values);
+      },
+    } },
+  };
+  try {
+    await Promise.all(Array.from({ length: 20 }, (_, index) => backgroundUpsertConversationMessage(message({
+      id: `concurrent-${index}`,
+      firstSeenAt: Date.now() + index + 1000,
+      lastUpdatedAt: Date.now() + index + 1000,
+      content: `message ${index}`,
+    }))));
+    assert.equal(state.chatAutomationHistoryV1.length, 20);
+    assert.deepEqual(
+      new Set(state.chatAutomationHistoryV1.map(item => item.id)),
+      new Set(Array.from({ length: 20 }, (_, index) => `concurrent-${index}`)),
+    );
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
+test('a queued history clear removes earlier writes and allows a later fresh write', async () => {
+  const previousBrowser = globalThis.browser;
+  const state = { chatAutomationHistoryV1: [], chatAutomationHistoryClearedAtV1: {} };
+  globalThis.browser = {
+    storage: { local: {
+      get: async keys => {
+        const requested = Array.isArray(keys) ? keys : [keys];
+        return Object.fromEntries(requested.filter(key => key in state).map(key => [key, state[key]]));
+      },
+      set: async values => { Object.assign(state, values); },
+    } },
+  };
+  try {
+    const beforeClear = backgroundUpsertConversationMessage(message({
+      id: 'before-clear',
+      firstSeenAt: Date.now() + 1000,
+      lastUpdatedAt: Date.now() + 1000,
+    }));
+    const clear = backgroundClearSiteHistory('https://example.com');
+    const afterClear = backgroundUpsertConversationMessage(message({
+      id: 'after-clear',
+      firstSeenAt: Date.now() + 10_000,
+      lastUpdatedAt: Date.now() + 10_000,
+    }));
+    await Promise.all([beforeClear, clear, afterClear]);
+    assert.deepEqual(state.chatAutomationHistoryV1.map(item => item.id), ['after-clear']);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
