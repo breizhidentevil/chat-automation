@@ -268,7 +268,8 @@ function Popup() {
       const allItems = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) as ConversationMessage[] : [];
       const siteItems = deduplicateConversationMessages(allItems.filter(item => item.origin === historyOrigin));
       const exactConversation = siteItems.filter(item => item.conversationId === historyConversationId);
-      const selectedItems = exactConversation.length > 0 ? exactConversation : siteItems;
+      // Do not silently export other conversations when the selected conversation has no records.
+      const selectedItems = historyConversationId ? exactConversation : siteItems;
       const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems.sort((a, b) => a.firstSeenAt - b.firstSeenAt) };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       url = URL.createObjectURL(blob);
