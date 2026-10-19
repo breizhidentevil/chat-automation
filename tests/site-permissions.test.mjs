@@ -121,5 +121,5 @@ test('history export selection scopes by origin and selected conversation and so
 
 test('history export uses the tested selection helper', () => {
   assert.match(historyHook, /selectHistoryExportMessages\(/);
-  assert.match(historyHook, /from '\.\.\/\.\.\/lib\/history-export'/);
+  assert.match(historyHook, /from '\.\.\/\.\.\/\.\.\/lib\/history-export'/);
 });
