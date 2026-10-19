@@ -157,3 +157,13 @@ test('variable collections are capped by count and aggregate value size', () => 
   assert.equal(filtered.some(item => item.name === 'small_after_limit'), false);
   assert.equal(filtered.reduce((total, item) => total + item.value.length, 0) <= 1_000_000, true);
 });
+
+test('resolves nested custom object paths and reports them as known variables', async () => {
+  const nested = variable('personne', JSON.stringify({ prenom: 'Alex', adresse: { ville: 'Nantes' } }));
+  const result = await resolveMessageTemplate(
+    'Bonjour {{personne.prenom}}, ville : {{personne.adresse.ville}}',
+    [nested],
+    context,
+  );
+  assert.equal(result.text, 'Bonjour Alex, ville : Nantes');
+});
