@@ -343,3 +343,9 @@ nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 :root[data-mantine-color-scheme="dark"] .simulator-safety-note { border-color: #285b40; background: #1d3328; color: #8ce99a; }
 :root[data-mantine-color-scheme="dark"] .logs .mantine-Paper-root { border-bottom-color: #373a40; background: transparent; color: #c1c2c5; }
 :root[data-mantine-color-scheme="dark"] .logs .mantine-Paper-root > span { color: #a6a7ab; }
+
+
+/* Le logo ouvre directement le tutoriel intégré. */
+button.mark { border: 0; padding: 0; font: inherit; cursor: pointer; }
+.site-origin { display: block; margin-top: 3px; color: #777; font-size: 10px; overflow-wrap: anywhere; }
+:root[data-mantine-color-scheme="dark"] .site-origin { color: #a6a7ab; }
