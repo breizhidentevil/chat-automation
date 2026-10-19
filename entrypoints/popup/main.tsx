@@ -5,9 +5,9 @@ import { deduplicateConversationMessages, historyStorageKey, type ConversationMe
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
-import { isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
-import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
-import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
+import { isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { LOCALE_STORAGE_KEY } from '../../lib/i18n';
+import { preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
 import { selectHistoryExportMessages } from '../../lib/history-export';
 import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
