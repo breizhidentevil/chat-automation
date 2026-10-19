@@ -153,6 +153,8 @@ function Popup() {
   const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const [page, setPage] = useState<Page>('automation');
+  const logReadErrorReported = useRef(false);
+  const runtimeReadErrorReported = useRef(false);
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
   const [message, setMessage] = useState('');
@@ -204,9 +206,13 @@ function Popup() {
       const data = await browser.storage.local.get('chatAutomationLogs');
       const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
       setLogs((entries as LogEntry[]).slice(-30).reverse());
+      logReadErrorReported.current = false;
     } catch (error) {
-      console.error('[Chat Automation] Lecture des journaux échouée.', error);
-      setStatus(locale === 'fr' ? 'Impossible de lire les journaux enregistrés.' : 'Could not read saved logs.');
+      if (!logReadErrorReported.current) {
+        console.error('[Chat Automation] Lecture des journaux échouée.', error);
+        setStatus(locale === 'fr' ? 'Impossible de lire les journaux enregistrés.' : 'Could not read saved logs.');
+        logReadErrorReported.current = true;
+      }
     }
   }
 
@@ -306,10 +312,14 @@ function Popup() {
     const refreshRuntimeStatus = async () => {
       try {
         const data = await browser.storage.local.get('chatAutomationRuntimeStatus');
+        runtimeReadErrorReported.current = false;
         if (mounted) setRuntimeStatus((data.chatAutomationRuntimeStatus as RuntimeStatus | undefined) ?? null);
       } catch (error) {
-        console.error('[Chat Automation] Lecture de l’état d’exécution échouée.', error);
-        if (mounted) setStatus(locale === 'fr' ? 'Impossible de lire l’état de l’automatisation.' : 'Could not read automation status.');
+        if (!runtimeReadErrorReported.current) {
+          console.error('[Chat Automation] Lecture de l’état d’exécution échouée.', error);
+          if (mounted) setStatus(locale === 'fr' ? 'Impossible de lire l’état de l’automatisation.' : 'Could not read automation status.');
+          runtimeReadErrorReported.current = true;
+        }
       }
     };
     void refreshRuntimeStatus();
