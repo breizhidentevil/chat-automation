@@ -44,7 +44,7 @@ Remplacer le simulateur de planification actuel par un simulateur comportemental
 - Ne jamais appeler le réseau, le DOM du site, l'API d'envoi ou un LLM réel.
 - Afficher clairement ce qui a été simulé et ce qui a été validé.
 
-### Étape 4 — Tests automatisés
+### Étape 4 — Tests automatisés — terminé
 - Ajouter, supprimer et ordonner les paires.
 - Séquence complète et séquence vide.
 - Champs vides et modèles invalides.
@@ -52,10 +52,11 @@ Remplacer le simulateur de planification actuel par un simulateur comportemental
 - Garantir l'absence d'effet de bord réseau/envoi.
 - Vérifier que la réponse attendue est affichée comme réponse simulée, sans prétendre mesurer la qualité d'une vraie réponse LLM.
 
-### Étape 5 — Intégration et livraison
+### Étape 5 — Intégration et livraison — validation CI réussie
 - Mettre à jour les traductions FR/EN et la documentation.
-- Exécuter npm test, npm run typecheck et les builds pertinents.
-- Corriger les régressions, ouvrir une PR et vérifier la CI.
+- Exécution CI confirmée : typecheck, tests unitaires, smoke test Chromium et builds Chrome, Firefox MV3 et Edge réussis.
+- Pull request ouverte : https://github.com/breizhidentevil/chat-automation/pull/17.
+- La PR reste non fusionnée ; revue finale avant intégration dans `main`.
 
 ## Critères d'acceptation
 
