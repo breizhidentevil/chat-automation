@@ -38,7 +38,7 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
     await popup.goto('chrome-extension://' + extensionId + '/popup.html');
     await popup.getByRole('heading', { name: 'Chat Automation' }).waitFor();
     await popup.getByRole('navigation').waitFor();
-    assert.match(await popup.title(), /Chat Automation/i);
+    assert.equal(await popup.title(), 'Chat Site Automation');
   } finally {
     await context.close();
   }
