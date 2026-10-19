@@ -31,9 +31,11 @@ test('unregisters dynamically registered scripts when site access is revoked', (
 });
 
 test('allows local data deletion only from the extension UI and serializes history deletion', () => {
-  assert.match(requireBackgroundSource, /sender\.id === browser\.runtime\.id && message\.type === 'CHAT_HISTORY_CLEAR_SITE'/);
+  assert.match(requireBackgroundSource, /isExtensionUiSender\(sender\) && message\.type === 'CHAT_HISTORY_CLEAR_SITE'/);
+  assert.match(requireBackgroundSource, /!sender\.tab/);
+  assert.match(requireBackgroundSource, /sender\.url\.startsWith\(browser\.runtime\.getURL\('\/'\)\)/);
   assert.match(requireBackgroundSource, /backgroundClearSiteHistory\(origin\)/);
-  assert.match(requireBackgroundSource, /sender\.id === browser\.runtime\.id && message\.type === 'CHAT_LOGS_CLEAR'/);
+  assert.match(requireBackgroundSource, /isExtensionUiSender\(sender\) && message\.type === 'CHAT_LOGS_CLEAR'/);
   assert.match(requireBackgroundSource, /browser\.storage\.local\.remove\(LOG_KEY\)/);
   assert.match(popup, /confirmClearHistory/);
   assert.match(popup, /confirmClearLogs/);
