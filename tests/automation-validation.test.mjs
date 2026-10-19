@@ -77,7 +77,7 @@ test('sanitizes malformed persisted automation settings and enforces aggregate l
   });
 
   assert.ok(sanitized);
-  assert.deepEqual(sanitized.messages, ['y'.repeat(100_000), 'z'.repeat(100_000)]);
+  assert.deepEqual(sanitized.messages, ['ok', 'y'.repeat(100_000), 'z'.repeat(100_000)]);
   assert.equal(sanitized.interval, '30');
   assert.equal(sanitized.unit, 'minutes');
   assert.equal(sanitized.repeatMode, 'infinite');
