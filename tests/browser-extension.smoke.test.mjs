@@ -40,7 +40,7 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
     await popup.getByRole('tablist').waitFor();
     assert.equal(await popup.title(), 'Chat Site Automation');
 
-    const appearance = popup.getByRole('combobox', { name: 'Appearance' });
+    const appearance = popup.locator('.theme-picker input');
     await appearance.click();
     await popup.getByRole('option', { name: 'Dark' }).click();
     await popup.waitForFunction(() => document.documentElement.getAttribute('data-mantine-color-scheme') === 'dark');
@@ -49,7 +49,7 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
     await popup.reload();
     await popup.getByRole('heading', { name: 'Chat Automation' }).waitFor();
     await popup.waitForFunction(() => document.documentElement.getAttribute('data-mantine-color-scheme') === 'dark');
-    assert.equal(await popup.getByRole('combobox', { name: 'Appearance' }).inputValue(), 'Dark');
+    assert.equal(await popup.locator('.theme-picker input').inputValue(), 'Dark');
   } finally {
     await context.close();
   }
