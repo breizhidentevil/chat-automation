@@ -74,3 +74,8 @@ test('stops active page scripts and history capture when host permission is revo
   assert.match(contentScript, /siteAccessRevoked = true/);
   assert.match(contentScript, /if \(siteAccessRevoked\) return/);
 });
+
+test('does not export other conversations when the selected conversation has no records', () => {
+  assert.match(popup, /const selectedItems = historyConversationId \? exactConversation : siteItems/);
+  assert.doesNotMatch(popup, /exactConversation\.length > 0 \? exactConversation : siteItems/);
+});
