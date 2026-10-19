@@ -44,7 +44,7 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 The popup separates presentation, stateful workflows, pure business logic, and browser infrastructure:
 
 - `entrypoints/popup/pages/` contains the five popup pages; `components/TemplateTextarea.tsx` is shared by the editor and variable preview.
-- The popup uses [Mantine v8](https://mantine.dev/) for its React component system, including a shared theme, accessible tabs, and action buttons. Mantine styles are bundled locally with the extension; no runtime CDN or network dependency is used.
+- The popup uses [Mantine v8](https://mantine.dev/) as its shared React UI system across all five pages: navigation, form controls, action buttons, alerts, status badges, cards, and result surfaces use Mantine components. The template editor retains its custom variable autocomplete while using Mantine's textarea styling. A small amount of project CSS remains for the compact browser-popup layout, message drag-and-drop, and specialized timelines. Mantine styles are bundled locally with the extension; no runtime CDN or network dependency is used.
 - `entrypoints/popup/hooks/` owns automation settings, variable editing, simulation, automation control, history/log loading, runtime status, and polling lifecycles.
 - `lib/` contains pure message-sequence operations, automation configuration validation, LiquidJS preview/resolution, simulation, and existing validation helpers.
 - `services/` isolates browser storage, per-site permissions/content-script registration, history/log reads, and JSON file downloads.
