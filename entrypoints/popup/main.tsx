@@ -10,13 +10,33 @@ import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedA
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
 import { selectHistoryExportMessages } from '../../lib/history-export';
+import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
-type Page = 'automation' | 'variables' | 'history' | 'logs';
+type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
 type RuntimeStatus = { phase: 'stopped' | 'ready' | 'waiting-interval' | 'waiting-window' | 'waiting-llm' | 'sending' | 'finished' | 'failed'; note: string; messageIndex: number; messagesCount: number; completedSequences: number; repeatMode: 'infinite' | 'finite'; repeatCount: number; nextSendAt: number | null; updatedAt: number };
 
 
 type TemplateSuggestion = { value: string; description: string; kind: 'custom' | 'dynamic' };
+
+function toLocalDateTimeInput(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function intervalAmountLabel(value: string, unit: 'seconds' | 'minutes', locale: Locale): string {
+  return `${value} ${unit === 'seconds' ? (locale === 'fr' ? 'seconde(s)' : 'second(s)') : (locale === 'fr' ? 'minute(s)' : 'minute(s)')}`;
+}
+
+function formatSimulationDuration(ms: number, locale: Locale): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return locale === 'fr'
+    ? [hours ? `${hours} h` : '', minutes ? `${minutes} min` : '', `${seconds} s`].filter(Boolean).join(' ')
+    : [hours ? `${hours} h` : '', minutes ? `${minutes} min` : '', `${seconds} s`].filter(Boolean).join(' ');
+}
 
 const DYNAMIC_VARIABLE_SUGGESTIONS: TemplateSuggestion[] = [
   { value: 'system.runtime.timestamp', description: 'currentTimestamp', kind: 'dynamic' },
@@ -185,6 +205,11 @@ function Popup() {
   const [timeWindowEnabled, setTimeWindowEnabled] = useState(true);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
+  const [simulationContext, setSimulationContext] = useState('{\n  "chat": { "session": { "title": "Conversation de test", "url": "https://example.test/chat" } },\n  "data": { "ticket": "A-123", "items": [{ "name": "Exemple", "value": "123" }] }\n}');
+  const [simulationStartAt, setSimulationStartAt] = useState(() => toLocalDateTimeInput(new Date()));
+  const [simulationCycles, setSimulationCycles] = useState('2');
+  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
+  const [simulationError, setSimulationError] = useState('');
 
   async function refreshStrategyStatus() {
     try {
@@ -517,6 +542,52 @@ function Popup() {
     });
   }
 
+  async function runSimulation() {
+    setSimulationError('');
+    setSimulationResult(null);
+    const messages = automationMessages.map(item => item.trim());
+    if (!messages.length || messages.some(item => !item)) {
+      setSimulationError(t('sequenceEmpty'));
+      return;
+    }
+    let dynamicData: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(simulationContext);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(t('simulationContextInvalid'));
+      dynamicData = parsed as Record<string, unknown>;
+    } catch (error) {
+      setSimulationError(error instanceof Error ? error.message : t('simulationContextInvalid'));
+      return;
+    }
+    const cycleCount = Number(simulationCycles);
+    const intervalAmount = Number(interval);
+    const startAt = new Date(simulationStartAt);
+    if (!Number.isSafeInteger(cycleCount) || cycleCount < 1 || cycleCount > 10) {
+      setSimulationError(t('simulationCycleLimit'));
+      return;
+    }
+    if (!Number.isFinite(intervalAmount) || intervalAmount <= 0 || !Number.isFinite(startAt.getTime())) {
+      setSimulationError(t('simulationInvalidSettings'));
+      return;
+    }
+    try {
+      const result = await simulateAutomation({
+        messages,
+        variables,
+        intervalMs: Math.round(intervalAmount * (unit === 'minutes' ? 60_000 : 1_000)),
+        repeatCount: cycleCount,
+        startAt,
+        timeWindowEnabled,
+        startTime,
+        endTime,
+        dynamicData,
+      });
+      setSimulationResult(result);
+    } catch (error) {
+      setSimulationError(error instanceof Error ? error.message : t('simulationFailedGeneric'));
+    }
+  }
+
   async function startAutomation() {
     const messages = automationMessages.map(text => text.trim());
     const amount = Number(interval);
@@ -616,20 +687,21 @@ function Popup() {
     }
   }
 
-  return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''}`}>
+  return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''} ${page === 'simulator' ? 'simulator-view' : ''}`}>
     <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><label className="locale-picker"><span>{t('language')}</span><select aria-label={t('language')} value={locale} onChange={event => { const next = event.target.value as Locale; setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); }}><option value="fr">Français</option><option value="en">English</option></select></label><button type="button" className="help-button" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
     <nav className="main-nav" aria-label={t('mainNavigation')}>
       <button className={page === 'automation' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('automation')}>{t('automation')}</button>
       <button className={page === 'variables' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('variables')}>{t('variables')}</button>
       <button className={page === 'history' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('history')}>{t('history')}</button>
       <button className={page === 'logs' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('logs')}>{t('logs')}</button>
+      <button className={page === 'simulator' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('simulator')}>{t('simulator')}</button>
     </nav>
 
     <div className="popup-content">
-      <section className="site-access-control" aria-label={t('siteAccess')}>
+      {page !== 'simulator' ? <section className="site-access-control" aria-label={t('siteAccess')}>
         <button type="button" className="secondary" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</button>
         {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
-      </section>
+      </section> : null}
     {page === 'automation' ? strategyReady === null ? <>
       <div className="page-heading"><h2>{t('automation')}</h2><p>{t('checkingStrategy')}</p></div>
       <p className="empty">{t('loadingSiteConfig')}</p>
