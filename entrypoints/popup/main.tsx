@@ -207,6 +207,9 @@ function Popup() {
       saveVariable={() => void saveVariable()}
       cancelEditing={cancelEditing}
       variables={variables}
+      variablesDocument={variablesDocument}
+      setVariablesDocument={setVariablesDocument}
+      saveVariableDocument={() => void saveVariableDocument()}
       editVariable={editVariable}
       deleteVariable={item => void deleteVariable(item)}
       variablePreviewText={variablePreviewText}
