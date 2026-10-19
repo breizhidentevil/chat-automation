@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './style.css';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
-import { contentScriptIdForOrigin } from '../../lib/content-script-id';
+import { ensureSiteAccessForTab } from '../../services/site-access';
 import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
@@ -125,48 +125,14 @@ function Popup() {
   }
 
   async function ensureSiteAccess(tab: Browser.tabs.Tab): Promise<boolean> {
-    if (!tab.id || !tab.url) return false;
-    const origin = new URL(tab.url).origin;
-    const pattern = origin + '/*';
-    const granted = await browser.permissions.contains({ origins: [pattern] })
-      || await browser.permissions.request({ origins: [pattern] });
-    if (!granted) {
-      setSiteAccessStatus(t('siteAccessDenied', { origin }));
+    const result = await ensureSiteAccessForTab(tab);
+    if (!result.granted) {
+      if (result.origin) setSiteAccessStatus(t('siteAccessDenied', { origin: result.origin }));
       return false;
     }
-
-    const id = contentScriptIdForOrigin(origin);
-    // Remove registrations created by older versions before switching to hashed IDs.
-    const legacyId = 'chat-automation-' + origin.replace(/[^a-zA-Z0-9_-]/g, '_');
-    if (legacyId !== id) {
-      const legacy = await browser.scripting.getRegisteredContentScripts({ ids: [legacyId] });
-      if (legacy.some(script => script.matches?.includes(pattern))) {
-        await browser.scripting.unregisterContentScripts({ ids: [legacyId] });
-      }
-    }
-    const registered = await browser.scripting.getRegisteredContentScripts({ ids: [id] });
-    if (registered.length === 0) {
-      await browser.scripting.registerContentScripts([{
-        id,
-        matches: [pattern],
-        js: ['/content-scripts/content.js'],
-        runAt: 'document_idle',
-        persistAcrossSessions: true,
-      }]);
-    }
-
-    try {
-      const response = await browser.tabs.sendMessage(tab.id, { type: 'CHAT_AUTOMATION_PING' });
-      if (response?.ready === true) {
-        setSiteAccessStatus(t('siteAccessEnabled', { origin }));
-        return true;
-      }
-    } catch {
-      // Existing tabs do not receive a newly registered script until navigation.
-    }
-
-    await browser.scripting.executeScript({ target: { tabId: tab.id }, files: ['/content-scripts/content.js'] });
-    setSiteAccessStatus(t('siteAccessEnabledScriptLoaded', { origin }));
+    setSiteAccessStatus(result.pageScriptInjected
+      ? t('siteAccessEnabledScriptLoaded', { origin: result.origin })
+      : t('siteAccessEnabled', { origin: result.origin }));
     return true;
   }
 
