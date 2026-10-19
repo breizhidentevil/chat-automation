@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const workflow = await readFile(new URL('../.github/workflows/build-and-publish.yml', import.meta.url), 'utf8');
+const dependabot = await readFile(new URL('../.github/dependabot.yml', import.meta.url), 'utf8');
 
 test('pins every GitHub Action to a full commit SHA', () => {
   const references = [...workflow.matchAll(/^\s+uses:\s+([^\s#]+)/gm)].map(match => match[1]);
@@ -22,4 +23,11 @@ test('keeps write permissions out of the build job', () => {
 test('limits publishing and Pages deployment to trusted push events', () => {
   assert.match(workflow, /deploy-pages:[\s\S]*?if: github\.event_name == 'push'/);
   assert.match(workflow, /publish-release:[\s\S]*?if: github\.event_name == 'push'/);
+});
+
+test('checks npm and GitHub Actions dependencies weekly with Dependabot', () => {
+  assert.match(dependabot, /^version:\s*2\s*$/m);
+  assert.match(dependabot, /package-ecosystem:\s*npm[\s\S]*?directory:\s*["']\/["'][\s\S]*?interval:\s*weekly/);
+  assert.match(dependabot, /package-ecosystem:\s*github-actions[\s\S]*?directory:\s*["']\/["'][\s\S]*?interval:\s*weekly/);
+  assert.match(dependabot, /open-pull-requests-limit:\s*5/);
 });
