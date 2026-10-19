@@ -4,6 +4,7 @@ import {
   backgroundUpsertConversationMessage,
 } from '../lib/history';
 import { isValidConversationMessage } from '../lib/history-validation';
+import { isValidDiagnosticEvent } from '../lib/diagnostic-validation';
 
 const LOG_KEY = 'chatAutomationLogs';
 const MAX_LOGS = 500;
@@ -26,9 +27,10 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: unknown) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
     if (message.type === 'CHAT_AUTOMATION_LOG_EVENT' && 'entry' in message) {
-      const entry = message.entry as DiagnosticEvent;
-      if (!entry || typeof entry.timestamp !== 'number' || typeof entry.site !== 'string' || typeof entry.event !== 'string' || !['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(entry.level)) return { ok: false };
-      return persistDiagnosticEvent(entry);
+      if (!isValidDiagnosticEvent(message.entry)) return { ok: false };
+      return persistDiagnosticEvent(message.entry)
+        .then(result => result)
+        .catch(() => ({ ok: false }));
     }
     if (message.type === 'CHAT_HISTORY_UPSERT' && 'message' in message) {
       if (!isValidConversationMessage(message.message)) return { ok: false };
