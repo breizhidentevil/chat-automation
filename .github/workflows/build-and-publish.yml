@@ -23,28 +23,21 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
       - name: Pin npm version
         run: npm install --global npm@10.8.2
-
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-
       - name: Generate WXT types
         run: npx wxt prepare
-
       - name: Type-check
         run: npm run typecheck
-
       - name: Run unit tests
         run: npm test
-
       - name: Build Chrome package
         run: |
           npm run build:chrome
@@ -69,19 +62,16 @@ jobs:
             </body>
           </html>
           HTML
-
       - name: Build Firefox package (Manifest V3)
         run: |
           npm run build:firefox
           cd .output/firefox-mv3
           zip -qr ../../packages/chat-automation-firefox.zip .
-
       - name: Build Microsoft Edge package
         run: |
           npm run build:edge
           cd .output/edge-mv3
           zip -qr ../../packages/chat-automation-edge.zip .
-
       - name: Upload browser packages
         uses: actions/upload-artifact@v4
         with:
@@ -89,7 +79,6 @@ jobs:
           path: packages/*.zip
           if-no-files-found: error
           retention-days: 30
-
       - name: Upload documentation site
         uses: actions/upload-artifact@v4
         with:
@@ -98,54 +87,51 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  publish:
-    name: Publish releases and documentation
-    if: github.event_name == 'push'
+  deploy-pages:
+    name: Deploy documentation to GitHub Pages
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Download documentation site
+        uses: actions/download-artifact@v4
+        with:
+          name: chat-automation-documentation-site
+          path: site/
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload documentation site to Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+      - name: Deploy documentation to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  publish-release:
+    name: Publish browser extension release
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pages: write
-      id-token: write
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-
       - name: Download browser packages
         uses: actions/download-artifact@v4
         with:
           name: chat-automation-browser-packages
           path: packages/
-
-      - name: Download documentation site
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: actions/download-artifact@v4
-        with:
-          name: chat-automation-documentation-site
-          path: site/
-
-      - name: Configure GitHub Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: actions/configure-pages@v5
-
-      - name: Upload documentation site to Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site/
-
-      - name: Deploy documentation to GitHub Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        id: deployment
-        uses: actions/deploy-pages@v4
-
       - name: Read extension version
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Publish development prerelease for main branch
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
@@ -155,7 +141,6 @@ jobs:
           prerelease: true
           generate_release_notes: true
           files: packages/*.zip
-
       - name: Publish stable release for version tags
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
