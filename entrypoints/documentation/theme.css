@@ -1,0 +1,18 @@
+:root{color-scheme:light;--docs-bg:#f4f7ff;--docs-surface:#fff;--docs-text:#111827;--docs-muted:#536987;--docs-border:#dce5f5;--docs-accent:#1769ff;--docs-soft:#e8f0ff}
+:root[data-mantine-color-scheme="dark"]{color-scheme:dark;--docs-bg:#0b1220;--docs-surface:#111c2e;--docs-text:#f3f7ff;--docs-muted:#a9bddb;--docs-border:#293b56;--docs-accent:#1595ff;--docs-soft:#112d4c}
+html,body{background:var(--docs-bg);color:var(--docs-text)}
+.docs-shell{max-width:1080px}.docs-header{border-color:var(--docs-border)}.docs-mark{background:linear-gradient(140deg,#0b9cff,#245bff 54%,#6b3ff2);box-shadow:0 8px 20px #245bff2b}
+.eyebrow,.subtitle,.docs-footer,.docs-footer p{color:var(--docs-muted)}.docs-header h1,h2,h3{color:var(--docs-text)}
+.docs-language{width:124px;min-width:124px}.docs-language .mantine-Select-input{background:var(--docs-surface);border-color:var(--docs-border);color:var(--docs-text)}
+.toc{position:sticky;top:0;z-index:2;padding:10px 0;background:color-mix(in srgb,var(--docs-bg) 92%,transparent);backdrop-filter:blur(12px)}
+.toc a{color:var(--docs-text);background:var(--docs-surface);border-color:var(--docs-border);border-radius:10px;transition:color .15s,border-color .15s,background .15s}
+.toc a:hover,.toc a:focus-visible{color:var(--docs-accent);background:var(--docs-soft);border-color:var(--docs-accent)}
+.docs-shell>section{background:var(--docs-surface);border-color:var(--docs-border);border-radius:15px;box-shadow:0 10px 28px color-mix(in srgb,var(--docs-text) 5%,transparent);padding:24px 27px}
+.docs-shell>section h2{padding-bottom:12px;border-bottom:1px solid var(--docs-border)}
+.docs-shell p,.docs-shell li{color:var(--docs-muted)}.docs-shell strong,.docs-shell th{color:var(--docs-text)}
+.docs-shell code{background:var(--docs-soft);color:var(--docs-accent)}.docs-shell pre{background:#101a2a;border:1px solid #293b56}
+.docs-shell .callout{background:var(--docs-soft);border-left-color:var(--docs-accent);color:var(--docs-text)}
+.docs-shell table,.docs-shell th,.docs-shell td{border-color:var(--docs-border)}.docs-shell th{background:var(--docs-soft)}
+.docs-footer{border-top:1px solid var(--docs-border);margin-top:18px}
+:root[data-mantine-color-scheme="dark"] .docs-shell code{background:#112d4c}
+@media(max-width:640px){.docs-header{flex-wrap:wrap}.docs-language{margin-left:auto}.docs-shell>section{padding:18px 16px}.toc{position:static}}
