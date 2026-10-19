@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import type { VariableDefinition } from '../../../lib/variables';
+import { Textarea } from '@mantine/core';
 import { translate } from '../../../lib/i18n';
 
 type TemplateSuggestion = { value: string; description: string; kind: 'custom' | 'dynamic' };
@@ -105,14 +106,15 @@ function TemplateTextarea({
   }
 
   return <div className={`template-input ${className}`}>
-    <textarea
+    <Textarea
       ref={textareaRef}
+      classNames={{ input: 'template-textarea-input' }}
       id={id}
       aria-label={ariaLabel}
       aria-autocomplete="list"
       aria-expanded={filtered.length > 0}
       value={value}
-      onChange={event => { onChange(event.target.value); updateCaret(event.target); }}
+      onChange={event => { onChange(event.currentTarget.value); updateCaret(event.currentTarget); }}
       onClick={event => updateCaret(event.currentTarget)}
       onKeyUp={event => { if (!['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(event.key)) updateCaret(event.currentTarget); }}
       onKeyDown={handleKeyDown}
