@@ -45,3 +45,23 @@ test('parses nested JSON and YAML objects and rejects malformed documents', () =
   assert.throws(() => parseVariableDocument('ligne invalide'), /Syntaxe YAML invalide/);
   assert.throws(() => parseVariableDocument('personne:\\n   prenom: Alex'), /multiples de deux/);
 });
+
+
+test('rejects unsafe nested keys and null values at every depth', () => {
+  assert.throws(() => parseVariableDocument('{"personne":{"__proto__":{"admin":true}}}'), /Clé imbriquée invalide ou interdite/);
+  assert.throws(() => parseVariableDocument('{"personne":{"constructor":"x"}}'), /Clé imbriquée invalide ou interdite/);
+  assert.throws(() => parseVariableDocument('{"personne":{"adresse":null}}'), /ne peut pas être nulle/);
+  assert.throws(() => parseVariableDocument('{"articles":[{"prototype":"x"}]}'), /Clé imbriquée invalide ou interdite/);
+});
+
+test('rejects excessively deep JSON and skipped YAML indentation levels', () => {
+  let nested = '"fin"';
+  for (let index = 0; index < 14; index += 1) nested = `{"niveau":${nested}}`;
+  assert.throws(() => parseVariableDocument(`{"racine":${nested}}`), /profondeur maximale/);
+  assert.throws(() => parseVariableDocument('personne:\\n    adresse: Nantes'), /Indentation YAML inattendue/);
+});
+
+test('rejects YAML keys that cannot be referenced safely', () => {
+  assert.throws(() => parseVariableDocument('personne:\\n  __proto__: x'), /invalide ou interdit/);
+  assert.throws(() => parseVariableDocument('personne:\\n  adresse:\\n      ville: Nantes'), /Indentation YAML inattendue/);
+});
