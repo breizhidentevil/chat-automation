@@ -91,3 +91,16 @@ test('LiquidJS cannot access inherited properties or prototype-related paths', a
     /Propriété « toString » introuvable/,
   );
 });
+
+test('unsafe prototype filters are rejected by the patched engine', async () => {
+  await assert.rejects(
+    resolveMessageTemplate('{{ value | valueOf }}', [], context),
+    /undefined filter|filter.*valueOf/i,
+  );
+});
+
+test('templates cannot load external partial files', async () => {
+  await assert.rejects(
+    resolveMessageTemplate("{% include 'private-template' %}", [], context),
+  );
+});
