@@ -36,6 +36,15 @@ export default defineBackground(() => {
   // permission. This keeps the registered-script state aligned with granted access.
   browser.permissions.onRemoved.addListener(({ origins = [] }) => {
     if (origins.length === 0) return;
+
+    // Un already-injected script can remain alive in an open tab after its host
+    // permission is revoked. Stop automation and DOM capture in matching tabs too.
+    void browser.tabs.query({ url: origins })
+      .then(tabs => Promise.all(tabs.filter(tab => tab.id !== undefined).map(tab =>
+        browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_PERMISSION_REVOKED' }).catch(() => undefined),
+      )))
+      .catch(error => console.error('[Chat Automation] Arrêt des scripts actifs après révocation impossible.', error));
+
     void browser.scripting.getRegisteredContentScripts()
       .then(scripts => scripts.filter(script => script.matches?.some(match => origins.includes(match)))
         .map(script => script.id))
