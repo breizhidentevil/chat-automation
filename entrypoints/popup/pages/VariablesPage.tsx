@@ -1,5 +1,6 @@
 import React from 'react';
 import type { VariableDefinition, VariableScope } from '../../../lib/variables';
+import type { Locale } from '../../../lib/i18n';
 import type { TemplatePreviewResult } from '../../../lib/template-preview';
 import { translate } from '../../../lib/i18n';
 import TemplateTextarea from '../components/TemplateTextarea';
@@ -8,6 +9,7 @@ type Translate = (key: Parameters<typeof translate>[1], values?: Record<string, 
 
 interface VariablesPageProps {
   t: Translate;
+  locale: Locale;
   editingVariableId: string | null;
   variableName: string;
   setVariableName: (value: string) => void;
@@ -29,7 +31,7 @@ interface VariablesPageProps {
 
 export default function VariablesPage(props: VariablesPageProps) {
   const {
-    t, editingVariableId, variableName, setVariableName, variableValue, setVariableValue,
+    t, locale, editingVariableId, variableName, setVariableName, variableValue, setVariableValue,
     variableScope, setVariableScope, variableError, saveVariable, cancelEditing,
     variables, editVariable, deleteVariable, variablePreviewText, setVariablePreviewText,
     variablePreviewResult, variablePreviewError,
@@ -47,7 +49,7 @@ export default function VariablesPage(props: VariablesPageProps) {
         <label htmlFor="variable-scope">{t('scope')}</label>
         <select id="variable-scope" value={variableScope} onChange={event => setVariableScope(event.target.value as VariableScope)}><option value="global">{t('globalScope')}</option><option value="automation">{t('automationScope')}</option></select>
         {variableError ? <p className="variable-error" role="alert">{variableError}</p> : null}
-        <div className="variable-form-actions"><button className="primary" onClick={() => void saveVariable()}>{editingVariableId ? t('saveChanges') : t('addVariable')}</button>{editingVariableId ? <button className="secondary" onClick={() => { setEditingVariableId(null); setVariableName(''); setVariableValue(''); setVariableScope('global'); setVariableError(''); }}>{t('cancel')}</button> : null}</div>
+        <div className="variable-form-actions"><button className="primary" onClick={() => void saveVariable()}>{editingVariableId ? t('saveChanges') : t('addVariable')}</button>{editingVariableId ? <button className="secondary" onClick={cancelEditing}>{t('cancel')}</button> : null}</div>
       </section>
       <section className="variable-list-section">
         <div className="section-head"><h2>{t('savedVariables', { count: variables.length })}</h2></div>
