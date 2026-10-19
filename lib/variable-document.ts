@@ -2,7 +2,9 @@ import { isValidVariableName, MAX_VARIABLE_DEFINITIONS, MAX_VARIABLE_VALUE_LENGT
 
 export type VariableDocumentFormat = 'json' | 'yaml';
 
-type VariableValue = string | number | boolean | Record<string, unknown> | unknown[];
+const MAX_NESTING_DEPTH = 12;
+const BLOCKED_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const NESTED_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
 
 function stripYamlComment(value: string): string {
   let quote: "'" | '"' | null = null;
@@ -58,6 +60,9 @@ function parseYamlMapping(source: string): Record<string, unknown> {
     if (typeof nameValue !== 'string' || !nameValue) throw new Error(`Nom de clé YAML invalide à la ligne ${index + 1}.`);
     while (stack.length > 1 && stack[stack.length - 1]!.indent >= indent) stack.pop();
     const parent = stack[stack.length - 1]!;
+    if (indent > parent.indent + 2) throw new Error(`Indentation YAML inattendue à la ligne ${index + 1} : un niveau ne peut augmenter que de deux espaces.`);
+    if (rawLine.slice(0, indent).includes('\t')) throw new Error(`Les tabulations sont interdites pour l’indentation YAML (ligne ${index + 1}).`);
+    if (!NESTED_KEY_PATTERN.test(nameValue) || BLOCKED_KEYS.has(nameValue)) throw new Error(`Nom de clé YAML invalide ou interdit à la ligne ${index + 1}.`);
     const fullPath = [...stack.slice(1).map(entry => entry.indent), indent].join(':') + ':' + rawName;
     if (seen.has(fullPath)) throw new Error(`Clé YAML dupliquée : « ${rawName} » (ligne ${index + 1}).`);
     seen.add(fullPath);
@@ -96,6 +101,8 @@ export function parseVariableDocument(source: string): Record<string, string> {
     values = parseYamlMapping(source);
   }
 
+  validateNestedValue(values, 'document', 0);
+
   const entries = Object.entries(values);
   if (entries.length === 0 && !(input.startsWith('{') && input.endsWith('}'))) throw new Error('Définissez au moins une variable.');
   if (entries.length > MAX_VARIABLE_DEFINITIONS) throw new Error(`Limite de ${MAX_VARIABLE_DEFINITIONS} variables dépassée.`);
@@ -113,6 +120,23 @@ export function parseVariableDocument(source: string): Record<string, string> {
     result[name] = stringValue;
   }
   return result;
+}
+
+function validateNestedValue(value: unknown, path: string, depth: number): void {
+  if (depth > MAX_NESTING_DEPTH) throw new Error(`La structure « ${path} » dépasse la profondeur maximale de ${MAX_NESTING_DEPTH} niveaux.`);
+  if (value === null || value === undefined) throw new Error(`La valeur « ${path} » ne peut pas être nulle.`);
+  if (typeof value === 'number' && !Number.isFinite(value)) throw new Error(`La valeur « ${path} » doit être un nombre fini.`);
+  if (typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateNestedValue(item, `${path}[${index}]`, depth + 1));
+    return;
+  }
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (!NESTED_KEY_PATTERN.test(key) || BLOCKED_KEYS.has(key)) {
+      throw new Error(`Clé imbriquée invalide ou interdite : « ${path}.${key} ».`);
+    }
+    validateNestedValue(child, `${path}.${key}`, depth + 1);
+  }
 }
 
 export function detectVariableDocumentFormat(source: string): VariableDocumentFormat {
