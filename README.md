@@ -133,7 +133,7 @@ If the documentation link is temporarily unavailable, check the [workflow runs](
 - The active chat tab must remain open during automation; reloading or closing it interrupts the running sequence.
 - DOM-based confirmation indicates that a matching message appeared in the page. It does not prove server-side delivery.
 - Site markup and browser restrictions affect detection and compatibility. Test each target site and browser before relying on an automation.
-- Website access is requested per site: open the target page and use **Enable on this site** in the extension popup, then approve the browser permission prompt. Access is limited to the site origin you enabled; browser-internal and protected pages remain unavailable. Previously granted site permissions can be reviewed in the browser's extension settings.
+- The extension requests host access for HTTP and HTTPS websites during installation or update so its content script can work across supported sites without per-site activation. Browser-internal and protected pages remain unavailable. The extension does not start sending messages on its own: the user must configure and explicitly start an automation. The broad host-access permission may be shown in the browser's installation/update warning.
 - History and logs may contain conversation text or diagnostic details. Review exported JSON before sharing it.
 - The repository includes unit tests for selected logic, run by `npm test` and enforced in CI. It does not yet include a comprehensive end-to-end suite or a cross-browser integration test matrix.
 

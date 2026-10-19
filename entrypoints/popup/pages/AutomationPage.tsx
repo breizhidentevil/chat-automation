@@ -17,8 +17,6 @@ interface AutomationPageProps {
   variables: VariableDefinition[];
   validateStrategy: () => void;
   status: string;
-  siteAccessStatus: string;
-  enableActiveSite: () => void;
   automationMessages: string[];
   draggingIndex: number | null;
   setDraggingIndex: (value: number | null) => void;
@@ -43,7 +41,7 @@ interface AutomationPageProps {
 export default function AutomationPage(props: AutomationPageProps) {
   const {
     t, locale, strategyReady, strategyOrigin, message, setMessage, variables,
-    validateStrategy, status, siteAccessStatus, enableActiveSite, automationMessages,
+    validateStrategy, status, automationMessages,
     draggingIndex, setDraggingIndex, addAutomationMessage, updateAutomationMessage,
     removeAutomationMessage, moveAutomationMessage, interval, setIntervalValue, unit,
     setUnit, repeatCount, setRepeatCount, timeWindowEnabled, setTimeWindowEnabled,

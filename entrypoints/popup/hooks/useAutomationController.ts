@@ -35,7 +35,6 @@ export function useAutomationController({
 }: AutomationControllerOptions) {
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
-  const [siteAccessStatus, setSiteAccessStatus] = useState('');
 
   async function activeTab(): Promise<Browser.tabs.Tab> {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -62,26 +61,6 @@ export function useAutomationController({
     }
   }
 
-  async function ensureSiteAccess(tab: Browser.tabs.Tab): Promise<boolean> {
-    const result = await ensureSiteAccessForTab(tab);
-    if (!result.granted) {
-      if (result.origin) setSiteAccessStatus(t('siteAccessDenied', { origin: result.origin }));
-      return false;
-    }
-    setSiteAccessStatus(result.pageScriptInjected
-      ? t('siteAccessEnabledScriptLoaded', { origin: result.origin })
-      : t('siteAccessEnabled', { origin: result.origin }));
-    return true;
-  }
-
-  async function enableActiveSite() {
-    try {
-      const tab = await activeTab();
-      await ensureSiteAccess(tab);
-    } catch (error) {
-      setSiteAccessStatus(error instanceof Error ? error.message : t('siteAccessError'));
-    }
-  }
 
   async function validateStrategy() {
     const text = message.trim();
@@ -89,7 +68,7 @@ export function useAutomationController({
     if (!window.confirm(t('testConfirm'))) return;
     try {
       const tab = await activeTab();
-      if (!await ensureSiteAccess(tab)) return;
+      await ensureSiteAccessForTab(tab);
       setStatus(t('testRunning'));
       const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_VALIDATE', text });
       setStatus(typeof response?.message === 'string' ? response.message : t('testInconclusive'));
@@ -127,7 +106,7 @@ export function useAutomationController({
 
     try {
       const tab = await activeTab();
-      if (!await ensureSiteAccess(tab)) return;
+      await ensureSiteAccessForTab(tab);
       const payload = buildAutomationStartPayload(validation.config);
       if (!await persistSettings()) return;
       const response = await browser.tabs.sendMessage(tab.id!, payload);
@@ -152,7 +131,7 @@ export function useAutomationController({
   }
 
   return {
-    strategyReady, strategyOrigin, siteAccessStatus, activeTab, refreshStrategyStatus,
-    enableActiveSite, validateStrategy, startAutomation, stopAutomation,
+    strategyReady, strategyOrigin, activeTab, refreshStrategyStatus,
+    validateStrategy, startAutomation, stopAutomation,
   };
 }

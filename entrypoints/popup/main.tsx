@@ -86,7 +86,7 @@ function Popup() {
     t,
     setStatus,
   });
-  const { strategyReady, strategyOrigin, siteAccessStatus, activeTab, refreshStrategyStatus, enableActiveSite, validateStrategy, startAutomation, stopAutomation } = useAutomationController({
+  const { strategyReady, strategyOrigin, activeTab, refreshStrategyStatus, validateStrategy, startAutomation, stopAutomation } = useAutomationController({
     t, locale, message, automationMessages, interval, unit, repeatCount,
     timeWindowEnabled, startTime, endTime, variables, persistSettings, refreshLogs,
     setStatus, setPage,
@@ -167,10 +167,6 @@ function Popup() {
     </Tabs>
 
     <div className="popup-content">
-      {page !== 'simulator' ? <section className="site-access-control" aria-label={t('siteAccess')}>
-        <Button size="xs" variant="light" color="dark" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</Button>
-        {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
-      </section> : null}
     {page === 'automation' ? <AutomationPage
       t={t}
       locale={locale}
@@ -181,8 +177,6 @@ function Popup() {
       variables={variables}
       validateStrategy={() => void validateStrategy()}
       status={status}
-      siteAccessStatus={siteAccessStatus}
-      enableActiveSite={() => void enableActiveSite()}
       automationMessages={automationMessages}
       draggingIndex={draggingIndex}
       setDraggingIndex={setDraggingIndex}

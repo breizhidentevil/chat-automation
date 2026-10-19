@@ -28,11 +28,12 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
     const manifest = await serviceWorker.evaluate(() => chrome.runtime.getManifest());
     assert.equal(manifest.manifest_version, 3);
     assert.ok(manifest.permissions.includes('scripting'));
-    assert.deepEqual(manifest.optional_host_permissions, ['http://*/*', 'https://*/*']);
-    assert.ok(!manifest.host_permissions?.length, 'site access must remain optional');
+    assert.deepEqual(manifest.host_permissions, ['http://*/*', 'https://*/*']);
+    assert.ok(!manifest.optional_host_permissions?.length, 'site access must be granted at installation');
 
     const registeredScripts = await serviceWorker.evaluate(() => chrome.scripting.getRegisteredContentScripts());
-    assert.equal(registeredScripts.length, 0, 'no site script should be registered before permission is granted');
+    assert.equal(registeredScripts.length, 1, 'the all-sites content script should be registered without per-site activation');
+    assert.deepEqual(registeredScripts[0].matches, ['http://*/*', 'https://*/*']);
 
     const popup = await context.newPage();
     await popup.goto('chrome-extension://' + extensionId + '/popup.html');

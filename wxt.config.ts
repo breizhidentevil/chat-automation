@@ -11,8 +11,8 @@ export default defineConfig({
     name: 'Chat Site Automation',
     description: 'Détecte les champs de chat et automatise les envois selon une fréquence et un créneau définis.',
     permissions: ['activeTab', 'storage', 'scripting'],
-    // Hosts are requested only when the user enables the extension on a specific site.
-    optional_host_permissions: ['http://*/*', 'https://*/*'],
+    // The user controls when automation starts; page access is granted by installation.
+    host_permissions: ['http://*/*', 'https://*/*'],
     action: {},
     // Firefox MV3 requires a stable ID and an explicit data-collection declaration.
     // This extension keeps its history and diagnostics in local browser storage and does not transmit them.
@@ -26,12 +26,11 @@ export default defineConfig({
     } : {}),
   }),
   hooks: {
-    // WXT's runtime registration normally promotes matches to mandatory host_permissions.
-    // Move those broad patterns to optional permissions so site access is granted per-origin.
+    // WXT may infer optional host access from runtime content-script registration.
+    // Override the generated manifest so access is granted at installation.
     'build:manifestGenerated': (_wxt, manifest) => {
-      delete manifest.host_permissions;
-      manifest.permissions = [...new Set([...(manifest.permissions ?? []), 'scripting'])];
-      manifest.optional_host_permissions = ['http://*/*', 'https://*/*'];
+      delete manifest.optional_host_permissions;
+      manifest.host_permissions = ['http://*/*', 'https://*/*'];
     },
   },
 });
