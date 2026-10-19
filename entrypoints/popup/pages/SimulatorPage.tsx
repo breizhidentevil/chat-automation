@@ -29,14 +29,12 @@ function intervalAmountLabel(value: string, unit: 'seconds' | 'minutes', locale:
   return `${value} ${unit === 'seconds' ? (locale === 'fr' ? 'seconde(s)' : 'second(s)') : (locale === 'fr' ? 'minute(s)' : 'minute(s)')}`;
 }
 
-function formatSimulationDuration(ms: number, locale: Locale): string {
+function formatSimulationDuration(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return locale === 'fr'
-    ? [hours ? `${hours} h` : '', minutes ? `${minutes} min` : '', `${seconds} s`].filter(Boolean).join(' ')
-    : [hours ? `${hours} h` : '', minutes ? `${minutes} min` : '', `${seconds} s`].filter(Boolean).join(' ');
+  return [hours ? `${hours} h` : '', minutes ? `${minutes} min` : '', `${seconds} s`].filter(Boolean).join(' ');
 }
 
 export default function SimulatorPage({
@@ -73,7 +71,7 @@ export default function SimulatorPage({
           <div className="simulation-metrics">
             <div><span>{t('simulationSuccessful')}</span><strong>{simulationResult.successful}</strong></div>
             <div><span>{t('simulationFailed')}</span><strong>{simulationResult.failed}</strong></div>
-            <div><span>{t('simulationDuration')}</span><strong>{formatSimulationDuration(simulationResult.simulatedDurationMs, locale)}</strong></div>
+            <div><span>{t('simulationDuration')}</span><strong>{formatSimulationDuration(simulationResult.simulatedDurationMs)}</strong></div>
           </div>
           <p className="helper">{new Date(simulationResult.startedAt).toLocaleString()} → {new Date(simulationResult.finishedAt).toLocaleString()}</p>
         </section>
