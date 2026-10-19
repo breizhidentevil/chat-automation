@@ -49,6 +49,9 @@ test('stops active page scripts and history capture when host permission is revo
   assert.match(requireBackgroundSource, /CHAT_AUTOMATION_PERMISSION_REVOKED/);
   assert.match(contentScript, /message\.type === 'CHAT_AUTOMATION_PERMISSION_REVOKED'/);
   assert.match(contentScript, /historyObserver\?\.disconnect\(\)/);
+  assert.match(contentScript, /historyPollTimer !== undefined/);
+  assert.match(contentScript, /historyPollTimer = undefined/);
+  assert.match(contentScript, /siteAccessRevoked\) return \{ message:/);
   assert.match(contentScript, /siteAccessRevoked = true/);
   assert.match(contentScript, /if \(siteAccessRevoked\) return/);
 });
