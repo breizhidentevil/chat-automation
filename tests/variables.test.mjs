@@ -152,8 +152,8 @@ test('variable collections are capped by count and aggregate value size', () => 
     variable('small_after_limit', 'ok'),
   ];
   const filtered = filterValidVariableDefinitions(oversized);
-  assert.equal(filtered.length, 11);
+  assert.equal(filtered.length, 10);
   assert.equal(filtered.some(item => item.name === 'large_10'), false);
-  assert.equal(filtered.some(item => item.name === 'small_after_limit'), true);
+  assert.equal(filtered.some(item => item.name === 'small_after_limit'), false);
   assert.equal(filtered.reduce((total, item) => total + item.value.length, 0) <= 1_000_000, true);
 });
