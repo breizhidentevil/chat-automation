@@ -8,6 +8,7 @@ import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
 import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
+import { contentScriptIdForOrigin } from '../../lib/content-script-id';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs';
@@ -427,7 +428,7 @@ function Popup() {
       return false;
     }
 
-    const id = 'chat-automation-' + origin.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const id = contentScriptIdForOrigin(origin);
     const registered = await browser.scripting.getRegisteredContentScripts({ ids: [id] });
     if (registered.length === 0) {
       await browser.scripting.registerContentScripts([{
