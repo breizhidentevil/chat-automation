@@ -167,10 +167,6 @@ function Popup() {
     </Tabs>
 
     <div className="popup-content">
-      {page !== 'simulator' ? <section className="site-access-control" aria-label={t('siteAccess')}>
-        <Button size="xs" variant="light" color="dark" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</Button>
-        {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
-      </section> : null}
     {page === 'automation' ? <AutomationPage
       t={t}
       locale={locale}
