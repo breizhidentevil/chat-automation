@@ -13,8 +13,11 @@ const CONTENT_SCRIPT_ID = 'chat-automation-all-sites';
 const CONTENT_SCRIPT_MATCHES = ['http://*/*', 'https://*/*'];
 
 async function registerContentScriptForAllSites(): Promise<void> {
-  const existing = await browser.scripting.getRegisteredContentScripts({ ids: [CONTENT_SCRIPT_ID] });
-  if (existing.length > 0) return;
+  const registered = await browser.scripting.getRegisteredContentScripts();
+  const legacyIds = registered.filter(script => script.id !== CONTENT_SCRIPT_ID).map(script => script.id);
+  if (legacyIds.length > 0) await browser.scripting.unregisterContentScripts({ ids: legacyIds });
+  const existing = registered.some(script => script.id === CONTENT_SCRIPT_ID);
+  if (existing) return;
   await browser.scripting.registerContentScripts([{
     id: CONTENT_SCRIPT_ID,
     matches: CONTENT_SCRIPT_MATCHES,
