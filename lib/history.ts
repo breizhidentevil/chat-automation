@@ -135,9 +135,14 @@ export function backgroundUpsertConversationMessage(message: ConversationMessage
     let budget = 0;
     for (let i = current.length - 1; i >= 0 && newestFirst.length < 2000; i--) {
       const item = current[i]!;
-      const cost = item.content.length + 400;
-      if (newestFirst.length > 0 && budget + cost > 1_500_000) break;
-      newestFirst.push(item);
+      // Bound individual records as well as the aggregate budget. Without this,
+      // one unusually large DOM message could exceed the entire storage budget.
+      const boundedItem = item.content.length > 100_000
+        ? { ...item, content: item.content.slice(0, 100_000), contentTruncated: true }
+        : item;
+      const cost = boundedItem.content.length + 400;
+      if (budget + cost > 1_500_000) break;
+      newestFirst.push(boundedItem);
       budget += cost;
     }
     await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: deduplicateConversationMessages(newestFirst.reverse()) });
