@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, NumberInput, Select, Switch, TextInput } from '@mantine/core';
+import { Alert, Button, NumberInput, Select, Switch, TextInput } from '@mantine/core';
 import type { VariableDefinition } from '../../../lib/variables';
 import type { Locale } from '../../../lib/i18n';
 import { translate } from '../../../lib/i18n';
@@ -58,8 +58,8 @@ export default function AutomationPage(props: AutomationPageProps) {
       <TemplateTextarea t={t} id="message" value={message} onChange={setMessage} variables={variables} placeholder={t('writeTestMessage')} rows={4} />
       <p className="helper autocomplete-note">{t('variableHint')}</p>
       <Button className="validate-button" variant="default" fullWidth onClick={() => void validateStrategy()}>{t('testAndSave')}</Button>
-      <p className="notice">{t('testWarning')}</p>
-      <p className="status" role="status">{status}</p>
+      <Alert color="yellow" variant="light">{t('testWarning')}</Alert>
+      <Alert color="gray" variant="light" role="status">{status}</Alert>
     </> : <>
       <div className="page-heading"><h2>{t('automateSending')}</h2><p>{t('siteStrategyDescription', { site: strategyOrigin })}</p></div>
       <div className="sequence-heading"><div><h3>{t('sequence')}</h3><p className="helper">{t('sequenceHelp')}</p></div><Button className="add-message" variant="default" size="compact-sm" onClick={addAutomationMessage}>{t('add')}</Button></div>
@@ -99,6 +99,6 @@ export default function AutomationPage(props: AutomationPageProps) {
           <p className="helper">{t('windowOvernight')}</p>
         </> : <p className="helper">{t('noTimeRestriction')}</p>}
       </section>
-      <p className="notice">{t('variableUsageNotice')}</p>
+      <Alert color="gray" variant="light">{t('variableUsageNotice')}</Alert>
     </>;
 }
