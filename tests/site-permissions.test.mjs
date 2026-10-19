@@ -22,7 +22,7 @@ test('registers the page script dynamically only after per-site permission', () 
   assert.match(popup, /const legacyId = 'chat-automation-' \+ origin\.replace/);
   assert.match(popup, /browser\.scripting\.unregisterContentScripts\(\{ ids: \[legacyId\] \}\)/);
   assert.match(popup, /files: \[['"]\/?content-scripts\/content\.js['"]\]/);
-  assert.match(popup, /Activer sur ce site/);
+  assert.match(popup, /t\('enableOnSite'\)/);
 });
 
 test('unregisters dynamically registered scripts when site access is revoked', () => {
