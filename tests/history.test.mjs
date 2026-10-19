@@ -4,12 +4,27 @@ import test from 'node:test';
 import ts from 'typescript';
 
 const source = await readFile(new URL('../lib/history.ts', import.meta.url), 'utf8');
-const compiled = ts.transpile(source, {
+const validationSource = await readFile(new URL('../lib/history-validation.ts', import.meta.url), 'utf8');
+const validationCompiled = ts.transpile(validationSource, {
   module: ts.ModuleKind.ESNext,
   target: ts.ScriptTarget.ES2022,
 });
+const validationUrl = `data:text/javascript;base64,${Buffer.from(validationCompiled).toString('base64')}`;
+const compiled = ts.transpile(source, {
+  module: ts.ModuleKind.ESNext,
+  target: ts.ScriptTarget.ES2022,
+}).replace("'./history-validation'", `'${validationUrl}'`);
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
-const { deduplicateConversationMessages, mergeConversationMessage, limitConversationHistory, upsertConversationMessage, markInterruptedMessagesIncomplete } = await import(moduleUrl);
+const {
+  deduplicateConversationMessages,
+  mergeConversationMessage,
+  limitConversationHistory,
+  readConversationHistory,
+  upsertConversationMessage,
+  markInterruptedMessagesIncomplete,
+  backgroundUpsertConversationMessage,
+  backgroundMarkInterruptedMessagesIncomplete,
+} = await import(moduleUrl);
 
 function message(overrides = {}) {
   return {
@@ -142,6 +157,68 @@ test('a rejected background reconciliation never falls back to direct storage wr
   try {
     await markInterruptedMessagesIncomplete('https://example.com');
     assert.equal(writes, 0);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
+
+test('history reads discard malformed persisted records', async () => {
+  const previousBrowser = globalThis.browser;
+  globalThis.browser = {
+    storage: { local: { get: async () => ({ chatAutomationHistoryV1: [
+      message({ id: 'valid' }),
+      { id: 'broken', origin: 'https://example.com' },
+      message({ id: 'wrong-origin', origin: 'https://other.example' }),
+    ] }) } },
+  };
+  try {
+    const result = await readConversationHistory('https://example.com');
+    assert.deepEqual(result.map(item => item.id), ['valid']);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
+test('background upsert removes malformed persisted records before writing', async () => {
+  const previousBrowser = globalThis.browser;
+  let written;
+  globalThis.browser = {
+    storage: { local: {
+      get: async () => ({ chatAutomationHistoryV1: [
+        message({ id: 'valid-existing' }),
+        { id: 'malformed', content: 42 },
+      ] }),
+      set: async value => { written = value.chatAutomationHistoryV1; },
+    } },
+  };
+  try {
+    await backgroundUpsertConversationMessage(message({ id: 'new-message', firstSeenAt: 3000, lastUpdatedAt: 3000 }));
+    assert.deepEqual(written.map(item => item.id), ['valid-existing', 'new-message']);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});
+
+test('background reconciliation ignores malformed persisted records', async () => {
+  const previousBrowser = globalThis.browser;
+  let written;
+  globalThis.browser = {
+    storage: { local: {
+      get: async () => ({ chatAutomationHistoryV1: [
+        message({ id: 'streaming', status: 'streaming' }),
+        { id: 'malformed', origin: 'https://example.com', status: 'streaming' },
+      ] }),
+      set: async value => { written = value.chatAutomationHistoryV1; },
+    } },
+  };
+  try {
+    await backgroundMarkInterruptedMessagesIncomplete('https://example.com');
+    assert.deepEqual(written.map(item => item.id), ['streaming']);
+    assert.equal(written[0].status, 'incomplete');
   } finally {
     if (previousBrowser === undefined) delete globalThis.browser;
     else globalThis.browser = previousBrowser;
