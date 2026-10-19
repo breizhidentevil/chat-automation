@@ -106,7 +106,7 @@ export function useAutomationController({
 
     try {
       const tab = await activeTab();
-      if (!await ensureSiteAccess(tab)) return;
+      await ensureSiteAccessForTab(tab);
       const payload = buildAutomationStartPayload(validation.config);
       if (!await persistSettings()) return;
       const response = await browser.tabs.sendMessage(tab.id!, payload);
