@@ -45,8 +45,8 @@ export default function VariablesPage(props: VariablesPageProps) {
     <section className="variable-form">
       <h3>{fr ? 'Définition des variables' : 'Variable definitions'}</h3>
       <p className="helper">{fr
-        ? 'Définissez toutes les variables dans un seul champ. Le format est détecté automatiquement : JSON (objet) ou YAML (une variable par ligne). Les variables existantes conservent leur portée.'
-        : 'Define all variables in one field. The format is detected automatically: JSON (object) or YAML (one variable per line). Existing variables keep their scope.'}</p>
+        ? 'Définissez les variables en JSON ou YAML, y compris des objets imbriqués. Appelez une propriété avec la notation pointée, par exemple {{personne.adresse.ville}}. Les variables existantes conservent leur portée.'
+        : 'Define variables in JSON or YAML, including nested objects. Access a property with dot notation, for example {{person.address.city}}. Existing variables keep their scope.'}</p>
       <label htmlFor="variables-document">{fr ? 'Variables (JSON ou YAML)' : 'Variables (JSON or YAML)'}</label>
       <Textarea
         id="variables-document"
@@ -61,8 +61,8 @@ export default function VariablesPage(props: VariablesPageProps) {
         placeholder={`{\n  "prenom": "Alexandre",\n  "ville": "Nantes"\n}`}
       />
       <p id="variables-document-help" className="helper">{fr
-        ? 'JSON : {"prenom": "Alexandre"} · YAML : prenom: Alexandre. Les valeurs doivent être des chaînes, nombres ou booléens. Les noms suivent les règles {{nom}}.'
-        : 'JSON: {"first_name": "Alex"} · YAML: first_name: Alex. Values must be strings, numbers, or booleans. Names follow the {{name}} rules.'}</p>
+        ? 'JSON : {"personne": {"adresse": {"ville": "Nantes"}}} · YAML : personne:\n  adresse:\n    ville: Nantes. Accès : {{personne.adresse.ville}}. Les objets et tableaux JSON sont pris en charge.'
+        : 'JSON: {"person": {"address": {"city": "Paris"}}} · YAML: person:\n  address:\n    city: Paris. Access: {{person.address.city}}. JSON objects and arrays are supported.'}</p>
       <label htmlFor="variable-scope">{fr ? 'Portée des nouvelles variables' : 'Scope for new variables'}</label>
       <Select id="variable-scope" value={variableScope} onChange={value => { if (value === 'global' || value === 'automation') setVariableScope(value); }} data={[{ value: 'global', label: t('globalScope') }, { value: 'automation', label: t('automationScope') }]} />
       {variableError ? <Alert className="variable-error" color="red" variant="light" role="alert">{variableError}</Alert> : null}
