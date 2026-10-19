@@ -19,7 +19,7 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "liquidjs": "^10.21.1"
+    "liquidjs": "^10.30.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
