@@ -183,3 +183,20 @@ export function backgroundMarkInterruptedMessagesIncomplete(origin: string): Pro
   });
   return operation;
 }
+
+/** Delete one site's retained messages through the same queue as history writes. */
+export function backgroundClearSiteHistory(origin: string): Promise<void> {
+  const operation = backgroundWriteQueue.then(async () => {
+    const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
+    const current = Array.isArray(stored[HISTORY_STORAGE_KEY])
+      ? stored[HISTORY_STORAGE_KEY].filter(isValidConversationMessage)
+      : [];
+    await browser.storage.local.set({
+      [HISTORY_STORAGE_KEY]: current.filter(message => message.origin !== origin),
+    });
+  });
+  backgroundWriteQueue = operation.catch(error => {
+    console.error('[Chat Automation] Échec de suppression de l’historique', error);
+  });
+  return operation;
+}
