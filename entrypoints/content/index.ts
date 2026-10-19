@@ -28,6 +28,8 @@ export default defineContentScript({
         stopAutomation('stopped', 'Accès au site révoqué : automatisation et capture de l’historique arrêtées.');
         historyObserver?.disconnect();
         historyObserver = undefined;
+        if (historyPollTimer !== undefined) window.clearInterval(historyPollTimer);
+        historyPollTimer = undefined;
         if (historyScanTimer !== undefined) window.clearTimeout(historyScanTimer);
         historyScanTimer = undefined;
         return { ok: true };
@@ -37,10 +39,12 @@ export default defineContentScript({
         return { message: 'Automatisation arrêtée.' };
       }
       if (message.type === 'CHAT_AUTOMATION_VALIDATE') {
+        if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant de valider une stratégie.', validated: false };
         if (!('text' in message) || typeof message.text !== 'string' || !message.text.trim()) return { message: 'Saisissez le message de test. Aucun changement n’a été effectué.' };
         return validateAndSaveStrategy(message.text);
       }
       if (message.type === 'CHAT_AUTOMATION_START') {
+        if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant de démarrer.', success: false };
         if (!isValidAutomationStartMessage(message)) {
           return { message: 'Paramètres d’automatisation invalides.' };
         }
