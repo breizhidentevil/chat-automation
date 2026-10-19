@@ -1,3 +1,9 @@
+## 5.0.0 — Versioning baseline
+
+- Aligned the extension package and lockfile versions with the V5 product milestone.
+- Established the versioning policy: increment the patch version on every development iteration that changes the project.
+- The generated browser manifest takes its version from the package metadata; development prerelease tags additionally include the GitHub Actions run number.
+
 ## Typecheck correction v3
 
 - Set `compilerOptions.jsx` to `react-jsx` for TSX entrypoints.
