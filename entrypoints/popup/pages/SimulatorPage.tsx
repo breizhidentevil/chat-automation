@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Alert, Button, Card, Textarea } from '@mantine/core';
-import { resolveMessageTemplate, type VariableDefinition } from '../../../lib/variables';
+import { type VariableDefinition } from '../../../lib/variables';
+import { simulateConversation, type ConversationPairResult } from '../../../lib/conversation-simulator';
 import type { Locale } from '../../../lib/i18n';
 import { translate } from '../../../lib/i18n';
 
 type Translate = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) => string;
 interface Pair { id: number; sent: string; expected: string }
-interface ResultPair extends Pair { renderedSent: string; status: 'ok' | 'error'; error?: string }
+type ResultPair = ConversationPairResult;
 
 interface SimulatorPageProps { t: Translate; locale: Locale; variables: VariableDefinition[] }
 
@@ -34,32 +35,12 @@ export default function SimulatorPage({ t, locale, variables }: SimulatorPagePro
   async function runSimulation() {
     setError('');
     setResults(null);
-    const emptyIndex = pairs.findIndex(pair => !pair.sent.trim() || !pair.expected.trim());
-    if (pairs.length === 0 || emptyIndex >= 0) {
-      setError(fr ? (pairs.length === 0 ? 'Ajoutez au moins une paire de messages.' : `Complétez les deux messages de la paire ${emptyIndex + 1}.`) : (pairs.length === 0 ? 'Add at least one message pair.' : `Complete both messages in pair ${emptyIndex + 1}.`));
-      return;
-    }
     setRunning(true);
     try {
-      const next: ResultPair[] = [];
-      for (let index = 0; index < pairs.length; index += 1) {
-        const pair = pairs[index]!;
-        try {
-          const rendered = await resolveMessageTemplate(pair.sent, variables, {
-            iteration: 1, messageIndex: index + 1, timestamp: new Date(),
-          }, 'automation', {
-            automation: {
-              sequence: { iteration: 1, total_iterations: 1 },
-              message: { index: index + 1, total: pairs.length },
-              messages: pairs.map(item => ({ content: item.sent })),
-            },
-          });
-          next.push({ ...pair, renderedSent: rendered.text, status: 'ok' });
-        } catch (cause) {
-          next.push({ ...pair, renderedSent: '', status: 'error', error: cause instanceof Error ? cause.message : String(cause) });
-        }
-      }
-      setResults(next);
+      const result = await simulateConversation(pairs, variables);
+      setResults(result.pairs);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (fr ? 'La simulation a échoué.' : 'Simulation failed.'));
     } finally {
       setRunning(false);
     }
