@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Button, Paper } from '@mantine/core';
+import { Alert, Badge, Button, Paper } from '@mantine/core';
 import type { ConversationMessage } from '../../../lib/history';
 import { translate } from '../../../lib/i18n';
 
