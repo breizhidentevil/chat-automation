@@ -5,6 +5,7 @@ import test from 'node:test';
 const config = await readFile(new URL('../wxt.config.ts', import.meta.url), 'utf8');
 const contentScript = await readFile(new URL('../entrypoints/content/index.ts', import.meta.url), 'utf8');
 const popup = await readFile(new URL('../entrypoints/popup/main.tsx', import.meta.url), 'utf8');
+const requireBackgroundSource = await readFile(new URL('../entrypoints/background.ts', import.meta.url), 'utf8');
 
 test('does not request mandatory access to every website', () => {
   assert.doesNotMatch(config, /host_permissions:\s*\[['"]<all_urls>['"]\]/);
@@ -19,4 +20,12 @@ test('registers the page script dynamically only after per-site permission', () 
   assert.match(popup, /browser\.scripting\.registerContentScripts/);
   assert.match(popup, /files: \[['"]\/?content-scripts\/content\.js['"]\]/);
   assert.match(popup, /Activer sur ce site/);
+});
+
+test('unregisters dynamically registered scripts when site access is revoked', () => {
+  const background = requireBackgroundSource;
+  assert.match(background, /browser\.permissions\.onRemoved\.addListener/);
+  assert.match(background, /browser\.scripting\.getRegisteredContentScripts\(\)/);
+  assert.match(background, /browser\.scripting\.unregisterContentScripts\(\{ ids \}\)/);
+  assert.match(background, /origins\.includes\(match\)/);
 });
