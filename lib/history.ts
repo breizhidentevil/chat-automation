@@ -109,46 +109,25 @@ export async function readConversationHistory(origin: string): Promise<Conversat
 export async function upsertConversationMessage(message: ConversationMessage): Promise<void> {
   try {
     const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_UPSERT', message });
-    if (response?.ok === true) return;
-    console.warn('[Chat Automation] Le contexte background n’a pas confirmé l’écriture de l’historique ; tentative de sauvegarde directe.');
-  } catch (error) {
-    console.warn('[Chat Automation] Transmission au contexte background impossible ; tentative de sauvegarde directe.', error);
-  }
-
-  // Fallback important : si le background n’est pas prêt ou si son listener n’est
-  // pas disponible, le content script persiste quand même le message capturé.
-  try {
-    const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
-    const current = deduplicateConversationMessages(Array.isArray(stored[HISTORY_STORAGE_KEY]) ? stored[HISTORY_STORAGE_KEY] as ConversationMessage[] : []);
-    const index = current.findIndex(item => item.id === message.id && item.origin === message.origin);
-    if (index >= 0) {
-      const previous = current[index]!;
-      current[index] = mergeConversationMessage(previous, message);
-    } else {
-      current.push(message);
+    if (response?.ok !== true) {
+      console.warn('[Chat Automation] Le contexte background a refusé ou n’a pas confirmé l’écriture de l’historique.');
     }
-    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: limitConversationHistory(deduplicateConversationMessages(current)) });
   } catch (error) {
-    console.error('[Chat Automation] Échec de la sauvegarde directe de l’historique.', error);
+    // Never write directly from a content script: doing so would bypass the
+    // background sender-origin checks and the serialized storage write queue.
+    console.error('[Chat Automation] Transmission au contexte background impossible ; historique non persisté.', error);
   }
 }
 
 export async function markInterruptedMessagesIncomplete(origin: string): Promise<void> {
   try {
     const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_MARK_INTERRUPTED', origin });
-    if (response?.ok === true) return;
+    if (response?.ok !== true) {
+      console.warn('[Chat Automation] Le contexte background a refusé ou n’a pas confirmé la réconciliation de l’historique.');
+    }
   } catch (error) {
-    console.warn('[Chat Automation] Réconciliation background indisponible ; tentative directe.', error);
-  }
-  try {
-    const stored = await browser.storage.local.get(HISTORY_STORAGE_KEY);
-    const current = deduplicateConversationMessages(Array.isArray(stored[HISTORY_STORAGE_KEY]) ? stored[HISTORY_STORAGE_KEY] as ConversationMessage[] : []);
-    const updated = current.map(message => message.origin === origin && message.status === 'streaming'
-      ? { ...message, status: 'incomplete' as const, lastUpdatedAt: Date.now() }
-      : message);
-    await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: limitConversationHistory(updated) });
-  } catch (error) {
-    console.error('[Chat Automation] Échec de la réconciliation directe de l’historique.', error);
+    // Keep all mutations behind the background origin check and write queue.
+    console.error('[Chat Automation] Réconciliation background impossible ; historique inchangé.', error);
   }
 }
 
