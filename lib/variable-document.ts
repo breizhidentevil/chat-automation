@@ -2,8 +2,28 @@ import { isValidVariableName, MAX_VARIABLE_DEFINITIONS, MAX_VARIABLE_VALUE_LENGT
 
 export type VariableDocumentFormat = 'json' | 'yaml';
 
+function stripYamlComment(value: string): string {
+  let quote: "'" | '"' | null = null;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index]!;
+    if (quote === '"') {
+      if (character === '\\\\') { index += 1; continue; }
+      if (character === '"') quote = null;
+      continue;
+    }
+    if (quote === "'") {
+      if (character === "'" && value[index + 1] === "'") { index += 1; continue; }
+      if (character === "'") quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    else if (character === '#' && (index === 0 || /\\s/.test(value[index - 1]!))) return value.slice(0, index).trimEnd();
+  }
+  return value.trimEnd();
+}
+
 function parseScalar(value: string, lineNumber: number): string {
-  const trimmed = value.trim();
+  const trimmed = stripYamlComment(value).trim();
   if (!trimmed) return '';
   if (trimmed.startsWith('"')) {
     try {
