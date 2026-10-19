@@ -307,3 +307,7 @@ nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .conversation-result-pair > p { display: grid; gap: 4px; margin: 9px 0 0; }
 .conversation-result-pair > p > span { color: #62676e; font-size: 10px; font-weight: 600; }
 .conversation-result-pair code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 11px; }
+
+
+/* Éditeur de variables JSON/YAML en bloc. */
+.variables-document .mantine-Textarea-input { min-height: 180px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5; tab-size: 2; }
