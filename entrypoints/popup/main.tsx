@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button as MantineButton, MantineProvider, Tabs } from '@mantine/core';
+import { Badge, Button, MantineProvider, Select, Tabs } from '@mantine/core';
 import '@mantine/core/styles.css';
 import './style.css';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
@@ -119,7 +119,7 @@ function Popup() {
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''} ${page === 'simulator' ? 'simulator-view' : ''}`}>
-    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><label className="locale-picker"><span>{t('language')}</span><select aria-label={t('language')} value={locale} onChange={event => { const next = event.target.value as Locale; setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); }}><option value="fr">Français</option><option value="en">English</option></select></label><button type="button" className="help-button" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
+    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><Select className="locale-picker" aria-label={t('language')} value={locale} onChange={value => { if (value === 'fr' || value === 'en') { setLocale(value); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: value }); } }} data={[{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }]} size="xs" /> <Button type="button" className="help-button" variant="default" size="compact-md" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</Button></header>
     <Tabs value={page} onChange={value => { if (value) setPage(value as Page); }} className="popup-tabs">
       <Tabs.List className="main-nav" aria-label={t('mainNavigation')}>
         <Tabs.Tab value="automation">{t('automation')}</Tabs.Tab>
@@ -132,7 +132,7 @@ function Popup() {
 
     <div className="popup-content">
       {page !== 'simulator' ? <section className="site-access-control" aria-label={t('siteAccess')}>
-        <MantineButton size="xs" variant="light" color="dark" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</MantineButton>
+        <Button size="xs" variant="light" color="dark" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</Button>
         {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
       </section> : null}
     {page === 'automation' ? <AutomationPage
@@ -223,19 +223,19 @@ function Popup() {
     /> : null}
     </div>
     {page === 'history' ? <div className="history-dock">
-      <button className="secondary export-history-button" disabled={historyMessages.length === 0} onClick={() => void exportHistory()}>{t('exportHistory')}</button>
+      <Button className="export-history-button" variant="default" fullWidth disabled={historyMessages.length === 0} onClick={() => void exportHistory()}>{t('exportHistory')}</Button>
     </div> : null}
     {page === 'logs' ? <div className="logs-dock">
-      <button className="secondary export-logs-button" onClick={() => void exportLogs()}>{t('exportLogs')}</button>
+      <Button className="export-logs-button" variant="default" fullWidth onClick={() => void exportLogs()}>{t('exportLogs')}</Button>
     </div> : null}
     {page === 'automation' && strategyReady === true ? <div className="automation-dock">
       <div className="automation-actions">
-        <MantineButton color="dark" fullWidth onClick={() => void startAutomation()}>{t('startAutomation')}</MantineButton>
-        <MantineButton color="red" variant="outline" fullWidth onClick={() => void stopAutomation()}>{t('stopAutomation')}</MantineButton>
+        <Button color="dark" fullWidth onClick={() => void startAutomation()}>{t('startAutomation')}</Button>
+        <Button color="red" variant="outline" fullWidth onClick={() => void stopAutomation()}>{t('stopAutomation')}</Button>
       </div>
       <p className="status" role="status">{status}</p>
       <section className="runtime-panel" aria-live="polite" aria-label={t('tracking')}>
-        <div className="runtime-head"><h3>{t('tracking')}</h3><span className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</span></div>
+        <div className="runtime-head"><h3>{t('tracking')}</h3><Badge className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`} variant="light" color={runtimeStatus?.phase === 'failed' ? 'red' : runtimeStatus?.phase === 'finished' ? 'blue' : runtimeStatus?.phase === 'sending' || runtimeStatus?.phase === 'ready' ? 'green' : 'gray'}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</Badge></div>
         <p className="runtime-note">{runtimeStatus?.note ?? t('noRun')}</p>
         <div className="runtime-metrics">
           <div><span>{t('iteration')}</span><strong>{runtimeStatus?.phase === 'finished' ? (runtimeStatus.completedSequences || 0) : runtimeStatus && runtimeStatus.phase !== 'stopped' && runtimeStatus.phase !== 'failed' ? runtimeStatus.completedSequences + 1 : runtimeStatus?.completedSequences ?? 0}<small>{runtimeStatus?.repeatMode === 'infinite' ? ' / ∞' : runtimeStatus ? ` / ${runtimeStatus.repeatCount}` : ''}</small></strong></div>
