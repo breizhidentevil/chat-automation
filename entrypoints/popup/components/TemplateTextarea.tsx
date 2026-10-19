@@ -95,7 +95,7 @@ function TemplateTextarea({
     });
   }, [variables]);
   const filtered = openToken && !dismissed
-    ? candidates.filter((item, index, all) => all.findIndex(other => other.value === item.value) === index && item.value.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    ? candidates.filter(item => item.value.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
     : [];
 
   function updateCaret(element: HTMLTextAreaElement) {
