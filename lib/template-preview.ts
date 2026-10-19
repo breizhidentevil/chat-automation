@@ -15,9 +15,9 @@ export interface TemplatePreviewResult {
 /** Extract the root path from Liquid output expressions, including filtered expressions. */
 function findPreviewPaths(template: string): string[] {
   const paths = new Set(findTemplateVariables(template));
-  for (const match of template.matchAll(/{{\\s*([^{}]+?)\\s*}}/g)) {
+  for (const match of template.matchAll(/{{\s*([^{}]+?)\s*}}/g)) {
     const expression = (match[1] ?? '').split('|', 1)[0]?.trim() ?? '';
-    const path = expression.match(/^([A-Za-z_][A-Za-z0-9_-]*(?:\\.[A-Za-z_][A-Za-z0-9_-]*|\\[\\d+\\])*)$/)?.[1];
+    const path = expression.match(/^([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)$/)?.[1];
     if (path) paths.add(path);
   }
   return [...paths];
@@ -32,8 +32,18 @@ export async function previewMessageTemplate(
   variables: VariableDefinition[],
   scope: VariableScope = 'automation',
 ): Promise<TemplatePreviewResult> {
-  const unknownVariables = validateTemplateVariables(template, variables, scope);
-  const variablesUsed = findTemplateVariables(template);
+  const variablesUsed = findPreviewPaths(template);
+  const availableNames = new Set(variables
+    .filter(variable => variable.scope === 'global' || variable.scope === scope)
+    .map(variable => variable.name));
+  const dynamicRoots = new Set(['system', 'automation', 'chat', 'history', 'logs', 'strategy', 'data']);
+  const unknownVariables = [...new Set([
+    ...validateTemplateVariables(template, variables, scope),
+    ...variablesUsed.filter(name => {
+      const root = name.split(/[.[]/, 1)[0] ?? '';
+      return !dynamicRoots.has(root) && !availableNames.has(name);
+    }),
+  ])];
   const previewVariables = [...variables];
   let previewIndex = 0;
 
