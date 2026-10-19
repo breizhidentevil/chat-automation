@@ -17,6 +17,7 @@ import { loadStoredVariables, saveStoredVariables } from '../../services/variabl
 import { loadAutomationSettings, saveAutomationSettings } from '../../services/automation-settings';
 import { loadVisibleHistory } from '../../services/history-service';
 import { loadRecentLogs } from '../../services/logs-service';
+import { downloadJsonFile } from '../../services/file-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -306,7 +307,6 @@ function Popup() {
   }
 
   async function exportHistory() {
-    let url: string | undefined;
     try {
       const key = historyStorageKey(historyOrigin);
       const data = await browser.storage.local.get(key);
@@ -318,16 +318,9 @@ function Popup() {
         historyConversationId,
       );
       const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`;
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
+      downloadJsonFile(payload, `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`);
       setStatus(t('historyExportStarted'));
     } catch (error) {
-      if (url) URL.revokeObjectURL(url);
       console.error('[Chat Automation] Export de l’historique échoué.', error);
       setStatus(t('historyExportError'));
     }
@@ -699,20 +692,12 @@ function Popup() {
   }
 
   async function exportLogs() {
-    let url: string | undefined;
     try {
       const data = await browser.storage.local.get('chatAutomationLogs');
       const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
-      const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
-      url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'chat-automation-logs.json';
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
+      downloadJsonFile(entries, 'chat-automation-logs.json');
       setStatus(t('logsExportStarted'));
     } catch (error) {
-      if (url) URL.revokeObjectURL(url);
       console.error('[Chat Automation] Export des journaux échoué.', error);
       setStatus(t('logsExportError'));
     }
