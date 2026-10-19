@@ -86,7 +86,7 @@ function Popup() {
     t,
     setStatus,
   });
-  const { strategyReady, strategyOrigin, siteAccessStatus, activeTab, refreshStrategyStatus, enableActiveSite, validateStrategy, startAutomation, stopAutomation } = useAutomationController({
+  const { strategyReady, strategyOrigin, activeTab, refreshStrategyStatus, validateStrategy, startAutomation, stopAutomation } = useAutomationController({
     t, locale, message, automationMessages, interval, unit, repeatCount,
     timeWindowEnabled, startTime, endTime, variables, persistSettings, refreshLogs,
     setStatus, setPage,
