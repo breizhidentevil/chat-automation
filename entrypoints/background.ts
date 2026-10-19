@@ -27,7 +27,7 @@ export default defineBackground(() => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
     if (message.type === 'CHAT_AUTOMATION_LOG_EVENT' && 'entry' in message) {
       const entry = message.entry as DiagnosticEvent;
-      if (!entry || typeof entry.timestamp !== 'number' || typeof entry.site !== 'string' || typeof entry.event !== 'string' || !['INFO', 'WARN', 'ERROR'].includes(entry.level)) return { ok: false };
+      if (!entry || typeof entry.timestamp !== 'number' || typeof entry.site !== 'string' || typeof entry.event !== 'string' || !['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(entry.level)) return { ok: false };
       return persistDiagnosticEvent(entry);
     }
     if (message.type === 'CHAT_HISTORY_UPSERT' && 'message' in message) {
