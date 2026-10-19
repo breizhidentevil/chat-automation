@@ -2,13 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { LOCALE_STORAGE_KEY, preferredLocale, type Locale } from '../../lib/i18n';
 import { EnglishDocumentation } from './English';
 import { createRoot } from 'react-dom/client';
-import { Button, MantineProvider, Select } from '@mantine/core';
+import { Button, MantineProvider, Select, useMantineColorScheme } from '@mantine/core';
 import '@mantine/core/styles.css';
 import './style.css';
 import './theme.css';
 
 function Documentation() {
+  const { setColorScheme, clearColorScheme } = useMantineColorScheme();
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
+  useEffect(() => {
+    let active = true;
+    void browser.storage.local.get('chatAutomationColorScheme').then(data => {
+      if (!active) return;
+      const preference = data.chatAutomationColorScheme;
+      if (preference === 'light' || preference === 'dark') setColorScheme(preference);
+      else clearColorScheme();
+    }).catch(() => { if (active) clearColorScheme(); });
+    return () => { active = false; };
+  }, [clearColorScheme, setColorScheme]);
   useEffect(() => { void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => { const saved = data[LOCALE_STORAGE_KEY]; if (saved === 'fr' || saved === 'en') setLocale(saved); }); }, []);
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const changeLocale = (next: Locale) => { setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); };
