@@ -1,8 +1,5 @@
 import type { DiagnosticEvent, LogLevel } from './contracts';
 
-const LOG_KEY = 'chatAutomationLogs';
-const MAX_LOGS = 500;
-
 export async function logEvent(
   site: string,
   level: LogLevel,
@@ -16,9 +13,13 @@ export async function logEvent(
     ...extra,
   };
   try {
-    const stored = await browser.storage.local.get(LOG_KEY);
-    const previous = (stored[LOG_KEY] as DiagnosticEvent[] | undefined) ?? [];
-    await browser.storage.local.set({ [LOG_KEY]: [...previous, entry].slice(-MAX_LOGS) });
+    // The background worker serializes writes so concurrent tabs do not overwrite
+    // one another's read-modify-write operations in storage.local.
+    const response = await browser.runtime.sendMessage({
+      type: 'CHAT_AUTOMATION_LOG_EVENT',
+      entry,
+    });
+    if (!response?.ok) throw new Error('Background logger rejected the event');
   } catch {
     console.warn('[Chat Automation] Échec de persistance du journal', entry.level, entry.event);
   }
