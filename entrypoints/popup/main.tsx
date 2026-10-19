@@ -627,6 +627,8 @@ function Popup() {
         case 'invalidSettings':
           setStatus(t('invalidSettings'));
           return;
+        default:
+          return;
       }
     }
 
