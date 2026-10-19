@@ -4,6 +4,7 @@ import './style.css';
 import { deduplicateConversationMessages, historyStorageKey, type ConversationMessage } from '../../lib/history';
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
+import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { validateTemplateVariables, VARIABLE_NAME_PATTERN, VARIABLES_STORAGE_KEY, type VariableDefinition, type VariableScope } from '../../lib/variables';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
@@ -186,8 +187,11 @@ function Popup() {
       const origin = new URL(tab.url!).origin;
       setStrategyOrigin(origin);
       const data = await browser.storage.local.get('chatAutomationProcedures');
-      const procedures = (data.chatAutomationProcedures as Record<string, { schemaVersion?: number }> | undefined) ?? {};
-      setStrategyReady(procedures[origin]?.schemaVersion === 2);
+      const procedures = data.chatAutomationProcedures;
+      setStrategyReady(
+        Boolean(procedures && typeof procedures === 'object' &&
+          isValidChatSiteProcedure((procedures as Record<string, unknown>)[origin], origin)),
+      );
     } catch {
       setStrategyOrigin('');
       setStrategyReady(false);
