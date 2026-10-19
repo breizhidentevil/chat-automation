@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Button as MantineButton, MantineProvider, Tabs } from '@mantine/core';
+import '@mantine/core/styles.css';
 import './style.css';
-import './components/ui.css';
-import { Button } from './components/ui';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
@@ -120,17 +120,19 @@ function Popup() {
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''} ${page === 'simulator' ? 'simulator-view' : ''}`}>
     <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><label className="locale-picker"><span>{t('language')}</span><select aria-label={t('language')} value={locale} onChange={event => { const next = event.target.value as Locale; setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); }}><option value="fr">Français</option><option value="en">English</option></select></label><button type="button" className="help-button" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
-    <nav className="main-nav" aria-label={t('mainNavigation')}>
-      <Button variant="tab" active={page === 'automation'} aria-current={page === 'automation' ? 'page' : undefined} onClick={() => setPage('automation')}>{t('automation')}</Button>
-      <Button variant="tab" active={page === 'variables'} aria-current={page === 'variables' ? 'page' : undefined} onClick={() => setPage('variables')}>{t('variables')}</Button>
-      <Button variant="tab" active={page === 'history'} aria-current={page === 'history' ? 'page' : undefined} onClick={() => setPage('history')}>{t('history')}</Button>
-      <Button variant="tab" active={page === 'logs'} aria-current={page === 'logs' ? 'page' : undefined} onClick={() => setPage('logs')}>{t('logs')}</Button>
-      <Button variant="tab" active={page === 'simulator'} aria-current={page === 'simulator' ? 'page' : undefined} onClick={() => setPage('simulator')}>{t('simulator')}</Button>
-    </nav>
+    <Tabs value={page} onChange={value => { if (value) setPage(value as Page); }} className="popup-tabs">
+      <Tabs.List className="main-nav" aria-label={t('mainNavigation')}>
+        <Tabs.Tab value="automation">{t('automation')}</Tabs.Tab>
+        <Tabs.Tab value="variables">{t('variables')}</Tabs.Tab>
+        <Tabs.Tab value="history">{t('history')}</Tabs.Tab>
+        <Tabs.Tab value="logs">{t('logs')}</Tabs.Tab>
+        <Tabs.Tab value="simulator">{t('simulator')}</Tabs.Tab>
+      </Tabs.List>
+    </Tabs>
 
     <div className="popup-content">
       {page !== 'simulator' ? <section className="site-access-control" aria-label={t('siteAccess')}>
-        <button type="button" className="secondary" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</button>
+        <MantineButton size="xs" variant="light" color="dark" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</MantineButton>
         {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
       </section> : null}
     {page === 'automation' ? <AutomationPage
@@ -228,8 +230,8 @@ function Popup() {
     </div> : null}
     {page === 'automation' && strategyReady === true ? <div className="automation-dock">
       <div className="automation-actions">
-        <button className="primary" onClick={() => void startAutomation()}>{t('startAutomation')}</button>
-        <button className="stop-button" onClick={() => void stopAutomation()}>{t('stopAutomation')}</button>
+        <MantineButton color="dark" fullWidth onClick={() => void startAutomation()}>{t('startAutomation')}</MantineButton>
+        <MantineButton color="red" variant="outline" fullWidth onClick={() => void stopAutomation()}>{t('stopAutomation')}</MantineButton>
       </div>
       <p className="status" role="status">{status}</p>
       <section className="runtime-panel" aria-live="polite" aria-label={t('tracking')}>
@@ -245,4 +247,8 @@ function Popup() {
   </main>;
 }
 
-createRoot(document.getElementById('root')!).render(<Popup />);
+createRoot(document.getElementById('root')!).render(
+  <MantineProvider theme={{ primaryColor: 'dark', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <Popup />
+  </MantineProvider>,
+);
