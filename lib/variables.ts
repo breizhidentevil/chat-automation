@@ -154,8 +154,8 @@ export async function resolveMessageTemplate(
 
   // Liquid introduces local names through loops, assignments, and captures.
   const liquidLocals = new Set<string>(['forloop', 'tablerowloop']);
-  for (const match of template.matchAll(/{%\\s*(?:for|tablerow)\\s+([A-Za-z_][A-Za-z0-9_-]*)\\s+in\\b/g)) liquidLocals.add(match[1]!);
-  for (const match of template.matchAll(/{%\\s*(?:assign|capture)\\s+([A-Za-z_][A-Za-z0-9_-]*)\\b/g)) liquidLocals.add(match[1]!);
+  for (const match of template.matchAll(/{%\s*(?:for|tablerow)\s+([A-Za-z_][A-Za-z0-9_-]*)\s+in\b/g)) liquidLocals.add(match[1]!);
+  for (const match of template.matchAll(/{%\s*(?:assign|capture)\s+([A-Za-z_][A-Za-z0-9_-]*)\b/g)) liquidLocals.add(match[1]!);
 
   const unknown = validateTemplateVariables(template, variables, scope)
     .filter(name => !liquidLocals.has(name.split(/[.[]/, 1)[0] ?? ''));
