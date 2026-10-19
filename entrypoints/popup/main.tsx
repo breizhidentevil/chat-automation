@@ -5,7 +5,7 @@ import { deduplicateConversationMessages, historyStorageKey, type ConversationMe
 import { isValidConversationMessage } from '../../lib/history-validation';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
-import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
 import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
@@ -178,20 +178,7 @@ function Popup() {
   const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
 
-  useEffect(() => {
-    let active = true;
-    setVariablePreviewError('');
-    void previewMessageTemplate(variablePreviewText, variables, 'automation')
-      .then(result => {
-        if (active) setVariablePreviewResult(result);
-      })
-      .catch(error => {
-        if (!active) return;
-        setVariablePreviewResult(null);
-        setVariablePreviewError(error instanceof Error ? error.message : 'Preview unavailable');
-      });
-    return () => { active = false; };
-  }, [variablePreviewText, variables]);
+
   const [page, setPage] = useState<Page>('automation');
   const logReadErrorReported = useRef(false);
   const runtimeReadErrorReported = useRef(false);
@@ -233,6 +220,21 @@ function Popup() {
   const [simulationCycles, setSimulationCycles] = useState('2');
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [simulationError, setSimulationError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setVariablePreviewError('');
+    void previewMessageTemplate(variablePreviewText, variables, 'automation')
+      .then(result => {
+        if (active) setVariablePreviewResult(result);
+      })
+      .catch(error => {
+        if (!active) return;
+        setVariablePreviewResult(null);
+        setVariablePreviewError(error instanceof Error ? error.message : 'Preview unavailable');
+      });
+    return () => { active = false; };
+  }, [variablePreviewText, variables]);
 
   async function refreshStrategyStatus() {
     try {
@@ -851,7 +853,7 @@ function Popup() {
         {variables.length === 0 ? <p className="empty">{t('noVariables')}</p> : <div className="variable-list">{variables.map(item => <article className="variable-card" key={item.id}><div className="variable-card-head"><code>{`{{${item.name}}}`}</code><span>{item.scope === 'global' ? t('globalVariable') : t('automation')}</span></div><p>{item.value}</p><div className="variable-card-actions"><button className="secondary" onClick={() => editVariable(item)}>{t('edit')}</button><button className="secondary danger-action" onClick={() => void deleteVariable(item)}>{t('delete')}</button></div></article>)}</div>}
       </section>
       <section className="variable-preview"><h3>{t('previewResolution')}</h3><p className="helper">{t('previewHelp')}</p><label htmlFor="variable-preview-input">{t('testTemplate')}</label><TemplateTextarea t={t} id="variable-preview-input" value={variablePreviewText} onChange={setVariablePreviewText} variables={variables} placeholder="Bonjour {{prenom}}" rows={2} />
-        {variablePreviewError ? <p className="variable-error" role="alert">{variablePreviewError}</p> : variablePreviewResult ? <div className="preview-result"><strong>{t('result')}</strong><p>{variablePreviewResult.text || t('enterTemplate')}</p>{variablePreviewResult.unknownVariables.length > 0 ? <small>{t('missingVariables', { names: variablePreviewResult.unknownVariables.map(name => `{{${name}}}`).join(', ') })}</small> : null}</div> : <p className="helper">{t('loading')}</p>
+        {variablePreviewError ? <p className="variable-error" role="alert">{variablePreviewError}</p> : variablePreviewResult ? <div className="preview-result"><strong>{t('result')}</strong><p>{variablePreviewResult.text || t('enterTemplate')}</p>{variablePreviewResult.unknownVariables.length > 0 ? <small>{t('missingVariables', { names: variablePreviewResult.unknownVariables.map(name => `{{${name}}}`).join(', ') })}</small> : null}</div> : null}
       </section>
     </> : page === 'history' ? <>
       <div className="page-heading"><h2>{t('conversationHistory')}</h2><p>{t('historyIntro')}</p></div>
