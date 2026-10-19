@@ -9,6 +9,7 @@ import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENG
 import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
+import { selectHistoryExportMessages } from '../../lib/history-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs';
@@ -266,11 +267,13 @@ function Popup() {
       const key = historyStorageKey(historyOrigin);
       const data = await browser.storage.local.get(key);
       const allItems = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) as ConversationMessage[] : [];
-      const siteItems = deduplicateConversationMessages(allItems.filter(item => item.origin === historyOrigin));
-      const exactConversation = siteItems.filter(item => item.conversationId === historyConversationId);
-      // Do not silently export other conversations when the selected conversation has no records.
-      const selectedItems = historyConversationId ? exactConversation : siteItems;
-      const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems.sort((a, b) => a.firstSeenAt - b.firstSeenAt) };
+      // Keep export scope explicit even when the selected conversation has no stored messages.
+      const selectedItems = selectHistoryExportMessages(
+        deduplicateConversationMessages(allItems),
+        historyOrigin,
+        historyConversationId,
+      );
+      const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');

@@ -87,3 +87,37 @@ test('declares Firefox MV3 identity and no external data collection', () => {
   assert.match(config, /browser_specific_settings:\s*\{[\s\S]*?gecko:\s*\{[\s\S]*?id:\s*'chat-automation@breizhidentevil\.github\.io'/);
   assert.match(config, /data_collection_permissions:\s*\{\s*required:\s*\['none'\]\s*\}/);
 });
+
+test('history export selection scopes by origin and selected conversation and sorts chronologically', async () => {
+  const source = await readFile(new URL('../lib/history-export.ts', import.meta.url), 'utf8');
+  const compiled = (await import('typescript')).default.transpile(source, {
+    module: (await import('typescript')).default.ModuleKind.ESNext,
+    target: (await import('typescript')).default.ScriptTarget.ES2022,
+  });
+  const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
+  const { selectHistoryExportMessages } = await import(moduleUrl);
+  const messages = [
+    { id: 'late', origin: 'https://example.com', conversationId: 'conversation-a', firstSeenAt: 30 },
+    { id: 'other', origin: 'https://example.com', conversationId: 'conversation-b', firstSeenAt: 20 },
+    { id: 'foreign', origin: 'https://other.example', conversationId: 'conversation-a', firstSeenAt: 10 },
+    { id: 'early', origin: 'https://example.com', conversationId: 'conversation-a', firstSeenAt: 5 },
+  ];
+
+  assert.deepEqual(
+    selectHistoryExportMessages(messages, 'https://example.com', 'conversation-a').map(item => item.id),
+    ['early', 'late'],
+  );
+  assert.deepEqual(
+    selectHistoryExportMessages(messages, 'https://example.com', 'missing-conversation'),
+    [],
+  );
+  assert.deepEqual(
+    selectHistoryExportMessages(messages, 'https://example.com', '').map(item => item.id),
+    ['early', 'other', 'late'],
+  );
+});
+
+test('history export uses the tested selection helper', () => {
+  assert.match(popup, /selectHistoryExportMessages\(/);
+  assert.match(popup, /from '\.\.\/\.\.\/lib\/history-export'/);
+});
