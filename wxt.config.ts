@@ -7,14 +7,24 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   // Preserve the relative base for documentation hosted under a GitHub Pages project path.
   vite: () => ({ base: './' }),
-  manifest: {
+  manifest: ({ browser }) => ({
     name: 'Chat Site Automation',
     description: 'Détecte les champs de chat et automatise les envois selon une fréquence et un créneau définis.',
     permissions: ['activeTab', 'storage', 'scripting'],
     // Hosts are requested only when the user enables the extension on a specific site.
     optional_host_permissions: ['http://*/*', 'https://*/*'],
     action: {},
-  },
+    // Firefox MV3 requires a stable ID and an explicit data-collection declaration.
+    // This extension keeps its history and diagnostics in local browser storage and does not transmit them.
+    ...(browser === 'firefox' ? {
+      browser_specific_settings: {
+        gecko: {
+          id: 'chat-automation@breizhidentevil.github.io',
+          data_collection_permissions: { required: ['none'] },
+        },
+      },
+    } : {}),
+  }),
   hooks: {
     // WXT's runtime registration normally promotes matches to mandatory host_permissions.
     // Move those broad patterns to optional permissions so site access is granted per-origin.
