@@ -4,20 +4,17 @@ import {
   backgroundUpsertConversationMessage,
 } from '../lib/history';
 import { isValidConversationMessage } from '../lib/history-validation';
-import { isValidDiagnosticEvent } from '../lib/diagnostic-validation';
+import { isValidDiagnosticEvent, limitDiagnosticEvents } from '../lib/diagnostic-validation';
 import { isSenderOriginAllowed } from '../lib/message-origin-validation';
 
 const LOG_KEY = 'chatAutomationLogs';
-const MAX_LOGS = 500;
 let logWriteQueue: Promise<void> = Promise.resolve();
 
 function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }> {
   const write = logWriteQueue.then(async () => {
     const stored = await browser.storage.local.get(LOG_KEY);
-    const previous = Array.isArray(stored[LOG_KEY])
-      ? stored[LOG_KEY].filter(isValidDiagnosticEvent)
-      : [];
-    await browser.storage.local.set({ [LOG_KEY]: [...previous, entry].slice(-MAX_LOGS) });
+    const previous = limitDiagnosticEvents(stored[LOG_KEY]);
+    await browser.storage.local.set({ [LOG_KEY]: limitDiagnosticEvents([...previous, entry]) });
   });
   logWriteQueue = write.catch(() => undefined);
   return write.then(() => ({ ok: true })).catch(error => {
