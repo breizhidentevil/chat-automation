@@ -11,6 +11,7 @@ import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../
 import { contentScriptIdForOrigin } from '../../lib/content-script-id';
 import { selectHistoryExportMessages } from '../../lib/history-export';
 import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
+import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -523,26 +524,19 @@ function Popup() {
   }
 
   function updateAutomationMessage(index: number, value: string) {
-    setAutomationMessages(current => current.map((item, itemIndex) => itemIndex === index ? value : item));
+    setAutomationMessages(current => updateMessage(current, index, value));
   }
 
   function addAutomationMessage() {
-    setAutomationMessages(current => [...current, '']);
+    setAutomationMessages(current => addMessage(current));
   }
 
   function removeAutomationMessage(index: number) {
-    setAutomationMessages(current => current.length <= 1 ? [''] : current.filter((_, itemIndex) => itemIndex !== index));
+    setAutomationMessages(current => removeMessage(current, index));
   }
 
   function moveAutomationMessage(from: number, to: number) {
-    if (from === to || from < 0 || to < 0 || from >= automationMessages.length || to >= automationMessages.length) return;
-    setAutomationMessages(current => {
-      const next = [...current];
-      const [item] = next.splice(from, 1);
-      if (item === undefined) return current;
-      next.splice(to, 0, item);
-      return next;
-    });
+    setAutomationMessages(current => moveMessage(current, from, to));
   }
 
   async function runSimulation() {
