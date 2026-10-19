@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+
+const workflow = await readFile(new URL('../.github/workflows/build-and-publish.yml', import.meta.url), 'utf8');
+
+test('pins every GitHub Action to a full commit SHA', () => {
+  const references = [...workflow.matchAll(/^\s+uses:\s+([^\s#]+)/gm)].map(match => match[1]);
+  assert.ok(references.length > 0, 'workflow should use GitHub Actions');
+  for (const reference of references) {
+    assert.match(reference, /^[^@]+@[0-9a-f]{40}$/, `Action must be pinned to a full SHA: ${reference}`);
+  }
+});
+
+test('keeps write permissions out of the build job', () => {
+  assert.match(workflow, /permissions:\s*\n\s+contents:\s+read\s*\n/);
+  assert.match(workflow, /build:[\s\S]*?permissions:\s*\n\s+contents:\s+read\s*\n/);
+  assert.match(workflow, /deploy-pages:[\s\S]*?permissions:\s*\n\s+pages:\s+write\s*\n\s+id-token:\s+write/);
+  assert.match(workflow, /publish-release:[\s\S]*?permissions:\s*\n\s+contents:\s+write/);
+});
+
+test('limits publishing and Pages deployment to trusted push events', () => {
+  assert.match(workflow, /deploy-pages:[\s\S]*?if: github\.event_name == 'push'/);
+  assert.match(workflow, /publish-release:[\s\S]*?if: github\.event_name == 'push'/);
+});
