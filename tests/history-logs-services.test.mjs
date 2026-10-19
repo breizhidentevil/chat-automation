@@ -14,8 +14,11 @@ const historyUrl = await compile('../lib/history.ts', [
   ["from './history-validation'", `from '${historyValidationUrl}'`],
 ]);
 const diagnosticValidationUrl = await compile('../lib/diagnostic-validation.ts');
+const variablesUrl = await compile('../lib/variables.ts', [
+  ["from 'liquidjs'", `from '${import.meta.resolve('liquidjs')}'`],
+]);
 const variablesServiceUrl = await compile('../services/variables-storage.ts', [
-  ["from '../lib/variables'", "data:text/javascript,export const VARIABLES_STORAGE_KEY='chatAutomationVariables';export const filterValidVariableDefinitions=(value)=>Array.isArray(value)?value.filter(item=>item&&typeof item.name==='string'):[];"],
+  ["from '../lib/variables'", `from '${variablesUrl}'`],
 ]);
 const historyServiceUrl = await compile('../services/history-service.ts', [
   ["from '../lib/history'", `from '${historyUrl}'`],
