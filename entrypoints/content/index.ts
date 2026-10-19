@@ -6,6 +6,7 @@ import { markInterruptedMessagesIncomplete, readConversationHistory, upsertConve
 import { filterValidVariableDefinitions, resolveMessageTemplate, type VariableDefinition } from '../../lib/variables';
 import type { DiagnosticEvent } from '../../lib/contracts';
 import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
+import { isValidAutomationStartMessage } from '../../lib/automation-validation';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -23,41 +24,13 @@ export default defineContentScript({
         return validateAndSaveStrategy(message.text);
       }
       if (message.type === 'CHAT_AUTOMATION_START') {
-        if (
-          !('messages' in message) ||
-          !Array.isArray(message.messages) ||
-          message.messages.length === 0 ||
-          message.messages.length > 100 ||
-          !message.messages.every((item: unknown) => typeof item === 'string' && item.trim().length > 0 && item.length <= 100_000) ||
-          !('intervalMs' in message) ||
-          typeof message.intervalMs !== 'number' ||
-          !Number.isSafeInteger(message.intervalMs) ||
-          message.intervalMs < 1000 ||
-          message.intervalMs > 31 * 24 * 60 * 60 * 1000 ||
-          !('repeatMode' in message) ||
-          !['infinite', 'finite'].includes(String(message.repeatMode)) ||
-          !('repeatCount' in message) ||
-          typeof message.repeatCount !== 'number' ||
-          !Number.isSafeInteger(message.repeatCount) ||
-          message.repeatCount < 0 ||
-          (message.repeatMode === 'finite' && message.repeatCount < 1) ||
-          (message.repeatMode === 'infinite' && message.repeatCount !== 0) ||
-          !('startTime' in message) ||
-          typeof message.startTime !== 'string' ||
-          !/^([01]\d|2[0-3]):[0-5]\d$/.test(message.startTime) ||
-          !('endTime' in message) ||
-          typeof message.endTime !== 'string' ||
-          !/^([01]\d|2[0-3]):[0-5]\d$/.test(message.endTime) ||
-          !('timeWindowEnabled' in message) ||
-          typeof message.timeWindowEnabled !== 'boolean' ||
-          (message.timeWindowEnabled && message.startTime === message.endTime)
-        ) {
+        if (!isValidAutomationStartMessage(message)) {
           return { message: 'Paramètres d’automatisation invalides.' };
         }
         const procedure = await getProcedure(location.origin);
         if (!procedure) return { message: 'Aucune stratégie validée n’est enregistrée pour ce site. Allez dans Détection et validez une stratégie avant de démarrer.' };
         const variables = filterValidVariableDefinitions('variables' in message ? message.variables : []);
-        startAutomation({ messages: (message.messages as string[]).map(item => item.trim()), variables, intervalMs: message.intervalMs, repeatMode: message.repeatMode as 'infinite' | 'finite', repeatCount: message.repeatCount, timeWindowEnabled: message.timeWindowEnabled, startTime: message.startTime, endTime: message.endTime });
+        startAutomation({ messages: message.messages.map(item => item.trim()), variables, intervalMs: message.intervalMs, repeatMode: message.repeatMode, repeatCount: message.repeatCount, timeWindowEnabled: message.timeWindowEnabled, startTime: message.startTime, endTime: message.endTime });
         return { message: `Automatisation démarrée avec ${message.messages.length} message(s) par séquence et la stratégie enregistrée « ${procedure.sendStrategy.method} ». Gardez la page ouverte.` };
       }
       if ((message.type !== 'CHAT_AUTOMATION_SEND' && message.type !== 'CHAT_AUTOMATION_TICK') || !('text' in message) || typeof message.text !== 'string') return undefined;
