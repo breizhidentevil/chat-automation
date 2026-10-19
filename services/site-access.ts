@@ -4,13 +4,27 @@ export type SiteAccessResult =
   | { granted: false; origin: string }
   | { granted: true; origin: string; pageScriptInjected: boolean };
 
+/** Return a usable web origin, excluding browser-internal and malformed URLs. */
+export function getSupportedSiteOrigin(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Request access to the active site's origin and register the extension content
  * script only after permission is granted. UI messages stay in the React layer.
  */
 export async function ensureSiteAccessForTab(tab: Browser.tabs.Tab): Promise<SiteAccessResult> {
-  if (!tab.id || !tab.url) return { granted: false, origin: '' };
-  const origin = new URL(tab.url).origin;
+  if (tab.id == null) return { granted: false, origin: '' };
+  const origin = getSupportedSiteOrigin(tab.url);
+  if (!origin) return { granted: false, origin: '' };
+
   const pattern = origin + '/*';
   const granted = await browser.permissions.contains({ origins: [pattern] })
     || await browser.permissions.request({ origins: [pattern] });
