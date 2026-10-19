@@ -13,6 +13,7 @@ import { selectHistoryExportMessages } from '../../lib/history-export';
 import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
+import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
@@ -176,6 +177,21 @@ function Popup() {
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
   const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
+
+  useEffect(() => {
+    let active = true;
+    setVariablePreviewError('');
+    void previewMessageTemplate(variablePreviewText, variables, 'automation')
+      .then(result => {
+        if (active) setVariablePreviewResult(result);
+      })
+      .catch(error => {
+        if (!active) return;
+        setVariablePreviewResult(null);
+        setVariablePreviewError(error instanceof Error ? error.message : 'Preview unavailable');
+      });
+    return () => { active = false; };
+  }, [variablePreviewText, variables]);
   const [page, setPage] = useState<Page>('automation');
   const logReadErrorReported = useRef(false);
   const runtimeReadErrorReported = useRef(false);
@@ -195,6 +211,8 @@ function Popup() {
   const [editingVariableId, setEditingVariableId] = useState<string | null>(null);
   const [variableError, setVariableError] = useState('');
   const [variablePreviewText, setVariablePreviewText] = useState('Bonjour {{prenom}}');
+  const [variablePreviewResult, setVariablePreviewResult] = useState<TemplatePreviewResult | null>(null);
+  const [variablePreviewError, setVariablePreviewError] = useState('');
   const [historyOrigin, setHistoryOrigin] = useState('');
   const [historyConversationId, setHistoryConversationId] = useState('');
   const [historyError, setHistoryError] = useState('');
@@ -833,7 +851,7 @@ function Popup() {
         {variables.length === 0 ? <p className="empty">{t('noVariables')}</p> : <div className="variable-list">{variables.map(item => <article className="variable-card" key={item.id}><div className="variable-card-head"><code>{`{{${item.name}}}`}</code><span>{item.scope === 'global' ? t('globalVariable') : t('automation')}</span></div><p>{item.value}</p><div className="variable-card-actions"><button className="secondary" onClick={() => editVariable(item)}>{t('edit')}</button><button className="secondary danger-action" onClick={() => void deleteVariable(item)}>{t('delete')}</button></div></article>)}</div>}
       </section>
       <section className="variable-preview"><h3>{t('previewResolution')}</h3><p className="helper">{t('previewHelp')}</p><label htmlFor="variable-preview-input">{t('testTemplate')}</label><TemplateTextarea t={t} id="variable-preview-input" value={variablePreviewText} onChange={setVariablePreviewText} variables={variables} placeholder="Bonjour {{prenom}}" rows={2} />
-        {(() => { const unknown = validateTemplateVariables(variablePreviewText, variables, 'automation'); const preview = variablePreviewText.replace(/{{\s*([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)\s*}}/g, (_match, name: string) => { if (name.includes('.') || name.includes('[')) return `[${t('resolvedAtRuntime', { name })}]`; const scoped = variables.find(item => item.name === name && item.scope === 'automation'); const global = variables.find(item => item.name === name && item.scope === 'global'); return scoped?.value ?? global?.value ?? `{{${name}}}`; }); return <div className="preview-result"><strong>{t('result')}</strong><p>{preview || t('enterTemplate')}</p>{unknown.length > 0 ? <small>{t('missingVariables', { names: unknown.map(name => `{{${name}}}`).join(', ') })}</small> : null}</div>; })()}
+        {variablePreviewError ? <p className="variable-error" role="alert">{variablePreviewError}</p> : variablePreviewResult ? <div className="preview-result"><strong>{t('result')}</strong><p>{variablePreviewResult.text || t('enterTemplate')}</p>{variablePreviewResult.unknownVariables.length > 0 ? <small>{t('missingVariables', { names: variablePreviewResult.unknownVariables.map(name => `{{${name}}}`).join(', ') })}</small> : null}</div> : <p className="helper">{t('loading')}</p>
       </section>
     </> : page === 'history' ? <>
       <div className="page-heading"><h2>{t('conversationHistory')}</h2><p>{t('historyIntro')}</p></div>
