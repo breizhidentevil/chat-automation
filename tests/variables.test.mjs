@@ -141,3 +141,19 @@ test('template resolution ignores malformed persisted variable definitions', asy
   );
   assert.equal(result.text, 'Hello World');
 });
+
+
+test('variable collections are capped by count and aggregate value size', () => {
+  const tooMany = Array.from({ length: 101 }, (_, index) => variable(`item_${index}`, 'v'));
+  assert.equal(filterValidVariableDefinitions(tooMany).length, 100);
+
+  const oversized = [
+    ...Array.from({ length: 11 }, (_, index) => variable(`large_${index}`, 'x'.repeat(100_000))),
+    variable('small_after_limit', 'ok'),
+  ];
+  const filtered = filterValidVariableDefinitions(oversized);
+  assert.equal(filtered.length, 11);
+  assert.equal(filtered.some(item => item.name === 'large_10'), false);
+  assert.equal(filtered.some(item => item.name === 'small_after_limit'), true);
+  assert.equal(filtered.reduce((total, item) => total + item.value.length, 0) <= 1_000_000, true);
+});
