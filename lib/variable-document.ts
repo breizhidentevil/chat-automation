@@ -9,7 +9,7 @@ function stripYamlComment(value: string): string {
   for (let index = 0; index < value.length; index += 1) {
     const character = value[index]!;
     if (quote === '"') {
-      if (character === '\\\\') { index += 1; continue; }
+      if (character === '\\') { index += 1; continue; }
       if (character === '"') quote = null;
       continue;
     }
@@ -19,7 +19,7 @@ function stripYamlComment(value: string): string {
       continue;
     }
     if (character === '"' || character === "'") quote = character;
-    else if (character === '#' && (index === 0 || /\\s/.test(value[index - 1]!))) return value.slice(0, index).trimEnd();
+    else if (character === '#' && (index === 0 || /\s/.test(value[index - 1]!))) return value.slice(0, index).trimEnd();
   }
   return value.trimEnd();
 }
@@ -37,7 +37,7 @@ function parseYamlScalar(value: string, lineNumber: number): unknown {
   }
   if (trimmed === 'true') return true;
   if (trimmed === 'false') return false;
-  if (/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(trimmed)) return Number(trimmed);
   if (trimmed === 'null' || trimmed === '~') return '';
   return trimmed;
 }
@@ -46,7 +46,7 @@ function parseYamlMapping(source: string): Record<string, unknown> {
   const root: Record<string, unknown> = {};
   const stack: Array<{ indent: number; value: Record<string, unknown> }> = [{ indent: -1, value: root }];
   const seen = new Set<string>();
-  for (const [index, rawLine] of source.split(/\\r?\\n/).entries()) {
+  for (const [index, rawLine] of source.split(/\r?\n/).entries()) {
     if (!rawLine.trim() || rawLine.trimStart().startsWith('#') || ['---', '...'].includes(rawLine.trim())) continue;
     const indent = rawLine.length - rawLine.trimStart().length;
     if (indent % 2 !== 0) throw new Error(`Utilisez une indentation YAML par multiples de deux espaces (ligne ${index + 1}).`);
