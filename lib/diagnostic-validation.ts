@@ -17,3 +17,24 @@ export function isValidDiagnosticEvent(value: unknown): value is DiagnosticEvent
   if (event.durationMs !== undefined && (typeof event.durationMs !== 'number' || !Number.isFinite(event.durationMs) || event.durationMs < 0)) return false;
   return true;
 }
+
+
+export const MAX_DIAGNOSTIC_LOGS = 500;
+export const MAX_TOTAL_DIAGNOSTIC_CHARACTERS = 1_000_000;
+
+/** Keep the newest valid events within both count and approximate text budgets. */
+export function limitDiagnosticEvents(value: unknown): DiagnosticEvent[] {
+  if (!Array.isArray(value)) return [];
+  const valid = value.filter(isValidDiagnosticEvent).slice(-MAX_DIAGNOSTIC_LOGS);
+  const result: DiagnosticEvent[] = [];
+  let totalCharacters = 0;
+  for (let index = valid.length - 1; index >= 0; index -= 1) {
+    const event = valid[index]!;
+    const size = event.site.length + event.event.length +
+      (event.details?.length ?? 0) + (event.strategy?.length ?? 0) + 128;
+    if (result.length > 0 && totalCharacters + size > MAX_TOTAL_DIAGNOSTIC_CHARACTERS) break;
+    result.push(event);
+    totalCharacters += size;
+  }
+  return result.reverse();
+}
