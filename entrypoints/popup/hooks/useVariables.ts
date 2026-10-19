@@ -7,6 +7,7 @@ import {
   type VariableDefinition,
   type VariableScope,
 } from '../../../lib/variables';
+import { parseVariableDocument } from '../../../lib/variable-document';
 import { loadStoredVariables, saveStoredVariables } from '../../../services/variables-storage';
 import type { Locale } from '../../../lib/i18n';
 import { translate } from '../../../lib/i18n';
@@ -19,8 +20,15 @@ interface UseVariablesOptions {
   onSaved: (name: string) => void;
 }
 
+function serializeVariables(variables: VariableDefinition[]): string {
+  return JSON.stringify(Object.fromEntries(variables.map(item => [item.name, item.value])), null, 2);
+}
+
 export function useVariables({ t, locale, onSaved }: UseVariablesOptions) {
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
+  const [variablesDocument, setVariablesDocument] = useState('{
+  "prenom": "Alexandre"
+}');
   const [variableName, setVariableName] = useState('');
   const [variableValue, setVariableValue] = useState('');
   const [variableScope, setVariableScope] = useState<VariableScope>('global');
@@ -30,7 +38,11 @@ export function useVariables({ t, locale, onSaved }: UseVariablesOptions) {
   useEffect(() => {
     let mounted = true;
     void loadStoredVariables(key => browser.storage.local.get(key))
-      .then(saved => { if (mounted) setVariables(saved); })
+      .then(saved => {
+        if (!mounted) return;
+        setVariables(saved);
+        setVariablesDocument(serializeVariables(saved));
+      })
       .catch(error => {
         if (!mounted) return;
         console.error('[Chat Automation] Lecture des variables échouée.', error);
@@ -43,6 +55,7 @@ export function useVariables({ t, locale, onSaved }: UseVariablesOptions) {
     try {
       const safeNext = await saveStoredVariables(items => browser.storage.local.set(items), next);
       setVariables(safeNext);
+      setVariablesDocument(serializeVariables(safeNext));
       setVariableError('');
       return true;
     } catch (error) {
@@ -50,6 +63,40 @@ export function useVariables({ t, locale, onSaved }: UseVariablesOptions) {
       setVariableError(t('variablesSaveError'));
       return false;
     }
+  }
+
+  async function saveVariableDocument() {
+    setVariableError('');
+    let parsed: Record<string, string>;
+    try {
+      parsed = parseVariableDocument(variablesDocument);
+    } catch (error) {
+      setVariableError(error instanceof Error ? error.message : (locale === 'fr' ? 'Document de variables invalide.' : 'Invalid variables document.'));
+      return;
+    }
+
+    const existingByName = new Map(variables.map(item => [item.name, item]));
+    const next: VariableDefinition[] = Object.entries(parsed).map(([name, value]) => {
+      const existing = existingByName.get(name);
+      return {
+        id: existing?.id ?? `var-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${name}`,
+        name,
+        type: 'static',
+        value,
+        scope: existing?.scope ?? variableScope,
+        updatedAt: Date.now(),
+      };
+    });
+    const totalValueLength = next.reduce((total, variable) => total + variable.value.length, 0);
+    if (next.length > MAX_VARIABLE_DEFINITIONS || totalValueLength > MAX_TOTAL_VARIABLE_VALUE_LENGTH) {
+      setVariableError(locale === 'fr'
+        ? 'Limite atteinte : 100 variables et 1 000 000 caractères cumulés au maximum.'
+        : 'Limit reached: at most 100 variables and 1,000,000 combined characters.');
+      return;
+    }
+    if (!await persistVariables(next)) return;
+    setEditingVariableId(null);
+    onSaved(locale === 'fr' ? 'Variables' : 'Variables');
   }
 
   async function saveVariable() {
@@ -104,7 +151,8 @@ export function useVariables({ t, locale, onSaved }: UseVariablesOptions) {
   }
 
   return {
-    variables, variableName, setVariableName, variableValue, setVariableValue,
+    variables, variablesDocument, setVariablesDocument, saveVariableDocument,
+    variableName, setVariableName, variableValue, setVariableValue,
     variableScope, setVariableScope, editingVariableId, variableError,
     saveVariable, editVariable, deleteVariable, cancelEditing,
   };
