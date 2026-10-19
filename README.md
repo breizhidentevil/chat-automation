@@ -85,7 +85,7 @@ If the documentation link is temporarily unavailable, check the [workflow runs](
 - Site markup and browser restrictions affect detection and compatibility. Test each target site and browser before relying on an automation.
 - The extension requests broad website access so its content script can work on ordinary web pages. Browser-internal and protected pages remain unavailable.
 - History and logs may contain conversation text or diagnostic details. Review exported JSON before sharing it.
-- The repository currently does not include a comprehensive automated test suite or a cross-browser integration test matrix.
+- The repository includes unit tests for selected logic, run by `npm test` and enforced in CI. It does not yet include a comprehensive end-to-end suite or a cross-browser integration test matrix.
 
 ## License
 
