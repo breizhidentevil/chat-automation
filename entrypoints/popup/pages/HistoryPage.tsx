@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert, Badge, Button, Paper } from '@mantine/core';
 import type { ConversationMessage } from '../../../lib/history';
 import { translate } from '../../../lib/i18n';
 
@@ -21,12 +22,12 @@ export default function HistoryPage({
   return <>
 
       <div className="page-heading"><h2>{t('conversationHistory')}</h2><p>{t('historyIntro')}</p></div>
-      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><div className="history-actions"><button className="secondary" onClick={() => void refreshHistory()}>{t('refresh')}</button><button className="secondary danger-action" disabled={!historyOrigin} onClick={() => void clearSiteHistory()}>{t('clearSiteHistory')}</button></div></div>
-      {historyError ? <p className="notice">{historyError}</p> : historyMessages.length === 0 ? <p className="empty history-empty">{t('noCapturedMessages')}</p> : <div className="history-list">{historyMessages.map(item => <article className={`history-message role-${item.role} status-${item.status}`} key={item.id}>
-        <div className="history-message-head"><strong>{item.role === 'user' ? t('you') : item.role === 'assistant' ? 'Assistant' : item.role === 'system' ? t('system') : t('unknownAuthor')}</strong><span>{new Date(item.firstSeenAt).toLocaleString()}</span><em>{item.status === 'streaming' ? t('inProgress') : item.status === 'incomplete' ? t('interrupted') : t('completed')}</em></div>
+      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><div className="history-actions"><Button variant="default" size="compact-sm" onClick={() => void refreshHistory()}>{t('refresh')}</Button><Button color="red" variant="light" size="compact-sm" disabled={!historyOrigin} onClick={() => void clearSiteHistory()}>{t('clearSiteHistory')}</Button></div></div>
+      {historyError ? <Alert color="red" variant="light">{historyError}</Alert> : historyMessages.length === 0 ? <p className="empty history-empty">{t('noCapturedMessages')}</p> : <div className="history-list">{historyMessages.map(item => <Paper component="article" withBorder p="sm" className={`history-message role-${item.role} status-${item.status}`} key={item.id}>
+        <div className="history-message-head"><strong>{item.role === 'user' ? t('you') : item.role === 'assistant' ? 'Assistant' : item.role === 'system' ? t('system') : t('unknownAuthor')}</strong><span>{new Date(item.firstSeenAt).toLocaleString()}</span><Badge size="xs" variant="light" color={item.status === 'streaming' ? 'yellow' : item.status === 'incomplete' ? 'red' : 'green'}>{item.status === 'streaming' ? t('inProgress') : item.status === 'incomplete' ? t('interrupted') : t('completed')}</Badge></div>
         <p>{item.content}</p>{item.contentTruncated ? <small className="history-truncated">{t('truncated')}</small> : null}
-      </article>)}</div>}
-      <p className="notice">{t('historyNotice')}</p>
+      </Paper>)}</div>}
+      <Alert variant="light" color="gray">{t('historyNotice')}</Alert>
     
   </>;
 }

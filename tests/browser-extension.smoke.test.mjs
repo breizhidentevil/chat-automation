@@ -37,8 +37,19 @@ test('loads the unpacked extension in real Chromium and renders its popup', { sk
     const popup = await context.newPage();
     await popup.goto('chrome-extension://' + extensionId + '/popup.html');
     await popup.getByRole('heading', { name: 'Chat Automation' }).waitFor();
-    await popup.getByRole('navigation').waitFor();
+    await popup.getByRole('tablist').waitFor();
     assert.equal(await popup.title(), 'Chat Site Automation');
+
+    const appearance = popup.locator('.theme-picker input');
+    await appearance.click();
+    await popup.getByRole('option', { name: 'Dark' }).click();
+    await popup.waitForFunction(() => document.documentElement.getAttribute('data-mantine-color-scheme') === 'dark');
+    assert.equal(await popup.locator('html').getAttribute('data-mantine-color-scheme'), 'dark');
+
+    await popup.reload();
+    await popup.getByRole('heading', { name: 'Chat Automation' }).waitFor();
+    await popup.waitForFunction(() => document.documentElement.getAttribute('data-mantine-color-scheme') === 'dark');
+    assert.equal(await popup.locator('.theme-picker input').inputValue(), 'Dark');
   } finally {
     await context.close();
   }

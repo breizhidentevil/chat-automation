@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Badge, Button, MantineProvider, Select, Tabs, useMantineColorScheme } from '@mantine/core';
+import '@mantine/core/styles.css';
 import './style.css';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 
@@ -19,13 +21,48 @@ import { useSimulation } from './hooks/useSimulation';
 import { useAutomationController } from './hooks/useAutomationController';
 
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
+type ColorSchemePreference = 'auto' | 'light' | 'dark';
+const COLOR_SCHEME_STORAGE_KEY = 'chatAutomationColorScheme';
+
+function isColorSchemePreference(value: unknown): value is ColorSchemePreference {
+  return value === 'auto' || value === 'light' || value === 'dark';
+}
 
 
 
 function Popup() {
+  const { setColorScheme, clearColorScheme } = useMantineColorScheme();
+  const [colorSchemePreference, setColorSchemePreference] = useState<ColorSchemePreference>('auto');
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
   const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
+
+  useEffect(() => {
+    let active = true;
+    void browser.storage.local.get(COLOR_SCHEME_STORAGE_KEY).then(stored => {
+      if (!active) return;
+      const saved = stored[COLOR_SCHEME_STORAGE_KEY];
+      const preference = isColorSchemePreference(saved) ? saved : 'auto';
+      setColorSchemePreference(preference);
+      if (preference === 'auto') clearColorScheme();
+      else setColorScheme(preference);
+    }).catch(() => {
+      if (active) clearColorScheme();
+    });
+    return () => { active = false; };
+  }, [clearColorScheme, setColorScheme]);
+
+  async function changeColorScheme(value: string | null) {
+    if (!isColorSchemePreference(value)) return;
+    setColorSchemePreference(value);
+    if (value === 'auto') clearColorScheme();
+    else setColorScheme(value);
+    try {
+      await browser.storage.local.set({ [COLOR_SCHEME_STORAGE_KEY]: value });
+    } catch {
+      setStatus(t('themeSaveError'));
+    }
+  }
 
 
   const [page, setPage] = useState<Page>('automation');
@@ -117,18 +154,20 @@ function Popup() {
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''} ${page === 'simulator' ? 'simulator-view' : ''}`}>
-    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><label className="locale-picker"><span>{t('language')}</span><select aria-label={t('language')} value={locale} onChange={event => { const next = event.target.value as Locale; setLocale(next); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: next }); }}><option value="fr">Français</option><option value="en">English</option></select></label><button type="button" className="help-button" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</button></header>
-    <nav className="main-nav" aria-label={t('mainNavigation')}>
-      <button className={page === 'automation' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('automation')}>{t('automation')}</button>
-      <button className={page === 'variables' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('variables')}>{t('variables')}</button>
-      <button className={page === 'history' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('history')}>{t('history')}</button>
-      <button className={page === 'logs' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('logs')}>{t('logs')}</button>
-      <button className={page === 'simulator' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('simulator')}>{t('simulator')}</button>
-    </nav>
+    <header className="popup-header"><div className="mark" aria-hidden="true">CA</div><div className="brand-copy"><h1>Chat Automation</h1><p>{t('subtitle')}</p></div><Select className="locale-picker" aria-label={t('language')} value={locale} onChange={value => { if (value === 'fr' || value === 'en') { setLocale(value); void browser.storage.local.set({ [LOCALE_STORAGE_KEY]: value }); } }} data={[{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }]} size="xs" /> <Select className="theme-picker" aria-label={t('appearance')} value={colorSchemePreference} onChange={value => void changeColorScheme(value)} data={[{ value: 'auto', label: t('themeAuto') }, { value: 'light', label: t('themeLight') }, { value: 'dark', label: t('themeDark') }]} size="xs" /> <Button type="button" className="help-button" variant="default" size="compact-md" aria-label={t('docs')} title={t('docs')} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/documentation.html') })}>?</Button></header>
+    <Tabs value={page} onChange={value => { if (value) setPage(value as Page); }} className="popup-tabs">
+      <Tabs.List className="main-nav" aria-label={t('mainNavigation')}>
+        <Tabs.Tab value="automation">{t('automation')}</Tabs.Tab>
+        <Tabs.Tab value="variables">{t('variables')}</Tabs.Tab>
+        <Tabs.Tab value="history">{t('history')}</Tabs.Tab>
+        <Tabs.Tab value="logs">{t('logs')}</Tabs.Tab>
+        <Tabs.Tab value="simulator">{t('simulator')}</Tabs.Tab>
+      </Tabs.List>
+    </Tabs>
 
     <div className="popup-content">
       {page !== 'simulator' ? <section className="site-access-control" aria-label={t('siteAccess')}>
-        <button type="button" className="secondary" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</button>
+        <Button size="xs" variant="light" color="dark" onClick={() => void enableActiveSite()}>{t('enableOnSite')}</Button>
         {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
       </section> : null}
     {page === 'automation' ? <AutomationPage
@@ -219,19 +258,19 @@ function Popup() {
     /> : null}
     </div>
     {page === 'history' ? <div className="history-dock">
-      <button className="secondary export-history-button" disabled={historyMessages.length === 0} onClick={() => void exportHistory()}>{t('exportHistory')}</button>
+      <Button className="export-history-button" variant="default" fullWidth disabled={historyMessages.length === 0} onClick={() => void exportHistory()}>{t('exportHistory')}</Button>
     </div> : null}
     {page === 'logs' ? <div className="logs-dock">
-      <button className="secondary export-logs-button" onClick={() => void exportLogs()}>{t('exportLogs')}</button>
+      <Button className="export-logs-button" variant="default" fullWidth onClick={() => void exportLogs()}>{t('exportLogs')}</Button>
     </div> : null}
     {page === 'automation' && strategyReady === true ? <div className="automation-dock">
       <div className="automation-actions">
-        <button className="primary" onClick={() => void startAutomation()}>{t('startAutomation')}</button>
-        <button className="stop-button" onClick={() => void stopAutomation()}>{t('stopAutomation')}</button>
+        <Button color="dark" fullWidth onClick={() => void startAutomation()}>{t('startAutomation')}</Button>
+        <Button color="red" variant="outline" fullWidth onClick={() => void stopAutomation()}>{t('stopAutomation')}</Button>
       </div>
       <p className="status" role="status">{status}</p>
       <section className="runtime-panel" aria-live="polite" aria-label={t('tracking')}>
-        <div className="runtime-head"><h3>{t('tracking')}</h3><span className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</span></div>
+        <div className="runtime-head"><h3>{t('tracking')}</h3><Badge className={`runtime-badge phase-${runtimeStatus?.phase ?? 'stopped'}`} variant="light" color={runtimeStatus?.phase === 'failed' ? 'red' : runtimeStatus?.phase === 'finished' ? 'blue' : runtimeStatus?.phase === 'sending' || runtimeStatus?.phase === 'ready' ? 'green' : 'gray'}>{phaseLabel(runtimeStatus?.phase ?? 'stopped')}</Badge></div>
         <p className="runtime-note">{runtimeStatus?.note ?? t('noRun')}</p>
         <div className="runtime-metrics">
           <div><span>{t('iteration')}</span><strong>{runtimeStatus?.phase === 'finished' ? (runtimeStatus.completedSequences || 0) : runtimeStatus && runtimeStatus.phase !== 'stopped' && runtimeStatus.phase !== 'failed' ? runtimeStatus.completedSequences + 1 : runtimeStatus?.completedSequences ?? 0}<small>{runtimeStatus?.repeatMode === 'infinite' ? ' / ∞' : runtimeStatus ? ` / ${runtimeStatus.repeatCount}` : ''}</small></strong></div>
@@ -243,4 +282,8 @@ function Popup() {
   </main>;
 }
 
-createRoot(document.getElementById('root')!).render(<Popup />);
+createRoot(document.getElementById('root')!).render(
+  <MantineProvider defaultColorScheme="auto" theme={{ primaryColor: 'dark', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <Popup />
+  </MantineProvider>,
+);
