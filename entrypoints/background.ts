@@ -11,7 +11,7 @@ import { isSenderOriginAllowed } from '../lib/message-origin-validation';
 const LOG_KEY = 'chatAutomationLogs';
 let logWriteQueue: Promise<void> = Promise.resolve();
 
-function isExtensionUiSender(sender: browser.runtime.MessageSender): boolean {
+function isExtensionUiSender(sender: { id?: string; tab?: unknown; url?: string }): boolean {
   return sender.id === browser.runtime.id
     && !sender.tab
     && typeof sender.url === 'string'
