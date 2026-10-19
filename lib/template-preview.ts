@@ -41,7 +41,7 @@ export async function previewMessageTemplate(
     ...validateTemplateVariables(template, variables, scope),
     ...variablesUsed.filter(name => {
       const root = name.split(/[.[]/, 1)[0] ?? '';
-      return !dynamicRoots.has(root) && !availableNames.has(name);
+      return !dynamicRoots.has(root) && !availableNames.has(root);
     }),
   ])];
   const previewVariables = [...variables];
