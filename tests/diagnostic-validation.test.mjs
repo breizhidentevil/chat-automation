@@ -42,3 +42,20 @@ test('rejects missing, unsupported, or oversized event fields', () => {
   assert.equal(isValidDiagnosticEvent(event({ details: 'x'.repeat(10_001) })), false);
   assert.equal(isValidDiagnosticEvent(event({ strategy: 7 })), false);
 });
+
+
+test('diagnostic history respects count and aggregate text budgets while retaining recent events', async () => {
+  const { limitDiagnosticEvents, MAX_TOTAL_DIAGNOSTIC_CHARACTERS } = await import(moduleUrl);
+  const events = Array.from({ length: 200 }, (_, index) => event({
+    timestamp: index + 1,
+    event: `event_${index}`,
+    details: 'x'.repeat(10_000),
+  }));
+  const limited = limitDiagnosticEvents(events);
+  assert.ok(limited.length <= 500);
+  assert.ok(limited.length < events.length);
+  assert.equal(limited.at(-1)?.timestamp, 200);
+  const estimatedSize = limited.reduce((total, item) =>
+    total + item.site.length + item.event.length + (item.details?.length ?? 0) + (item.strategy?.length ?? 0) + 128, 0);
+  assert.ok(estimatedSize <= MAX_TOTAL_DIAGNOSTIC_CHARACTERS);
+});
