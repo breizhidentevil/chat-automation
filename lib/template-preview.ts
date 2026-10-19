@@ -12,6 +12,17 @@ export interface TemplatePreviewResult {
   unknownVariables: string[];
 }
 
+/** Extract the root path from Liquid output expressions, including filtered expressions. */
+function findPreviewPaths(template: string): string[] {
+  const paths = new Set(findTemplateVariables(template));
+  for (const match of template.matchAll(/{{\\s*([^{}]+?)\\s*}}/g)) {
+    const expression = (match[1] ?? '').split('|', 1)[0]?.trim() ?? '';
+    const path = expression.match(/^([A-Za-z_][A-Za-z0-9_-]*(?:\\.[A-Za-z_][A-Za-z0-9_-]*|\\[\\d+\\])*)$/)?.[1];
+    if (path) paths.add(path);
+  }
+  return [...paths];
+}
+
 /**
  * Preview templates with the same LiquidJS resolver used by the simulator/runtime.
  * Dynamic paths are replaced by placeholders because this page has no live runtime context.
