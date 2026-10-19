@@ -96,7 +96,7 @@ export function useAutomationController({
       await refreshStrategyStatus();
       await refreshLogs();
     } catch (error) {
-      setStatus(error instanceof Error && error.message.startsWith('Cette page') ? error.message : t('pageScriptUnavailable'));
+      setStatus(error instanceof Error && error.message === t('strategyUnavailable') ? error.message : t('pageScriptUnavailable'));
     }
   }
 
@@ -134,7 +134,7 @@ export function useAutomationController({
       setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
       await refreshLogs();
     } catch (error) {
-      setStatus(error instanceof Error && error.message.startsWith(locale === 'fr' ? 'Cette page' : 'This page')
+      setStatus(error instanceof Error && error.message === t('strategyUnavailable')
         ? error.message
         : (locale === 'fr' ? 'Le script de page est indisponible. Rechargez la page puis réessayez.' : 'The page script is unavailable. Reload the page and try again.'));
     }
