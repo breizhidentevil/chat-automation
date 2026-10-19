@@ -140,3 +140,28 @@ If the documentation link is temporarily unavailable, check the [workflow runs](
 ## License
 
 This project is licensed under the **MIT License**. See the [`LICENSE`](LICENSE) file for the full license text.
+
+
+## Définition des variables
+
+Les variables se définissent en bloc dans l’onglet **Variables** au format JSON ou YAML. Le format est détecté automatiquement : un document commençant par `{` est lu comme du JSON ; sinon, il est lu comme un mapping YAML plat.
+
+JSON :
+
+```json
+{
+  "prenom": "Alexandre",
+  "ville": "Nantes",
+  "actif": true
+}
+```
+
+YAML :
+
+```yaml
+prenom: Alexandre
+ville: Nantes
+actif: true
+```
+
+Les clés doivent respecter les règles de nommage des variables utilisées dans les modèles, par exemple `{{prenom}}`. Les valeurs acceptées sont des chaînes, des nombres et des booléens ; les tableaux et objets imbriqués ne sont pas pris en charge. Lors de l’enregistrement, les variables existantes conservent leur portée ; la portée sélectionnée s’applique aux nouvelles variables. Un objet JSON vide (`{}`) permet de supprimer toutes les variables.
