@@ -144,7 +144,7 @@ This project is licensed under the **MIT License**. See the [`LICENSE`](LICENSE)
 
 ## Définition des variables
 
-Les variables se définissent en bloc dans l’onglet **Variables** au format JSON ou YAML. Le format est détecté automatiquement : un document commençant par `{` est lu comme du JSON ; sinon, il est lu comme un mapping YAML plat.
+Les variables se définissent en bloc dans l’onglet **Variables** au format JSON ou YAML. Le format est détecté automatiquement : un document commençant par `{` est lu comme du JSON ; sinon, il est lu comme un mapping YAML, y compris les objets imbriqués.
 
 JSON :
 
@@ -164,4 +164,4 @@ ville: Nantes
 actif: true
 ```
 
-Les clés doivent respecter les règles de nommage des variables utilisées dans les modèles, par exemple `{{prenom}}`. Les valeurs acceptées sont des chaînes, des nombres et des booléens ; les tableaux et objets imbriqués ne sont pas pris en charge. Lors de l’enregistrement, les variables existantes conservent leur portée ; la portée sélectionnée s’applique aux nouvelles variables. Un objet JSON vide (`{}`) permet de supprimer toutes les variables.
+Les clés de premier niveau doivent respecter les règles de nommage des variables utilisées dans les modèles. Les objets imbriqués sont pris en charge ; accédez à leurs propriétés avec la notation pointée, par exemple `{{personne.adresse.ville}}`. Les tableaux JSON sont également pris en charge et peuvent être indexés, par exemple `{{articles[0].titre}}`. Les mappings YAML imbriqués utilisent une indentation par multiples de deux espaces. Lors de l’enregistrement, les variables existantes conservent leur portée ; la portée sélectionnée s’applique aux nouvelles variables. Un objet JSON vide (`{}`) permet de supprimer toutes les variables.
