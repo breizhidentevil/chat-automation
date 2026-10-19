@@ -44,6 +44,7 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 The popup separates presentation, stateful workflows, pure business logic, and browser infrastructure:
 
 - `entrypoints/popup/pages/` contains the five popup pages; `components/TemplateTextarea.tsx` is shared by the editor and variable preview.
+- `entrypoints/popup/components/ui.tsx` provides shared React UI primitives (`Button`, `Card`, and `Badge`) and their variants. The first migration applies the button primitive to popup navigation; pages can adopt the same components incrementally.
 - `entrypoints/popup/hooks/` owns automation settings, variable editing, simulation, automation control, history/log loading, runtime status, and polling lifecycles.
 - `lib/` contains pure message-sequence operations, automation configuration validation, LiquidJS preview/resolution, simulation, and existing validation helpers.
 - `services/` isolates browser storage, per-site permissions/content-script registration, history/log reads, and JSON file downloads.
@@ -109,7 +110,7 @@ To package builds manually, use the build output for the relevant browser. The C
 
 The extension version follows Semantic Versioning and is kept in sync between `package.json` and `package-lock.json`; WXT uses this package version in the generated browser manifest.
 
-- Current release baseline: `5.3.0`.
+- Current development baseline: `5.4.0`.
 - Each patch-level development iteration increments the patch version (for example, `5.3.0` → `5.3.1` → `5.3.2`).
 - The minor or major component changes only when the scope of a release justifies it.
 - GitHub Actions adds its run number to development prerelease tags (for example, `v5.0.1-dev.201`); that build number does not replace the extension version.
