@@ -36,6 +36,18 @@ test('preserves unknown variables visibly and reports them separately', async ()
   assert.deepEqual(result.unknownVariables, ['inconnu']);
 });
 
+test('preserves and reports unknown variables used with Liquid filters', async () => {
+  const result = await previewMessageTemplate('Bonjour {{ inconnu | capitalize }}', [variable]);
+  assert.equal(result.text, 'Bonjour {{inconnu}}');
+  assert.deepEqual(result.unknownVariables, ['inconnu']);
+});
+
+test('shows filtered dynamic paths as placeholders without runtime data', async () => {
+  const result = await previewMessageTemplate('Ticket {{ data.ticket | default: "aucun" }}', [variable]);
+  assert.equal(result.text, 'Ticket [data.ticket]');
+  assert.deepEqual(result.unknownVariables, []);
+});
+
 test('reports malformed Liquid syntax through the shared resolver', async () => {
   await assert.rejects(previewMessageTemplate('{% if prenom %}Bonjour', [variable]), /Syntaxe de template Liquid invalide/);
 });
