@@ -28,6 +28,36 @@ export interface VariableResolutionResult {
 export const VARIABLES_STORAGE_KEY = 'chatAutomationVariables';
 export const VARIABLE_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
 
+const MAX_VARIABLE_ID_LENGTH = 256;
+const MAX_VARIABLE_VALUE_LENGTH = 100_000;
+
+export function isValidVariableDefinition(value: unknown): value is VariableDefinition {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<VariableDefinition>;
+  return typeof item.id === 'string' && item.id.length > 0 && item.id.length <= MAX_VARIABLE_ID_LENGTH &&
+    typeof item.name === 'string' && VARIABLE_NAME_PATTERN.test(item.name) &&
+    item.type === 'static' && typeof item.value === 'string' &&
+    item.value.length <= MAX_VARIABLE_VALUE_LENGTH &&
+    (item.scope === 'global' || item.scope === 'automation') &&
+    typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) && item.updatedAt >= 0;
+}
+
+export function filterValidVariableDefinitions(value: unknown): VariableDefinition[] {
+  if (!Array.isArray(value)) return [];
+  const seenIds = new Set<string>();
+  const seenNames = new Set<string>();
+  const valid: VariableDefinition[] = [];
+  for (const candidate of value) {
+    if (!isValidVariableDefinition(candidate)) continue;
+    const nameKey = `${candidate.scope}:${candidate.name}`;
+    if (seenIds.has(candidate.id) || seenNames.has(nameKey)) continue;
+    seenIds.add(candidate.id);
+    seenNames.add(nameKey);
+    valid.push(candidate);
+  }
+  return valid;
+}
+
 const TEMPLATE_TOKEN = /{{\s*([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)\s*}}/g;
 const DYNAMIC_ROOTS = new Set(['system', 'automation', 'chat', 'history', 'logs', 'strategy', 'data']);
 const BLOCKED_PATH_PARTS = new Set(['__proto__', 'prototype', 'constructor']);
