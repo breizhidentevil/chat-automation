@@ -5,6 +5,7 @@ import {
 } from '../lib/history';
 import { isValidConversationMessage } from '../lib/history-validation';
 import { isValidDiagnosticEvent } from '../lib/diagnostic-validation';
+import { isSenderOriginAllowed } from '../lib/message-origin-validation';
 
 const LOG_KEY = 'chatAutomationLogs';
 const MAX_LOGS = 500;
@@ -24,16 +25,18 @@ function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }
 }
 
 export default defineBackground(() => {
-  browser.runtime.onMessage.addListener((message: unknown) => {
+  browser.runtime.onMessage.addListener((message: unknown, sender) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
     if (message.type === 'CHAT_AUTOMATION_LOG_EVENT' && 'entry' in message) {
       if (!isValidDiagnosticEvent(message.entry)) return { ok: false };
+      if (!isSenderOriginAllowed(sender.tab?.url, message.entry.site)) return { ok: false };
       return persistDiagnosticEvent(message.entry)
         .then(result => result)
         .catch(() => ({ ok: false }));
     }
     if (message.type === 'CHAT_HISTORY_UPSERT' && 'message' in message) {
       if (!isValidConversationMessage(message.message)) return { ok: false };
+      if (!isSenderOriginAllowed(sender.tab?.url, message.message.origin)) return { ok: false };
       return backgroundUpsertConversationMessage(message.message)
         .then(() => ({ ok: true }))
         .catch(error => {
@@ -42,12 +45,7 @@ export default defineBackground(() => {
         });
     }
     if (message.type === 'CHAT_HISTORY_MARK_INTERRUPTED' && 'origin' in message && typeof message.origin === 'string') {
-      try {
-        const origin = new URL(message.origin);
-        if (!['http:', 'https:'].includes(origin.protocol) || origin.origin !== message.origin) return { ok: false };
-      } catch {
-        return { ok: false };
-      }
+      if (!isSenderOriginAllowed(sender.tab?.url, message.origin)) return { ok: false };
       return backgroundMarkInterruptedMessagesIncomplete(message.origin)
         .then(() => ({ ok: true }))
         .catch(error => {
