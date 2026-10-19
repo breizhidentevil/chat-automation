@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { chromium } from 'playwright';
 
 const extensionPath = resolve(process.env.CHROME_EXTENSION_PATH ?? '.output/chrome-mv3');
 
-test('loads the unpacked extension in real Chromium and renders its popup', { timeout: 60000 }, async () => {
+test('loads the unpacked extension in real Chromium and renders its popup', { skip: process.env.RUN_BROWSER_INTEGRATION !== '1', timeout: 60000 }, async () => {
+  const { chromium } = await import('playwright');
   await access(resolve(extensionPath, 'manifest.json'));
   const context = await chromium.launchPersistentContext('', {
     headless: true,
