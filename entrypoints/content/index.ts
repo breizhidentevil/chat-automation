@@ -23,7 +23,35 @@ export default defineContentScript({
         return validateAndSaveStrategy(message.text);
       }
       if (message.type === 'CHAT_AUTOMATION_START') {
-        if (!('messages' in message) || !Array.isArray(message.messages) || message.messages.length === 0 || !message.messages.every((item: unknown) => typeof item === 'string' && item.trim().length > 0) || !('intervalMs' in message) || typeof message.intervalMs !== 'number' || message.intervalMs < 1000 || !('repeatMode' in message) || !['infinite', 'finite'].includes(String(message.repeatMode)) || !('repeatCount' in message) || typeof message.repeatCount !== 'number' || !('startTime' in message) || typeof message.startTime !== 'string' || !('endTime' in message) || typeof message.endTime !== 'string' || !('timeWindowEnabled' in message) || typeof message.timeWindowEnabled !== 'boolean') {
+        if (
+          !('messages' in message) ||
+          !Array.isArray(message.messages) ||
+          message.messages.length === 0 ||
+          message.messages.length > 100 ||
+          !message.messages.every((item: unknown) => typeof item === 'string' && item.trim().length > 0 && item.length <= 100_000) ||
+          !('intervalMs' in message) ||
+          typeof message.intervalMs !== 'number' ||
+          !Number.isSafeInteger(message.intervalMs) ||
+          message.intervalMs < 1000 ||
+          message.intervalMs > 31 * 24 * 60 * 60 * 1000 ||
+          !('repeatMode' in message) ||
+          !['infinite', 'finite'].includes(String(message.repeatMode)) ||
+          !('repeatCount' in message) ||
+          typeof message.repeatCount !== 'number' ||
+          !Number.isSafeInteger(message.repeatCount) ||
+          message.repeatCount < 0 ||
+          (message.repeatMode === 'finite' && message.repeatCount < 1) ||
+          (message.repeatMode === 'infinite' && message.repeatCount !== 0) ||
+          !('startTime' in message) ||
+          typeof message.startTime !== 'string' ||
+          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(message.startTime) ||
+          !('endTime' in message) ||
+          typeof message.endTime !== 'string' ||
+          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(message.endTime) ||
+          !('timeWindowEnabled' in message) ||
+          typeof message.timeWindowEnabled !== 'boolean' ||
+          (message.timeWindowEnabled && message.startTime === message.endTime)
+        ) {
           return { message: 'Paramètres d’automatisation invalides.' };
         }
         const procedure = await getProcedure(location.origin);
