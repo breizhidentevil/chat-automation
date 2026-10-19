@@ -1,7 +1,7 @@
 {
   "name": "chat-site-automation",
   "description": "Extension navigateur pour détecter les champs de chat, apprendre les procédures par site et journaliser les tentatives.",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "liquidjs": "^10.30.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

@@ -1,3 +1,11 @@
+## 5.1.0 — LiquidJS message templates
+
+- Integrated LiquidJS into message rendering with support for filters, default values, conditionals, and loops.
+- Preserved existing static-variable and dynamic-path tokens and their validation behavior.
+- Restricted property access to own properties and configured template parsing, render, and memory limits; pinned a patched LiquidJS release.
+- Added regression tests for Liquid syntax, backwards compatibility, malformed templates, unknown variables, and blocked object properties.
+- Validation status: tests and browser builds must be confirmed by CI; they have not been run in this editing environment.
+
 ## 5.0.0 — Versioning baseline
 
 - Aligned the extension package and lockfile versions with the V5 product milestone.

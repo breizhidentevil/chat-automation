@@ -33,9 +33,30 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 - **Message automation**: compose and reorder multi-message sequences, configure an interval, choose a finite number of cycles or repeat indefinitely, and optionally restrict execution to a daily time window.
 - **Generation-aware scheduling**: pause sending when supported page signals indicate that a response is still being generated.
 - **Variables**: define reusable static variables and use variable suggestions while editing message templates.
+- **LiquidJS message templates**: use filters, default values, conditionals, and loops alongside existing `{{variable}}` and dynamic data-path tokens.
 - **Dynamic data paths**: reference runtime, automation, chat, history, logs, strategy, and data context with dotted properties and indexed arrays.
 - **History and logs**: inspect captured messages and execution events, with JSON export where available.
 - **Built-in documentation**: open the extension guide from the popup's help icon.
+
+## Message templates
+
+Message fields support [LiquidJS](https://liquidjs.com/) syntax while preserving the existing variable tokens. Examples:
+
+```liquid
+Bonjour {{ contact.name | default: "à vous" | capitalize }} !
+
+{% if automation.sequence.iteration > 1 %}
+Je reviens vers vous avec un complément.
+{% else %}
+Voici les informations demandées.
+{% endif %}
+
+{% for item in data.items %}
+- {{ item.name }} : {{ item.value }}
+{% endfor %}
+```
+
+Available data includes saved variables, runtime and automation context, and the existing dynamic roots (`chat`, `history`, `logs`, `strategy`, and `data`). Liquid filters such as `default`, `capitalize`, and `upcase`, plus `if`, `unless`, and `for`, can be used directly in message text. Existing templates continue to work unchanged. Template rendering is local to the extension; do not place secrets in messages or expose data you would not want sent to the active chat.
 
 ## Requirements
 
@@ -70,7 +91,7 @@ To package builds manually, use the build output for the relevant browser. The C
 
 The extension version follows Semantic Versioning and is kept in sync between `package.json` and `package-lock.json`; WXT uses this package version in the generated browser manifest.
 
-- Baseline: `5.0.0`.
+- Current release baseline: `5.1.0`.
 - Each development iteration that changes the project increments the patch version (for example, `5.0.0` → `5.0.1` → `5.0.2`).
 - The minor or major component changes only when the scope of a release justifies it.
 - GitHub Actions adds its run number to development prerelease tags (for example, `v5.0.1-dev.201`); that build number does not replace the extension version.

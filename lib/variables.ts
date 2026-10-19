@@ -1,8 +1,9 @@
 /**
- * Variable resolver for static user variables and dynamic data paths.
- * Templates use {{name}} for custom variables and {{module.collection[0].field}}
- * for dynamic values. Paths may contain any number of property/index segments.
+ * Variable definitions and LiquidJS-backed message template rendering.
+ * Legacy {{name}} and {{module.collection[0].field}} tokens remain supported;
+ * Liquid adds filters, conditionals, loops, and default values.
  */
+import { Liquid } from 'liquidjs';
 export type VariableScope = 'global' | 'automation';
 
 export interface VariableDefinition {
@@ -67,6 +68,24 @@ export function filterValidVariableDefinitions(value: unknown): VariableDefiniti
 const TEMPLATE_TOKEN = /{{\s*([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)\s*}}/g;
 const DYNAMIC_ROOTS = new Set(['system', 'automation', 'chat', 'history', 'logs', 'strategy', 'data']);
 const BLOCKED_PATH_PARTS = new Set(['__proto__', 'prototype', 'constructor']);
+
+// Do not expose inherited properties or dynamic partial/template loading to user-authored messages.
+const liquid = new Liquid({
+  ownPropertyOnly: true,
+  strictFilters: true,
+  strictVariables: false,
+  dynamicPartials: false,
+  templates: {},
+  parseLimit: 100_000,
+  renderLimit: 250,
+  memoryLimit: 100_000,
+});
+
+// Message templates are self-contained: never load filesystem, URL, or extension partials.
+delete liquid.tags.include;
+delete liquid.tags.render;
+delete liquid.tags.layout;
+delete liquid.tags.block;
 
 export function isValidVariableName(value: unknown): value is string {
   return typeof value === 'string' && VARIABLE_NAME_PATTERN.test(value) && !BLOCKED_PATH_PARTS.has(value);
@@ -133,14 +152,25 @@ export async function resolveMessageTemplate(
   for (const variable of applicable.filter(item => item.scope === 'global')) byName.set(variable.name, variable);
   for (const variable of applicable.filter(item => item.scope === scope && item.scope !== 'global')) byName.set(variable.name, variable);
 
-  const validTemplate = template.replace(TEMPLATE_TOKEN, '');
-  if (/{{|}}/.test(validTemplate)) throw new Error('Syntaxe de variable invalide. Utilisez {{nom}} ou un chemin tel que {{history.messages[0].content}}.');
-  const unknown = validateTemplateVariables(template, variables, scope);
+  const openingDelimiters = template.match(/{{/g)?.length ?? 0;
+  const closingDelimiters = template.match(/}}/g)?.length ?? 0;
+  if (openingDelimiters !== closingDelimiters) {
+    throw new Error('Syntaxe de variable invalide. Utilisez {{nom}}, les filtres Liquid et les balises {% ... %}.');
+  }
+
+  // Liquid introduces local names through loops, assignments, and captures.
+  const liquidLocals = new Set<string>(['forloop', 'tablerowloop']);
+  for (const match of template.matchAll(/{%\s*(?:for|tablerow)\s+([A-Za-z_][A-Za-z0-9_-]*)\s+in\b/g)) liquidLocals.add(match[1]!);
+  for (const match of template.matchAll(/{%\s*(?:assign|capture)\s+([A-Za-z_][A-Za-z0-9_-]*)\b/g)) liquidLocals.add(match[1]!);
+
+  const unknown = validateTemplateVariables(template, variables, scope)
+    .filter(name => !liquidLocals.has(name.split(/[.[]/, 1)[0] ?? ''));
   if (unknown.length > 0) throw new Error(`Variable(s) inconnue(s) : ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.`);
 
   const variablesUsed = findTemplateVariables(template);
   const rootData: Record<string, unknown> = {
     ...dynamicData,
+    ...Object.fromEntries([...byName.entries()].map(([name, definition]) => [name, definition.value])),
     system: {
       runtime: {
         timestamp: context.timestamp.toISOString(),
@@ -162,9 +192,18 @@ export async function resolveMessageTemplate(
     },
   };
 
-  const text = template.replace(TEMPLATE_TOKEN, (_match, name: string) => {
-    if (!isDynamicPath(name)) return byName.get(name)!.value;
-    return readPath(rootData, name);
-  });
-  return { text, variablesUsed };
+  // Preserve the legacy resolver's explicit errors and blocked-path checks for simple tokens.
+  for (const name of variablesUsed) {
+    if (isDynamicPath(name)) readPath(rootData, name);
+  }
+
+  try {
+    const text = await liquid.parseAndRender(template, rootData);
+    return { text, variablesUsed };
+  } catch (error) {
+    if (error instanceof Error && /unexpected|parse|tag|syntax/i.test(error.name + ' ' + error.message)) {
+      throw new Error(`Syntaxe de template Liquid invalide : ${error.message}`);
+    }
+    throw error;
+  }
 }
