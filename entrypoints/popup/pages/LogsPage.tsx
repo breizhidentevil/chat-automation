@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert, Badge, Button, Paper } from '@mantine/core';
 import type { DiagnosticEvent } from '../../../lib/contracts';
 import { translate } from '../../../lib/i18n';
 
@@ -17,10 +18,10 @@ export default function LogsPage({ t, logs, refreshLogs, clearLogs, exportLogs }
 
       <div className="page-heading"><h2>{t('eventLog')}</h2><p>{t('logIntro')}</p></div>
       <section className="logs-section logs-page-section">
-        <div className="section-head"><h2>{t('recentEvents')}</h2><div className="logs-actions"><button className="secondary" onClick={() => void refreshLogs()}>{t('refresh')}</button><button className="secondary danger-action" onClick={() => void clearLogs()}>{t('clearLogs')}</button></div></div>
-        <div className="logs">{logs.length === 0 ? <p className="empty">{t('noEvents')}</p> : logs.map((log, index) => <article key={`${log.timestamp}-${index}`}><strong>{log.level}</strong><span>{new Date(log.timestamp).toLocaleString()} · {log.site}</span><p>{log.event}{log.details ? ` — ${log.details}` : ''}</p></article>)}</div>
+        <div className="section-head"><h2>{t('recentEvents')}</h2><div className="logs-actions"><Button variant="default" size="compact-sm" onClick={() => void refreshLogs()}>{t('refresh')}</Button><Button color="red" variant="light" size="compact-sm" onClick={() => void clearLogs()}>{t('clearLogs')}</Button></div></div>
+        <div className="logs">{logs.length === 0 ? <p className="empty">{t('noEvents')}</p> : logs.map((log, index) => <Paper component="article" key={`${log.timestamp}-${index}`} padding="xs" withBorder><Badge size="xs" variant="light" color={log.level === 'error' ? 'red' : log.level === 'warn' ? 'yellow' : 'gray'}>{log.level}</Badge><span>{new Date(log.timestamp).toLocaleString()} · {log.site}</span><p>{log.event}{log.details ? ` — ${log.details}` : ''}</p></Paper>)}</div>
       </section>
-      <p className="notice">{t('logNotice')}</p>
+      <Alert variant="light" color="gray">{t('logNotice')}</Alert>
     
   </>;
 }
