@@ -3,11 +3,17 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import ts from 'typescript';
 
+const validationSource = await readFile(new URL('../lib/history-validation.ts', import.meta.url), 'utf8');
+const compiledValidation = ts.transpile(validationSource, {
+  module: ts.ModuleKind.ESNext,
+  target: ts.ScriptTarget.ES2022,
+});
+const validationUrl = `data:text/javascript;base64,${Buffer.from(compiledValidation).toString('base64')}`;
 const source = await readFile(new URL('../lib/history.ts', import.meta.url), 'utf8');
 const compiled = ts.transpile(source, {
   module: ts.ModuleKind.ESNext,
   target: ts.ScriptTarget.ES2022,
-});
+}).replace("from './history-validation'", `from '${validationUrl}'`);
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
 const {
   deduplicateConversationMessages,
