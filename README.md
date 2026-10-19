@@ -44,7 +44,7 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 The popup separates presentation, stateful workflows, pure business logic, and browser infrastructure:
 
 - `entrypoints/popup/pages/` contains the five popup pages; `components/TemplateTextarea.tsx` is shared by the editor and variable preview.
-- `entrypoints/popup/components/ui.tsx` provides shared React UI primitives (`Button`, `Card`, and `Badge`) and their variants. The first migration applies the button primitive to popup navigation; pages can adopt the same components incrementally.
+- The popup uses [Mantine v8](https://mantine.dev/) for its React component system, including a shared theme, accessible tabs, and action buttons. Mantine styles are bundled locally with the extension; no runtime CDN or network dependency is used.
 - `entrypoints/popup/hooks/` owns automation settings, variable editing, simulation, automation control, history/log loading, runtime status, and polling lifecycles.
 - `lib/` contains pure message-sequence operations, automation configuration validation, LiquidJS preview/resolution, simulation, and existing validation helpers.
 - `services/` isolates browser storage, per-site permissions/content-script registration, history/log reads, and JSON file downloads.
