@@ -12,7 +12,7 @@ import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
-import { loadAutomationSettings, saveAutomationSettings } from '../../services/automation-settings';
+
 import { loadVisibleHistory } from '../../services/history-service';
 import { loadRecentLogs } from '../../services/logs-service';
 import TemplateTextarea from './components/TemplateTextarea';
@@ -24,6 +24,7 @@ import AutomationPage from './pages/AutomationPage';
 import { usePagePolling } from './hooks/usePagePolling';
 import { useRuntimeStatus, type RuntimeStatus } from './hooks/useRuntimeStatus';
 import { useVariables } from './hooks/useVariables';
+import { useAutomationSettings } from './hooks/useAutomationSettings';
 import { downloadJsonFile } from '../../services/file-export';
 
 type LogEntry = import('../../lib/contracts').DiagnosticEvent;
@@ -46,8 +47,6 @@ function Popup() {
   const logReadErrorReported = useRef(false);
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
-  const [message, setMessage] = useState('');
-  const [automationMessages, setAutomationMessages] = useState<string[]>(['']);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [status, setStatus] = useState(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr') === 'fr' ? 'Prêt. Ouvrez une page contenant un chat.' : 'Ready. Open a page containing a chat.');
   const [siteAccessStatus, setSiteAccessStatus] = useState('');
@@ -59,13 +58,6 @@ function Popup() {
   const [historyOrigin, setHistoryOrigin] = useState('');
   const [historyConversationId, setHistoryConversationId] = useState('');
   const [historyError, setHistoryError] = useState('');
-  const [interval, setIntervalValue] = useState('30');
-  const [unit, setUnit] = useState<'seconds' | 'minutes'>('seconds');
-  // 0 signifie une répétition infinie ; toute valeur positive définit le nombre d’envois.
-  const [repeatCount, setRepeatCount] = useState('0');
-  const [timeWindowEnabled, setTimeWindowEnabled] = useState(true);
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('18:00');
   const [simulationContext, setSimulationContext] = useState(`{
   "chat": { "session": { "title": "Conversation de test", "url": "https://example.test/chat" } },
   "data": { "ticket": "A-123", "items": [{ "name": "Exemple", "value": "123" }] }
@@ -75,6 +67,11 @@ function Popup() {
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [simulationError, setSimulationError] = useState('');
   const { runtimeStatus, clockNow } = useRuntimeStatus(() => setStatus(t('automationStatusReadError')));
+  const { message, setMessage, automationMessages, setAutomationMessages, interval, setIntervalValue, unit, setUnit, repeatCount, setRepeatCount, timeWindowEnabled, setTimeWindowEnabled, startTime, setStartTime, endTime, setEndTime, persistSettings } = useAutomationSettings(
+    () => setStatus(t('settingsReadError')),
+    () => setStatus(t('settingsSaveError')),
+    t,
+  );
   const { variables, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
 
   useEffect(() => {
@@ -186,17 +183,7 @@ function Popup() {
       console.error('[Chat Automation] Lecture de la langue échouée.', error);
     });
     void refreshLogs();
-    void loadAutomationSettings(key => browser.storage.local.get(key)).then(saved => {
-      if (!saved) return;
-      setMessage(saved.message);
-      setAutomationMessages(saved.messages);
-      setIntervalValue(saved.interval); setUnit(saved.unit);
-      setRepeatCount(saved.repeatCount);
-      setTimeWindowEnabled(saved.timeWindowEnabled);
-      setStartTime(saved.startTime); setEndTime(saved.endTime);
-    }).catch(() => {
-      setStatus(t('settingsReadError'));
-    });
+
   }, []);
 
   useEffect(() => {
@@ -206,17 +193,6 @@ function Popup() {
   usePagePolling(page === 'history', refreshHistory, 1500);
 
   usePagePolling(page === 'logs', refreshLogs, 1000);
-
-  async function persistSettings(): Promise<boolean> {
-    try {
-      await saveAutomationSettings(items => browser.storage.local.set(items), { message, messages: automationMessages, interval, unit, repeatCount, timeWindowEnabled, startTime, endTime });
-      return true;
-    } catch (error) {
-      console.error('[Chat Automation] Écriture des paramètres échouée.', error);
-      setStatus(t('settingsSaveError'));
-      return false;
-    }
-  }
 
   async function activeTab() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
