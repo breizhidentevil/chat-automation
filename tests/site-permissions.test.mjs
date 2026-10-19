@@ -17,6 +17,6 @@ test('registers the page script dynamically only after per-site permission', () 
   assert.match(contentScript, /matches:\s*\[['"]<all_urls>['"]\]/);
   assert.match(popup, /browser\.permissions\.request\(\{ origins: \[pattern\] \}\)/);
   assert.match(popup, /browser\.scripting\.registerContentScripts/);
-  assert.match(popup, /files: \[['"]content-scripts\/content\.js['"]\]/);
+  assert.match(popup, /files: \\[\\['\"]\\/?content-scripts\\/content\\.js['\"]\\]/);
   assert.match(popup, /Activer sur ce site/);
 });
