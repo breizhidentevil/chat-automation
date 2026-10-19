@@ -20,7 +20,7 @@ function Documentation() {
     </nav>
 
     <section id="demarrage"><h2>1. Démarrage</h2>
-      <ol><li>Installez l’extension dans le navigateur à partir du paquet fourni.</li><li>Ouvrez le site de chat concerné dans un onglet ordinaire (URL HTTP ou HTTPS).</li><li>Ouvrez la popup de l’extension. La page <strong>Automatisation</strong> vérifie si une stratégie a déjà été validée pour l’origine du site.</li><li>Si aucune stratégie n’existe, effectuez le test d’envoi décrit ci-dessous. Rechargez l’onglet du site après l’installation ou une mise à jour si la capture ne démarre pas.</li></ol>
+      <ol><li>Installez l’extension dans le navigateur à partir du paquet fourni.</li><li>Ouvrez le site de chat concerné dans un onglet ordinaire (URL HTTP ou HTTPS).</li><li>Ouvrez la popup de l’extension et cliquez sur <strong>Activer sur ce site</strong>. Autorisez l’accès dans la demande du navigateur. Cette autorisation concerne uniquement l’origine du site actif.</li><li>La page <strong>Automatisation</strong> vérifie si une stratégie a déjà été validée pour ce site. Si aucune stratégie n’existe, effectuez le test d’envoi décrit ci-dessous.</li><li>Si la capture ne démarre pas après une installation ou une mise à jour, rechargez l’onglet du site.</li></ol>
       <p className="callout"><strong>Attention :</strong> le test de stratégie et l’automatisation envoient réellement du texte dans le chat. Vérifiez le contenu et la conversation active avant de confirmer.</p>
     </section>
 

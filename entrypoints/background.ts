@@ -2,18 +2,27 @@ import type { DiagnosticEvent } from '../lib/contracts';
 import {
   backgroundMarkInterruptedMessagesIncomplete,
   backgroundUpsertConversationMessage,
-  type ConversationMessage,
+  backgroundClearSiteHistory,
 } from '../lib/history';
+import { isValidConversationMessage } from '../lib/history-validation';
+import { isValidDiagnosticEvent, limitDiagnosticEvents } from '../lib/diagnostic-validation';
+import { isSenderOriginAllowed } from '../lib/message-origin-validation';
 
 const LOG_KEY = 'chatAutomationLogs';
-const MAX_LOGS = 500;
 let logWriteQueue: Promise<void> = Promise.resolve();
+
+function isExtensionUiSender(sender: { id?: string; tab?: unknown; url?: string }): boolean {
+  return sender.id === browser.runtime.id
+    && !sender.tab
+    && typeof sender.url === 'string'
+    && sender.url.startsWith(browser.runtime.getURL('/'));
+}
 
 function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }> {
   const write = logWriteQueue.then(async () => {
     const stored = await browser.storage.local.get(LOG_KEY);
-    const previous = Array.isArray(stored[LOG_KEY]) ? stored[LOG_KEY] as DiagnosticEvent[] : [];
-    await browser.storage.local.set({ [LOG_KEY]: [...previous, entry].slice(-MAX_LOGS) });
+    const previous = limitDiagnosticEvents(stored[LOG_KEY]);
+    await browser.storage.local.set({ [LOG_KEY]: limitDiagnosticEvents([...previous, entry]) });
   });
   logWriteQueue = write.catch(() => undefined);
   return write.then(() => ({ ok: true })).catch(error => {
@@ -23,17 +32,76 @@ function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }
 }
 
 export default defineBackground(() => {
-  browser.runtime.onMessage.addListener((message: unknown) => {
+  // Remove dynamically registered page scripts as soon as a user revokes a site
+  // permission. This keeps the registered-script state aligned with granted access.
+  browser.permissions.onRemoved.addListener(({ origins = [] }) => {
+    if (origins.length === 0) return;
+
+    // Un already-injected script can remain alive in an open tab after its host
+    // permission is revoked. Stop automation and DOM capture in matching tabs too.
+    void browser.tabs.query({ url: origins })
+      .then(tabs => Promise.all(tabs.filter(tab => tab.id !== undefined).map(tab =>
+        browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_PERMISSION_REVOKED' }).catch(() => undefined),
+      )))
+      .catch(error => console.error('[Chat Automation] Arrêt des scripts actifs après révocation impossible.', error));
+
+    void browser.scripting.getRegisteredContentScripts()
+      .then(scripts => scripts.filter(script => script.matches?.some(match => origins.includes(match)))
+        .map(script => script.id))
+      .then(ids => ids.length > 0 ? browser.scripting.unregisterContentScripts({ ids }) : undefined)
+      .catch(error => console.error('[Chat Automation] Nettoyage des scripts après révocation impossible.', error));
+  });
+
+  browser.runtime.onMessage.addListener((message: unknown, sender) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
+
+    // Destructive storage actions are accepted only from this extension's own UI.
+    if (isExtensionUiSender(sender) && message.type === 'CHAT_HISTORY_CLEAR_SITE' && 'origin' in message && typeof message.origin === 'string') {
+      let origin: string;
+      try {
+        const parsed = new URL(message.origin);
+        if (!['http:', 'https:'].includes(parsed.protocol) || parsed.origin !== message.origin) return { ok: false };
+        origin = parsed.origin;
+      } catch {
+        return { ok: false };
+      }
+      return (async () => {
+        // Suppress current DOM contents first. Any upserts already in flight are then
+        // ordered ahead of the deletion in the shared history write queue.
+        try {
+          const tabs = await browser.tabs.query({ url: `${origin}/*` });
+          await Promise.all(tabs.filter(tab => tab.id !== undefined).map(tab =>
+            browser.tabs.sendMessage(tab.id!, { type: 'CHAT_HISTORY_CLEARED', origin }).catch(() => undefined),
+          ));
+        } catch (error) {
+          console.warn('[Chat Automation] Notification des onglets avant effacement impossible.', error);
+        }
+        await backgroundClearSiteHistory(origin);
+        return { ok: true };
+      })().catch(error => {
+        console.error('[Chat Automation] Effacement de l’historique impossible.', error);
+        return { ok: false };
+      });
+    }
+
+    if (isExtensionUiSender(sender) && message.type === 'CHAT_LOGS_CLEAR') {
+      const operation = logWriteQueue.then(() => browser.storage.local.remove(LOG_KEY));
+      logWriteQueue = operation.catch(error => {
+        console.error('[Chat Automation] Effacement des journaux impossible.', error);
+      });
+      return operation.then(() => ({ ok: true })).catch(() => ({ ok: false }));
+    }
     if (message.type === 'CHAT_AUTOMATION_LOG_EVENT' && 'entry' in message) {
-      const entry = message.entry as DiagnosticEvent;
-      if (!entry || typeof entry.timestamp !== 'number' || typeof entry.site !== 'string' || typeof entry.event !== 'string' || !['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(entry.level)) return { ok: false };
-      return persistDiagnosticEvent(entry);
+      if (!isValidDiagnosticEvent(message.entry)) return { ok: false };
+      if (!isSenderOriginAllowed(sender.tab?.url, message.entry.site)) return { ok: false };
+      return persistDiagnosticEvent(message.entry)
+        .then(result => result)
+        .catch(() => ({ ok: false }));
     }
     if (message.type === 'CHAT_HISTORY_UPSERT' && 'message' in message) {
-      const item = message.message as ConversationMessage;
-      if (!item || typeof item.id !== 'string' || typeof item.origin !== 'string' || typeof item.content !== 'string' || !['user', 'assistant', 'system', 'unknown'].includes(item.role) || !['streaming', 'complete', 'incomplete'].includes(item.status)) return { ok: false };
-      return backgroundUpsertConversationMessage(item)
+      if (!isValidConversationMessage(message.message)) return { ok: false };
+      if (!isSenderOriginAllowed(sender.tab?.url, message.message.origin)) return { ok: false };
+      return backgroundUpsertConversationMessage(message.message)
         .then(() => ({ ok: true }))
         .catch(error => {
           console.error('[Chat Automation] Écriture de l’historique échouée dans le background.', error);
@@ -41,6 +109,7 @@ export default defineBackground(() => {
         });
     }
     if (message.type === 'CHAT_HISTORY_MARK_INTERRUPTED' && 'origin' in message && typeof message.origin === 'string') {
+      if (!isSenderOriginAllowed(sender.tab?.url, message.origin)) return { ok: false };
       return backgroundMarkInterruptedMessagesIncomplete(message.origin)
         .then(() => ({ ok: true }))
         .catch(error => {

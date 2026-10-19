@@ -2,12 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import { deduplicateConversationMessages, historyStorageKey, type ConversationMessage } from '../../lib/history';
-import { validateTemplateVariables, VARIABLE_NAME_PATTERN, VARIABLES_STORAGE_KEY, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { isValidConversationMessage } from '../../lib/history-validation';
+import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
+import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
+import { validateTemplateVariables, isValidVariableName, MAX_VARIABLE_VALUE_LENGTH, MAX_VARIABLE_DEFINITIONS, MAX_TOTAL_VARIABLE_VALUE_LENGTH, VARIABLES_STORAGE_KEY, filterValidVariableDefinitions, type VariableDefinition, type VariableScope } from '../../lib/variables';
+import { MAX_TOTAL_MESSAGE_LENGTH, isValidAutomationStartMessage, sanitizeSavedAutomationSettings } from '../../lib/automation-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
+import { contentScriptIdForOrigin } from '../../lib/content-script-id';
+import { selectHistoryExportMessages } from '../../lib/history-export';
 
-type LogEntry = { timestamp: number; level: string; site: string; event: string; details?: string };
+type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs';
-type SavedSettings = { message?: string; messages?: string[]; interval?: string; unit?: 'seconds' | 'minutes'; repeatMode?: 'infinite' | 'finite'; repeatCount?: string | number; timeWindowEnabled?: boolean; startTime?: string; endTime?: string };
 type RuntimeStatus = { phase: 'stopped' | 'ready' | 'waiting-interval' | 'waiting-window' | 'waiting-llm' | 'sending' | 'finished' | 'failed'; note: string; messageIndex: number; messagesCount: number; completedSequences: number; repeatMode: 'infinite' | 'finite'; repeatCount: number; nextSendAt: number | null; updatedAt: number };
 
 
@@ -150,12 +155,15 @@ function Popup() {
   const t = (key: Parameters<typeof translate>[1], values: Record<string, string | number> = {}) => Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), translate(locale, key));
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const [page, setPage] = useState<Page>('automation');
+  const logReadErrorReported = useRef(false);
+  const runtimeReadErrorReported = useRef(false);
   const [strategyReady, setStrategyReady] = useState<boolean | null>(null);
   const [strategyOrigin, setStrategyOrigin] = useState('');
   const [message, setMessage] = useState('');
   const [automationMessages, setAutomationMessages] = useState<string[]>(['']);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [status, setStatus] = useState(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr') === 'fr' ? 'Prêt. Ouvrez une page contenant un chat.' : 'Ready. Open a page containing a chat.');
+  const [siteAccessStatus, setSiteAccessStatus] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
@@ -184,8 +192,11 @@ function Popup() {
       const origin = new URL(tab.url!).origin;
       setStrategyOrigin(origin);
       const data = await browser.storage.local.get('chatAutomationProcedures');
-      const procedures = (data.chatAutomationProcedures as Record<string, { schemaVersion?: number }> | undefined) ?? {};
-      setStrategyReady(procedures[origin]?.schemaVersion === 2);
+      const procedures = data.chatAutomationProcedures;
+      setStrategyReady(
+        Boolean(procedures && typeof procedures === 'object' &&
+          isValidChatSiteProcedure((procedures as Record<string, unknown>)[origin], origin)),
+      );
     } catch {
       setStrategyOrigin('');
       setStrategyReady(false);
@@ -194,8 +205,18 @@ function Popup() {
   }
 
   async function refreshLogs() {
-    const data = await browser.storage.local.get('chatAutomationLogs');
-    setLogs((data.chatAutomationLogs as LogEntry[] | undefined ?? []).slice(-30).reverse());
+    try {
+      const data = await browser.storage.local.get('chatAutomationLogs');
+      const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
+      setLogs((entries as LogEntry[]).slice(-30).reverse());
+      logReadErrorReported.current = false;
+    } catch (error) {
+      if (!logReadErrorReported.current) {
+        console.error('[Chat Automation] Lecture des journaux échouée.', error);
+        setStatus(locale === 'fr' ? 'Impossible de lire les journaux enregistrés.' : 'Could not read saved logs.');
+        logReadErrorReported.current = true;
+      }
+    }
   }
 
   async function refreshHistory() {
@@ -209,8 +230,8 @@ function Popup() {
       setHistoryConversationId(conversationId);
       const key = historyStorageKey(origin);
       const data = await browser.storage.local.get(key);
-      const items = Array.isArray(data[key]) ? data[key] as ConversationMessage[] : [];
-      const siteItems = deduplicateConversationMessages(items.filter(item => item.origin === origin));
+      const items = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) : [];
+      const siteItems = deduplicateConversationMessages((items as ConversationMessage[]).filter(item => item.origin === origin));
       const exactConversation = siteItems.filter(item => item.conversationId === conversationId);
       // Les applications SPA peuvent modifier l’URL (paramètres, hash ou route interne)
       // après la capture. Si aucune entrée ne correspond à l’URL actuelle, ne pas
@@ -225,45 +246,75 @@ function Popup() {
     }
   }
 
+  async function clearSiteHistory() {
+    if (!historyOrigin) return;
+    const confirmed = window.confirm(t('confirmClearHistory', { origin: historyOrigin }));
+    if (!confirmed) return;
+    try {
+      const response = await browser.runtime.sendMessage({ type: 'CHAT_HISTORY_CLEAR_SITE', origin: historyOrigin });
+      if (response?.ok !== true) throw new Error('Background refused history deletion');
+      setHistoryMessages([]);
+      setStatus(t('historyCleared'));
+    } catch (error) {
+      console.error('[Chat Automation] Effacement de l’historique échoué.', error);
+      setHistoryError(t('historyClearError'));
+    }
+  }
+
   async function exportHistory() {
-    const key = historyStorageKey(historyOrigin);
-    const data = await browser.storage.local.get(key);
-    const allItems = Array.isArray(data[key]) ? data[key] as ConversationMessage[] : [];
-    const siteItems = deduplicateConversationMessages(allItems.filter(item => item.origin === historyOrigin));
-    const exactConversation = siteItems.filter(item => item.conversationId === historyConversationId);
-    const selectedItems = exactConversation.length > 0 ? exactConversation : siteItems;
-    const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems.sort((a, b) => a.firstSeenAt - b.firstSeenAt) };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    let url: string | undefined;
+    try {
+      const key = historyStorageKey(historyOrigin);
+      const data = await browser.storage.local.get(key);
+      const allItems = Array.isArray(data[key]) ? data[key].filter(isValidConversationMessage) as ConversationMessage[] : [];
+      // Keep export scope explicit even when the selected conversation has no stored messages.
+      const selectedItems = selectHistoryExportMessages(
+        deduplicateConversationMessages(allItems),
+        historyOrigin,
+        historyConversationId,
+      );
+      const payload = { origin: historyOrigin, conversationId: historyConversationId, exportedAt: new Date().toISOString(), messages: selectedItems };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `chat-history-${historyOrigin.replace(/[^a-z0-9.-]+/gi, '-') || 'site'}.json`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
+      setStatus(locale === 'fr' ? 'Export de l’historique lancé.' : 'History export started.');
+    } catch (error) {
+      if (url) URL.revokeObjectURL(url);
+      console.error('[Chat Automation] Export de l’historique échoué.', error);
+      setStatus(locale === 'fr' ? 'Impossible d’exporter l’historique.' : 'Could not export history.');
+    }
   }
 
   useEffect(() => {
     void browser.storage.local.get(LOCALE_STORAGE_KEY).then(data => {
       const saved = data[LOCALE_STORAGE_KEY];
       if (saved === 'fr' || saved === 'en') setLocale(saved);
+    }).catch(error => {
+      console.error('[Chat Automation] Lecture de la langue échouée.', error);
     });
     void refreshLogs();
     void browser.storage.local.get(VARIABLES_STORAGE_KEY).then(data => {
       const saved = data[VARIABLES_STORAGE_KEY];
-      if (Array.isArray(saved)) setVariables(saved.filter((item): item is VariableDefinition => !!item && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.value === 'string' && item.type === 'static' && (item.scope === 'global' || item.scope === 'automation')));
+      setVariables(filterValidVariableDefinitions(saved));
+    }).catch(error => {
+      console.error('[Chat Automation] Lecture des variables échouée.', error);
+      setVariableError(locale === 'fr' ? 'Impossible de lire les variables enregistrées.' : 'Could not read saved variables.');
     });
     void browser.storage.local.get('chatAutomationSettings').then(({ chatAutomationSettings }) => {
-      const saved = chatAutomationSettings as SavedSettings | undefined;
+      const saved = sanitizeSavedAutomationSettings(chatAutomationSettings);
       if (!saved) return;
-      setMessage(saved.message ?? '');
-      setAutomationMessages(Array.isArray(saved.messages) && saved.messages.length > 0 ? saved.messages : [saved.message ?? '']);
-      setIntervalValue(saved.interval ?? '30'); setUnit(saved.unit ?? 'seconds');
-      const savedCount = saved.repeatCount;
-      // Migration des paramètres des versions précédentes qui utilisaient un choix Infini/Fini.
-      const migratedCount = saved.repeatMode === 'infinite' ? '0' : (savedCount !== undefined ? String(savedCount) : '0');
-      setRepeatCount(migratedCount);
-      setTimeWindowEnabled(saved.timeWindowEnabled ?? true);
-      setStartTime(saved.startTime ?? '09:00'); setEndTime(saved.endTime ?? '18:00');
+      setMessage(saved.message);
+      setAutomationMessages(saved.messages);
+      setIntervalValue(saved.interval); setUnit(saved.unit);
+      setRepeatCount(saved.repeatCount);
+      setTimeWindowEnabled(saved.timeWindowEnabled);
+      setStartTime(saved.startTime); setEndTime(saved.endTime);
+    }).catch(() => {
+      setStatus(locale === 'fr' ? 'Impossible de lire les paramètres sauvegardés.' : 'Could not read saved settings.');
     });
   }, []);
 
@@ -288,8 +339,17 @@ function Popup() {
   useEffect(() => {
     let mounted = true;
     const refreshRuntimeStatus = async () => {
-      const data = await browser.storage.local.get('chatAutomationRuntimeStatus');
-      if (mounted) setRuntimeStatus((data.chatAutomationRuntimeStatus as RuntimeStatus | undefined) ?? null);
+      try {
+        const data = await browser.storage.local.get('chatAutomationRuntimeStatus');
+        runtimeReadErrorReported.current = false;
+        if (mounted) setRuntimeStatus((data.chatAutomationRuntimeStatus as RuntimeStatus | undefined) ?? null);
+      } catch (error) {
+        if (!runtimeReadErrorReported.current) {
+          console.error('[Chat Automation] Lecture de l’état d’exécution échouée.', error);
+          if (mounted) setStatus(locale === 'fr' ? 'Impossible de lire l’état de l’automatisation.' : 'Could not read automation status.');
+          runtimeReadErrorReported.current = true;
+        }
+      }
     };
     void refreshRuntimeStatus();
     const timer = window.setInterval(() => {
@@ -299,24 +359,48 @@ function Popup() {
     return () => { mounted = false; window.clearInterval(timer); };
   }, []);
 
-  async function persistSettings() {
-    await browser.storage.local.set({ chatAutomationSettings: { message, messages: automationMessages, interval, unit, repeatCount, timeWindowEnabled, startTime, endTime } });
+  async function persistSettings(): Promise<boolean> {
+    try {
+      await browser.storage.local.set({ chatAutomationSettings: { message, messages: automationMessages, interval, unit, repeatCount, timeWindowEnabled, startTime, endTime } });
+      return true;
+    } catch (error) {
+      console.error('[Chat Automation] Écriture des paramètres échouée.', error);
+      setStatus(locale === 'fr' ? 'Impossible d’enregistrer les paramètres. Vérifiez l’espace de stockage disponible.' : 'Could not save settings. Check available storage space.');
+      return false;
+    }
   }
 
-  async function persistVariables(next: VariableDefinition[]) {
-    setVariables(next);
-    await browser.storage.local.set({ [VARIABLES_STORAGE_KEY]: next });
+  async function persistVariables(next: VariableDefinition[]): Promise<boolean> {
+    const safeNext = filterValidVariableDefinitions(next);
+    try {
+      await browser.storage.local.set({ [VARIABLES_STORAGE_KEY]: safeNext });
+      setVariables(safeNext);
+      setVariableError('');
+      return true;
+    } catch (error) {
+      console.error('[Chat Automation] Écriture des variables échouée.', error);
+      setVariableError(locale === 'fr' ? 'Impossible d’enregistrer les variables. Vérifiez l’espace de stockage disponible.' : 'Could not save variables. Check available storage space.');
+      return false;
+    }
   }
 
   async function saveVariable() {
     setVariableError('');
     const name = variableName.trim();
-    if (!VARIABLE_NAME_PATTERN.test(name)) { setVariableError(t('invalidVariableName')); return; }
+    if (!isValidVariableName(name)) { setVariableError(t('invalidVariableName')); return; }
     if (!variableValue.trim()) { setVariableError(t('emptyVariableValue')); return; }
+    if (variableValue.length > MAX_VARIABLE_VALUE_LENGTH) { setVariableError(t('variableValueTooLong')); return; }
     if (variables.some(item => item.name === name && item.scope === variableScope && item.id !== editingVariableId)) { setVariableError(t('duplicateVariable')); return; }
     const item: VariableDefinition = { id: editingVariableId ?? `var-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, type: 'static', value: variableValue, scope: variableScope, updatedAt: Date.now() };
     const next = editingVariableId ? variables.map(existing => existing.id === editingVariableId ? item : existing) : [...variables, item];
-    await persistVariables(next);
+    const totalValueLength = next.reduce((total, variable) => total + variable.value.length, 0);
+    if (next.length > MAX_VARIABLE_DEFINITIONS || totalValueLength > MAX_TOTAL_VARIABLE_VALUE_LENGTH) {
+      setVariableError(locale === 'fr'
+        ? 'Limite atteinte : 100 variables et 1 000 000 caractères cumulés au maximum.'
+        : 'Limit reached: at most 100 variables and 1,000,000 combined characters.');
+      return;
+    }
+    if (!await persistVariables(next)) return;
     setVariableName(''); setVariableValue(''); setVariableScope('global'); setEditingVariableId(null);
     setStatus(t('testSaved', { name }));
   }
@@ -337,6 +421,61 @@ function Popup() {
     return tab;
   }
 
+  async function ensureSiteAccess(tab: Browser.tabs.Tab): Promise<boolean> {
+    if (!tab.id || !tab.url) return false;
+    const origin = new URL(tab.url).origin;
+    const pattern = origin + '/*';
+    const granted = await browser.permissions.contains({ origins: [pattern] })
+      || await browser.permissions.request({ origins: [pattern] });
+    if (!granted) {
+      setSiteAccessStatus(locale === 'fr' ? `Accès refusé pour ${origin}. Autorisez ce site pour utiliser l’extension.` : `Access denied for ${origin}. Grant this site permission to use the extension.`);
+      return false;
+    }
+
+    const id = contentScriptIdForOrigin(origin);
+    // Remove registrations created by older versions before switching to hashed IDs.
+    const legacyId = 'chat-automation-' + origin.replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (legacyId !== id) {
+      const legacy = await browser.scripting.getRegisteredContentScripts({ ids: [legacyId] });
+      if (legacy.some(script => script.matches?.includes(pattern))) {
+        await browser.scripting.unregisterContentScripts({ ids: [legacyId] });
+      }
+    }
+    const registered = await browser.scripting.getRegisteredContentScripts({ ids: [id] });
+    if (registered.length === 0) {
+      await browser.scripting.registerContentScripts([{
+        id,
+        matches: [pattern],
+        js: ['/content-scripts/content.js'],
+        runAt: 'document_idle',
+        persistAcrossSessions: true,
+      }]);
+    }
+
+    try {
+      const response = await browser.tabs.sendMessage(tab.id, { type: 'CHAT_AUTOMATION_PING' });
+      if (response?.ready === true) {
+        setSiteAccessStatus(locale === 'fr' ? `Accès activé pour ${origin}.` : `Access enabled for ${origin}.`);
+        return true;
+      }
+    } catch {
+      // Existing tabs do not receive a newly registered script until navigation.
+    }
+
+    await browser.scripting.executeScript({ target: { tabId: tab.id }, files: ['/content-scripts/content.js'] });
+    setSiteAccessStatus(locale === 'fr' ? `Accès activé pour ${origin}. Le script est chargé dans l’onglet actif.` : `Access enabled for ${origin}. The script is loaded in the active tab.`);
+    return true;
+  }
+
+  async function enableActiveSite() {
+    try {
+      const tab = await activeTab();
+      await ensureSiteAccess(tab);
+    } catch (error) {
+      setSiteAccessStatus(error instanceof Error ? error.message : (locale === 'fr' ? 'Impossible d’activer ce site.' : 'Could not enable this site.'));
+    }
+  }
+
   async function validateStrategy() {
     const text = message.trim();
     if (!text) { setStatus(locale === 'fr' ? 'Saisissez le message qui servira au test.' : 'Enter the message to use for the test.'); return; }
@@ -344,6 +483,7 @@ function Popup() {
     if (!confirmed) return;
     try {
       const tab = await activeTab();
+      if (!await ensureSiteAccess(tab)) return;
       setStatus(locale === 'fr' ? 'Test en cours : l’extension observe la conversation avant d’enregistrer la stratégie…' : 'Test running: the extension is observing the conversation before saving the strategy…');
       const response = await browser.tabs.sendMessage(tab.id!, { type: 'CHAT_AUTOMATION_VALIDATE', text });
       setStatus(typeof response?.message === 'string' ? response.message : (locale === 'fr' ? 'Résultat du test indéterminé. Consultez les logs.' : 'Test result is inconclusive. Check the logs.'));
@@ -381,6 +521,7 @@ function Popup() {
     const messages = automationMessages.map(text => text.trim());
     const amount = Number(interval);
     if (messages.length === 0 || messages.some(text => !text)) { setStatus(t('sequenceEmpty')); return; }
+    if (messages.reduce((total, text) => total + text.length, 0) > MAX_TOTAL_MESSAGE_LENGTH) { setStatus(locale === 'fr' ? 'La séquence dépasse la limite totale de 1 000 000 caractères.' : 'The sequence exceeds the 1,000,000-character total limit.'); return; }
     for (let index = 0; index < messages.length; index++) {
       const unknown = validateTemplateVariables(messages[index]!, variables, 'automation');
       if (unknown.length > 0) { setStatus(locale === 'fr' ? `Message ${index + 1} : variable(s) inconnue(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.` : `Message ${index + 1}: unknown variable(s) ${unknown.map(name => `{{${name}}}`).join(', ')}. Create them on the Variables page.`); setPage('variables'); return; }
@@ -392,12 +533,19 @@ function Popup() {
     if (timeWindowEnabled && startTime === endTime) { setStatus(t('invalidTimeWindow')); return; }
     try {
       const tab = await activeTab();
-      await persistSettings();
-      const response = await browser.tabs.sendMessage(tab.id!, {
-        type: 'CHAT_AUTOMATION_START', messages, variables,
+      if (!await ensureSiteAccess(tab)) return;
+      const payload = {
+        type: 'CHAT_AUTOMATION_START' as const, messages, variables,
         intervalMs: Math.round(amount * (unit === 'minutes' ? 60_000 : 1_000)),
-        repeatMode: Number(repeatCount) === 0 ? 'infinite' : 'finite', repeatCount: Number(repeatCount), timeWindowEnabled, startTime, endTime,
-      });
+        repeatMode: Number(repeatCount) === 0 ? 'infinite' as const : 'finite' as const,
+        repeatCount: Number(repeatCount), timeWindowEnabled, startTime, endTime,
+      };
+      if (!isValidAutomationStartMessage(payload)) {
+        setStatus(locale === 'fr' ? 'Paramètres invalides : vérifiez le nombre, la taille et la fréquence des messages ainsi que le créneau horaire.' : 'Invalid settings: check message count, message size, interval and time window.');
+        return;
+      }
+      if (!await persistSettings()) return;
+      const response = await browser.tabs.sendMessage(tab.id!, payload);
       setStatus(typeof response?.message === 'string' ? response.message : t('automationStarted'));
       await refreshLogs();
     } catch (error) {
@@ -435,11 +583,37 @@ function Popup() {
     }
   }
 
+  async function clearLogs() {
+    if (!window.confirm(t('confirmClearLogs'))) return;
+    try {
+      const response = await browser.runtime.sendMessage({ type: 'CHAT_LOGS_CLEAR' });
+      if (response?.ok !== true) throw new Error('Background refused log deletion');
+      setLogs([]);
+      setStatus(t('logsCleared'));
+    } catch (error) {
+      console.error('[Chat Automation] Effacement des journaux échoué.', error);
+      setStatus(t('logsClearError'));
+    }
+  }
+
   async function exportLogs() {
-    const data = await browser.storage.local.get('chatAutomationLogs');
-    const blob = new Blob([JSON.stringify(data.chatAutomationLogs ?? [], null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'chat-automation-logs.json'; anchor.click(); URL.revokeObjectURL(url);
+    let url: string | undefined;
+    try {
+      const data = await browser.storage.local.get('chatAutomationLogs');
+      const entries = Array.isArray(data.chatAutomationLogs) ? data.chatAutomationLogs.filter(isValidDiagnosticEvent) : [];
+      const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+      url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'chat-automation-logs.json';
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url!), 1000);
+      setStatus(locale === 'fr' ? 'Export des journaux lancé.' : 'Log export started.');
+    } catch (error) {
+      if (url) URL.revokeObjectURL(url);
+      console.error('[Chat Automation] Export des journaux échoué.', error);
+      setStatus(locale === 'fr' ? 'Impossible d’exporter les journaux.' : 'Could not export logs.');
+    }
   }
 
   return <main className={`popup-shell ${page === 'automation' ? 'automation-view' : ''} ${page === 'variables' ? 'variables-view' : ''} ${page === 'history' ? 'history-view' : ''} ${page === 'logs' ? 'logs-view' : ''}`}>
@@ -452,6 +626,10 @@ function Popup() {
     </nav>
 
     <div className="popup-content">
+      <section className="site-access-control" aria-label={locale === 'fr' ? 'Accès au site' : 'Site access'}>
+        <button type="button" className="secondary" onClick={() => void enableActiveSite()}>{locale === 'fr' ? 'Activer sur ce site' : 'Enable on this site'}</button>
+        {siteAccessStatus ? <p className="status" role="status">{siteAccessStatus}</p> : null}
+      </section>
     {page === 'automation' ? strategyReady === null ? <>
       <div className="page-heading"><h2>{t('automation')}</h2><p>{t('checkingStrategy')}</p></div>
       <p className="empty">{t('loadingSiteConfig')}</p>
@@ -526,7 +704,7 @@ function Popup() {
       </section>
     </> : page === 'history' ? <>
       <div className="page-heading"><h2>{t('conversationHistory')}</h2><p>{t('historyIntro')}</p></div>
-      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><button className="secondary" onClick={() => void refreshHistory()}>{t('refresh')}</button></div>
+      <div className="history-toolbar"><span className="history-origin">{historyConversationId || t('noConversation')}</span><div className="history-actions"><button className="secondary" onClick={() => void refreshHistory()}>{t('refresh')}</button><button className="secondary danger-action" disabled={!historyOrigin} onClick={() => void clearSiteHistory()}>{t('clearSiteHistory')}</button></div></div>
       {historyError ? <p className="notice">{historyError}</p> : historyMessages.length === 0 ? <p className="empty history-empty">{t('noCapturedMessages')}</p> : <div className="history-list">{historyMessages.map(item => <article className={`history-message role-${item.role} status-${item.status}`} key={item.id}>
         <div className="history-message-head"><strong>{item.role === 'user' ? t('you') : item.role === 'assistant' ? 'Assistant' : item.role === 'system' ? t('system') : t('unknownAuthor')}</strong><span>{new Date(item.firstSeenAt).toLocaleString()}</span><em>{item.status === 'streaming' ? t('inProgress') : item.status === 'incomplete' ? t('interrupted') : t('completed')}</em></div>
         <p>{item.content}</p>{item.contentTruncated ? <small className="history-truncated">{t('truncated')}</small> : null}
@@ -537,7 +715,7 @@ function Popup() {
     {page === 'logs' ? <>
       <div className="page-heading"><h2>{t('eventLog')}</h2><p>{t('logIntro')}</p></div>
       <section className="logs-section logs-page-section">
-        <div className="section-head"><h2>{t('recentEvents')}</h2><button className="secondary" onClick={() => void refreshLogs()}>Actualiser</button></div>
+        <div className="section-head"><h2>{t('recentEvents')}</h2><div className="logs-actions"><button className="secondary" onClick={() => void refreshLogs()}>{t('refresh')}</button><button className="secondary danger-action" onClick={() => void clearLogs()}>{t('clearLogs')}</button></div></div>
         <div className="logs">{logs.length === 0 ? <p className="empty">{t('noEvents')}</p> : logs.map((log, index) => <article key={`${log.timestamp}-${index}`}><strong>{log.level}</strong><span>{new Date(log.timestamp).toLocaleString()} · {log.site}</span><p>{log.event}{log.details ? ` — ${log.details}` : ''}</p></article>)}</div>
       </section>
       <p className="notice">{t('logNotice')}</p>

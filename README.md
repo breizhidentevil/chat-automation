@@ -39,7 +39,7 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22 or newer (required by the current build toolchain)
 - npm
 
 ## Development
@@ -83,9 +83,9 @@ If the documentation link is temporarily unavailable, check the [workflow runs](
 - The active chat tab must remain open during automation; reloading or closing it interrupts the running sequence.
 - DOM-based confirmation indicates that a matching message appeared in the page. It does not prove server-side delivery.
 - Site markup and browser restrictions affect detection and compatibility. Test each target site and browser before relying on an automation.
-- The extension requests broad website access so its content script can work on ordinary web pages. Browser-internal and protected pages remain unavailable.
+- Website access is requested per site: open the target page and use **Enable on this site** in the extension popup, then approve the browser permission prompt. Access is limited to the site origin you enabled; browser-internal and protected pages remain unavailable. Previously granted site permissions can be reviewed in the browser's extension settings.
 - History and logs may contain conversation text or diagnostic details. Review exported JSON before sharing it.
-- The repository currently does not include a comprehensive automated test suite or a cross-browser integration test matrix.
+- The repository includes unit tests for selected logic, run by `npm test` and enforced in CI. It does not yet include a comprehensive end-to-end suite or a cross-browser integration test matrix.
 
 ## License
 

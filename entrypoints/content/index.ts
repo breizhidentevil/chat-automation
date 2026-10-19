@@ -3,32 +3,72 @@ import { logEvent } from '../../lib/logger';
 import { getProcedure, saveProcedure } from '../../lib/procedures';
 import type { Candidate, ChatSiteProcedure } from '../../lib/contracts';
 import { markInterruptedMessagesIncomplete, readConversationHistory, upsertConversationMessage, type ConversationMessage, type ConversationRole } from '../../lib/history';
-import { resolveMessageTemplate, type VariableDefinition } from '../../lib/variables';
+import { filterValidVariableDefinitions, resolveMessageTemplate, type VariableDefinition } from '../../lib/variables';
 import type { DiagnosticEvent } from '../../lib/contracts';
+import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
+import { isValidAutomationStartMessage } from '../../lib/automation-validation';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
+  registration: 'runtime',
   runAt: 'document_idle',
   main() {
     void startConversationHistoryObserver();
     browser.runtime.onMessage.addListener(async (message: unknown) => {
       if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
+      if (message.type === 'CHAT_AUTOMATION_PING') {
+        if (siteAccessRevoked) {
+          siteAccessRevoked = false;
+          void startConversationHistoryObserver();
+        }
+        return { ready: true, origin: location.origin };
+      }
+      if (message.type === 'CHAT_HISTORY_CLEARED' && 'origin' in message && message.origin === location.origin) {
+        // Keep already-visible content from being re-persisted after a user clears
+        // this site's history. If a node's content changes later, treat it as new.
+        historyKnownEntries = [];
+        historyClaimedExisting = new Set<string>();
+        // Snapshot every current element, not just candidates recognized by the
+        // current site-specific heuristics. A later scan must not reclassify an
+        // already-visible legacy DOM block as a newly captured message.
+        historyClearedExistingElements = new WeakMap<HTMLElement, boolean>();
+        for (const element of Array.from(document.querySelectorAll<HTMLElement>('*'))) {
+          historyClearedExistingElements.set(element, true);
+        }
+        for (const candidate of historyMessageCandidates()) {
+          historyClearedContent.set(candidate.element, candidate.content);
+        }
+        return { ok: true };
+      }
+      if (message.type === 'CHAT_AUTOMATION_PERMISSION_REVOKED') {
+        siteAccessRevoked = true;
+        stopAutomation('stopped', 'Accès au site révoqué : automatisation et capture de l’historique arrêtées.');
+        historyObserver?.disconnect();
+        historyObserver = undefined;
+        if (historyPollTimer !== undefined) window.clearInterval(historyPollTimer);
+        historyPollTimer = undefined;
+        if (historyScanTimer !== undefined) window.clearTimeout(historyScanTimer);
+        historyScanTimer = undefined;
+        return { ok: true };
+      }
       if (message.type === 'CHAT_AUTOMATION_STOP') {
         stopAutomation();
         return { message: 'Automatisation arrêtée.' };
       }
       if (message.type === 'CHAT_AUTOMATION_VALIDATE') {
+        if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant de valider une stratégie.', validated: false };
         if (!('text' in message) || typeof message.text !== 'string' || !message.text.trim()) return { message: 'Saisissez le message de test. Aucun changement n’a été effectué.' };
         return validateAndSaveStrategy(message.text);
       }
       if (message.type === 'CHAT_AUTOMATION_START') {
-        if (!('messages' in message) || !Array.isArray(message.messages) || message.messages.length === 0 || !message.messages.every((item: unknown) => typeof item === 'string' && item.trim().length > 0) || !('intervalMs' in message) || typeof message.intervalMs !== 'number' || message.intervalMs < 1000 || !('repeatMode' in message) || !['infinite', 'finite'].includes(String(message.repeatMode)) || !('repeatCount' in message) || typeof message.repeatCount !== 'number' || !('startTime' in message) || typeof message.startTime !== 'string' || !('endTime' in message) || typeof message.endTime !== 'string' || !('timeWindowEnabled' in message) || typeof message.timeWindowEnabled !== 'boolean') {
+        if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant de démarrer.', success: false };
+        if (!isValidAutomationStartMessage(message)) {
           return { message: 'Paramètres d’automatisation invalides.' };
         }
         const procedure = await getProcedure(location.origin);
         if (!procedure) return { message: 'Aucune stratégie validée n’est enregistrée pour ce site. Allez dans Détection et validez une stratégie avant de démarrer.' };
-        const variables = 'variables' in message && Array.isArray(message.variables) ? message.variables as VariableDefinition[] : [];
-        startAutomation({ messages: (message.messages as string[]).map(item => item.trim()), variables, intervalMs: message.intervalMs, repeatMode: message.repeatMode as 'infinite' | 'finite', repeatCount: message.repeatCount, timeWindowEnabled: message.timeWindowEnabled, startTime: message.startTime, endTime: message.endTime });
+        const variables = filterValidVariableDefinitions('variables' in message ? message.variables : []);
+        startAutomation({ messages: message.messages.map(item => item.trim()), variables, intervalMs: message.intervalMs, repeatMode: message.repeatMode, repeatCount: message.repeatCount, timeWindowEnabled: message.timeWindowEnabled, startTime: message.startTime, endTime: message.endTime });
         return { message: `Automatisation démarrée avec ${message.messages.length} message(s) par séquence et la stratégie enregistrée « ${procedure.sendStrategy.method} ». Gardez la page ouverte.` };
       }
       if ((message.type !== 'CHAT_AUTOMATION_SEND' && message.type !== 'CHAT_AUTOMATION_TICK') || !('text' in message) || typeof message.text !== 'string') return undefined;
@@ -42,6 +82,7 @@ async function sendText(
   options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
 ): Promise<{ message: string; success: boolean }> {
   const text = rawText.trim();
+  if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant tout envoi.', success: false };
   if (!text) return { message: 'Le message est vide.', success: false };
   const origin = location.origin;
   await logEvent(origin, 'INFO', 'send-request-received');
@@ -89,6 +130,9 @@ async function sendText(
   const baselineMatches = getMatchingMessageElements(text);
   try {
     await insertText(chosen, text);
+    if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+      return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+    }
     await logEvent(origin, 'INFO', 'text-inserted', `element=${chosen.tagName.toLowerCase()}; selector=${procedure?.inputSelector ?? stableSelector(chosen)}`);
   } catch (error) {
     await logEvent(origin, 'ERROR', 'text-insertion-failed', error instanceof Error ? error.message : 'unknown error');
@@ -156,6 +200,7 @@ async function sendText(
 
 async function validateAndSaveStrategy(rawText: string): Promise<{ message: string; validated?: boolean }> {
   const text = rawText.trim();
+  if (siteAccessRevoked) return { message: 'Accès au site révoqué : réactivez le site avant de valider une stratégie.', validated: false };
   const origin = location.origin;
   await logEvent(origin, 'INFO', 'strategy-validation-started', 'Le test va envoyer le texte saisi dans le chat.');
 
@@ -190,7 +235,9 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
   // Do not select the send button before typing: many chat apps keep it
   // disabled/absent until their framework has processed the new text.
   await waitForUiUpdate();
+  if (siteAccessRevoked) return { message: 'Validation annulée car l’accès au site a été révoqué.', validated: false };
   const button = await waitForEnabledSendButton(input, 1800);
+  if (siteAccessRevoked) return { message: 'Validation annulée car l’accès au site a été révoqué.', validated: false };
   if (button) {
     const buttonSelector = stableSelector(button);
     strategy = { method: 'button', selector: buttonSelector, confidence: 1 };
@@ -404,6 +451,8 @@ const HISTORY_MESSAGE_SELECTORS = [
   'article', '[role="listitem"]',
 ].join(',');
 
+const historyClearedContent = new WeakMap<HTMLElement, string>();
+let historyClearedExistingElements = new WeakMap<HTMLElement, boolean>();
 const historyElementIds = new WeakMap<HTMLElement, string>();
 const historyFirstSeen = new WeakMap<HTMLElement, number>();
 const historyLastContent = new WeakMap<HTMLElement, string>();
@@ -411,6 +460,8 @@ const historyLastChanged = new WeakMap<HTMLElement, number>();
 const historyElementRoles = new WeakMap<HTMLElement, ConversationRole>();
 let historyScanTimer: number | undefined;
 let historyObserver: MutationObserver | undefined;
+let historyPollTimer: number | undefined;
+let siteAccessRevoked = false;
 let historyScanBusy = false;
 let historyClaimedExisting = new Set<string>();
 let historyKnownEntries: ConversationMessage[] = [];
@@ -536,11 +587,14 @@ async function startConversationHistoryObserver(): Promise<void> {
   } catch (error) {
     console.warn('[Chat Automation] Initialisation de l’historique impossible', error);
   }
+  if (siteAccessRevoked) return;
   historyObserver?.disconnect();
+  if (historyPollTimer !== undefined) window.clearInterval(historyPollTimer);
   historyObserver = new MutationObserver(() => scheduleHistoryScan());
   historyObserver.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['data-message-author-role', 'data-author', 'data-role', 'data-testid', 'aria-label', 'class'] });
   scanConversationHistory();
-  window.setInterval(() => {
+  historyPollTimer = window.setInterval(() => {
+    if (siteAccessRevoked) return;
     if (historyLastRoute !== `${location.pathname}${location.search}${location.hash}`) {
       historyLastRoute = `${location.pathname}${location.search}${location.hash}`;
       historyClaimedExisting = new Set<string>();
@@ -552,11 +606,13 @@ async function startConversationHistoryObserver(): Promise<void> {
 }
 
 function scheduleHistoryScan(): void {
+  if (siteAccessRevoked) return;
   if (historyScanTimer !== undefined) window.clearTimeout(historyScanTimer);
   historyScanTimer = window.setTimeout(() => { scanConversationHistory(); }, 300);
 }
 
 function scanConversationHistory(): void {
+  if (siteAccessRevoked) return;
   if (historyScanBusy || !document.body) return;
   historyScanBusy = true;
   try {
@@ -576,6 +632,17 @@ function scanConversationHistory(): void {
 
     for (const candidate of candidates) {
       const { element, role, content } = candidate;
+      const contentAtClear = historyClearedContent.get(element);
+      if (contentAtClear !== undefined) {
+        if (content === contentAtClear) continue;
+        historyClearedContent.delete(element);
+        historyClearedExistingElements.set(element, false);
+        historyElementIds.delete(element);
+        historyFirstSeen.delete(element);
+        historyLastContent.delete(element);
+        historyElementRoles.delete(element);
+      }
+      if (historyClearedExistingElements.get(element) === true) continue;
       let id = historyElementIds.get(element);
       if (!id) {
         const reusable = historyKnownEntries.find(entry =>
@@ -737,7 +804,7 @@ async function buildDynamicVariableData(config: AutomationConfig, timestamp: Dat
   const messages = chronological.map(toRecord);
   const sent = messages.filter(message => message.direction === 'sent').map((message, index) => ({ ...message, index }));
   const received = messages.filter(message => message.direction === 'received').map((message, index) => ({ ...message, index }));
-  const logs = (Array.isArray(storage.chatAutomationLogs) ? storage.chatAutomationLogs as DiagnosticEvent[] : [])
+  const logs = (Array.isArray(storage.chatAutomationLogs) ? storage.chatAutomationLogs.filter(isValidDiagnosticEvent) : [])
     .filter(item => item.site === origin)
     .map((item, index) => ({ ...item, index, message: item.details ?? item.event, timestamp: new Date(item.timestamp).toISOString() }));
   const dataStore = storage.chatAutomationData && typeof storage.chatAutomationData === 'object'
