@@ -44,10 +44,10 @@ export default defineContentScript({
           (message.repeatMode === 'infinite' && message.repeatCount !== 0) ||
           !('startTime' in message) ||
           typeof message.startTime !== 'string' ||
-          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(message.startTime) ||
+          !/^([01]\d|2[0-3]):[0-5]\d$/.test(message.startTime) ||
           !('endTime' in message) ||
           typeof message.endTime !== 'string' ||
-          !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(message.endTime) ||
+          !/^([01]\d|2[0-3]):[0-5]\d$/.test(message.endTime) ||
           !('timeWindowEnabled' in message) ||
           typeof message.timeWindowEnabled !== 'boolean' ||
           (message.timeWindowEnabled && message.startTime === message.endTime)
