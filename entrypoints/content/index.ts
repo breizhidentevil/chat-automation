@@ -28,6 +28,13 @@ export default defineContentScript({
         // this site's history. If a node's content changes later, treat it as new.
         historyKnownEntries = [];
         historyClaimedExisting = new Set<string>();
+        // Snapshot every current element, not just candidates recognized by the
+        // current site-specific heuristics. A later scan must not reclassify an
+        // already-visible legacy DOM block as a newly captured message.
+        historyClearedExistingElements = new WeakMap<HTMLElement, boolean>();
+        for (const element of Array.from(document.querySelectorAll<HTMLElement>('*'))) {
+          historyClearedExistingElements.set(element, true);
+        }
         for (const candidate of historyMessageCandidates()) {
           historyClearedContent.set(candidate.element, candidate.content);
         }
@@ -445,6 +452,7 @@ const HISTORY_MESSAGE_SELECTORS = [
 ].join(',');
 
 const historyClearedContent = new WeakMap<HTMLElement, string>();
+let historyClearedExistingElements = new WeakMap<HTMLElement, boolean>();
 const historyElementIds = new WeakMap<HTMLElement, string>();
 const historyFirstSeen = new WeakMap<HTMLElement, number>();
 const historyLastContent = new WeakMap<HTMLElement, string>();
@@ -590,6 +598,8 @@ async function startConversationHistoryObserver(): Promise<void> {
     if (historyLastRoute !== `${location.pathname}${location.search}${location.hash}`) {
       historyLastRoute = `${location.pathname}${location.search}${location.hash}`;
       historyClaimedExisting = new Set<string>();
+      // A route change starts a new conversation context; establish a fresh DOM baseline.
+      historyClearedExistingElements = new WeakMap<HTMLElement, boolean>();
       void readConversationHistory(location.origin).then(items => { historyKnownEntries = items; scanConversationHistory(); });
     } else {
       scanConversationHistory();
@@ -628,11 +638,13 @@ function scanConversationHistory(): void {
       if (contentAtClear !== undefined) {
         if (content === contentAtClear) continue;
         historyClearedContent.delete(element);
+        historyClearedExistingElements.set(element, false);
         historyElementIds.delete(element);
         historyFirstSeen.delete(element);
         historyLastContent.delete(element);
         historyElementRoles.delete(element);
       }
+      if (historyClearedExistingElements.get(element) === true) continue;
       let id = historyElementIds.get(element);
       if (!id) {
         const reusable = historyKnownEntries.find(entry =>
