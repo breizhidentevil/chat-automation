@@ -29,7 +29,7 @@ export const VARIABLES_STORAGE_KEY = 'chatAutomationVariables';
 export const VARIABLE_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
 
 const MAX_VARIABLE_ID_LENGTH = 256;
-const MAX_VARIABLE_VALUE_LENGTH = 100_000;
+export const MAX_VARIABLE_VALUE_LENGTH = 100_000;
 
 export function isValidVariableDefinition(value: unknown): value is VariableDefinition {
   if (!value || typeof value !== 'object') return false;
