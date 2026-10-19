@@ -167,3 +167,14 @@ test('resolves nested custom object paths and reports them as known variables', 
   );
   assert.equal(result.text, 'Bonjour Alex, ville : Nantes');
 });
+
+
+test('supports Liquid default values and standard string filters', async () => {
+  const result = await resolveMessageTemplate(
+    '{{prenom | default: "Client"}} / {{nom | upcase}} / {{ ville | strip | downcase }}',
+    [variable('nom', 'dupont'), variable('ville', ' Nantes ')],
+    context,
+  );
+  assert.equal(result.text, 'Client / DUPONT / nantes');
+  assert.deepEqual(result.variablesUsed, ['prenom', 'nom', 'ville']);
+});
