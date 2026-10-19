@@ -10,22 +10,21 @@ const logsHook = await readFile(new URL('../entrypoints/popup/hooks/useLogs.ts',
 const siteAccessService = await readFile(new URL('../services/site-access.ts', import.meta.url), 'utf8');
 const requireBackgroundSource = await readFile(new URL('../entrypoints/background.ts', import.meta.url), 'utf8');
 
-test('does not request mandatory access to every website', () => {
-  assert.doesNotMatch(config, /host_permissions:\s*\[['"]<all_urls>['"]\]/);
-  assert.match(config, /optional_host_permissions:\s*\[['"]http:\/\/\*\/\*['"],\s*['"]https:\/\/\*\/\*['"]\]/);
-  assert.match(config, /delete manifest\.host_permissions/);
+test('declares broad HTTP and HTTPS host access in the manifest', () => {
+  assert.match(config, /host_permissions:\s*\[['"]http:\/\/\*\/\*['"],\s*['"]https:\/\/\*\/\*['"]\]/);
+  assert.doesNotMatch(config, /optional_host_permissions/);
+  assert.doesNotMatch(config, /delete manifest\.host_permissions/);
 });
 
-test('registers the page script dynamically only after per-site permission', () => {
-  assert.match(contentScript, /registration:\s*['"]runtime['"]/);
-  assert.match(contentScript, /matches:\s*\[['"]<all_urls>['"]\]/);
-  assert.match(siteAccessService, /browser\.permissions\.request\(\{ origins: \[pattern\] \}\)/);
-  assert.match(siteAccessService, /browser\.scripting\.registerContentScripts/);
-  assert.match(siteAccessService, /contentScriptIdForOrigin\(origin\)/);
-  assert.match(siteAccessService, /const legacyId = 'chat-automation-' \+ origin\.replace/);
-  assert.match(siteAccessService, /browser\.scripting\.unregisterContentScripts\(\{ ids: \[legacyId\] \}\)/);
-  assert.match(siteAccessService, /files: \[['"]\/?content-scripts\/content\.js['"]\]/);
-  assert.match(popup, /t\('enableOnSite'\)/);
+test('registers one persistent content script for all HTTP and HTTPS sites without a prompt', () => {
+  assert.match(config, /host_permissions:\s*\[['"]http:\/\/\*\/\*['"],\s*['"]https:\/\/\*\/\*['"]\]/);
+  assert.match(requireBackgroundSource, /CONTENT_SCRIPT_ID = 'chat-automation-all-sites'/);
+  assert.match(requireBackgroundSource, /CONTENT_SCRIPT_MATCHES = \['http:\/\/\*\/\*', 'https:\/\/\*\/\*'\]/);
+  assert.match(requireBackgroundSource, /browser\.scripting\.registerContentScripts/);
+  assert.match(requireBackgroundSource, /browser\.runtime\.onStartup\.addListener/);
+  assert.doesNotMatch(siteAccessService, /browser\.permissions\.request/);
+  assert.doesNotMatch(siteAccessService, /browser\.scripting\.registerContentScripts/);
+  assert.doesNotMatch(popup, /enableOnSite|enableActiveSite|siteAccessStatus/);
 });
 
 test('unregisters dynamically registered scripts when site access is revoked', () => {
