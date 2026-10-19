@@ -429,6 +429,14 @@ function Popup() {
     }
 
     const id = contentScriptIdForOrigin(origin);
+    // Remove registrations created by older versions before switching to hashed IDs.
+    const legacyId = 'chat-automation-' + origin.replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (legacyId !== id) {
+      const legacy = await browser.scripting.getRegisteredContentScripts({ ids: [legacyId] });
+      if (legacy.some(script => script.matches?.includes(pattern))) {
+        await browser.scripting.unregisterContentScripts({ ids: [legacyId] });
+      }
+    }
     const registered = await browser.scripting.getRegisteredContentScripts({ ids: [id] });
     if (registered.length === 0) {
       await browser.scripting.registerContentScripts([{
