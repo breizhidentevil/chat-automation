@@ -36,3 +36,8 @@ test('checks npm and GitHub Actions dependencies weekly with Dependabot', () => 
 test('audits npm dependencies for high-severity vulnerabilities in CI', () => {
   assert.match(workflow, /name: Audit npm dependencies for high-severity vulnerabilities\s+run: npm audit --audit-level=high/);
 });
+
+
+test('uses a supported Node.js version for the build toolchain', () => {
+  assert.match(workflow, /node-version:\s*22\s*$/m);
+});

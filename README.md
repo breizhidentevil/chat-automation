@@ -39,7 +39,7 @@ For detailed setup and usage instructions, see the **[documentation website](htt
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22 or newer (required by the current build toolchain)
 - npm
 
 ## Development
