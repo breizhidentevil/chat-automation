@@ -121,12 +121,12 @@ test('variable validation rejects malformed, oversized and duplicate persisted d
   assert.deepEqual(
     filterValidVariableDefinitions([
       valid,
-      { ...valid, id: 'duplicate-id', name: 'second' },
+      { ...valid, id: valid.id, name: 'second' },
       { ...valid, id: 'second-id' },
       { ...valid, id: 'bad-scope', scope: 'other' },
       null,
     ]).map(item => item.id),
-    ['first'],
+    ['automation:first'],
   );
 });
 
