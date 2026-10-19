@@ -12,7 +12,6 @@ import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
-
 import { loadVisibleHistory } from '../../services/history-service';
 import { loadRecentLogs } from '../../services/logs-service';
 import TemplateTextarea from './components/TemplateTextarea';
@@ -70,7 +69,6 @@ function Popup() {
   const { message, setMessage, automationMessages, setAutomationMessages, interval, setIntervalValue, unit, setUnit, repeatCount, setRepeatCount, timeWindowEnabled, setTimeWindowEnabled, startTime, setStartTime, endTime, setEndTime, persistSettings } = useAutomationSettings(
     () => setStatus(t('settingsReadError')),
     () => setStatus(t('settingsSaveError')),
-    t,
   );
   const { variables, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
 
