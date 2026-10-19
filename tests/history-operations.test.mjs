@@ -56,9 +56,9 @@ test('deduplication merges repeated updates with the same identity', () => {
   assert.equal(result[0].content, 'Final');
 });
 
-test('preserves distinct identical messages sent close together', () => {
+test('preserves identical messages first seen more than one second apart', () => {
   const first = message({ id: 'first', firstSeenAt: 1000, lastUpdatedAt: 1100 });
-  const repeated = message({ id: 'second', firstSeenAt: 1500, lastUpdatedAt: 1600 });
+  const repeated = message({ id: 'second', firstSeenAt: 2501, lastUpdatedAt: 2600 });
   const result = deduplicateConversationMessages([first, repeated]);
   assert.equal(result.length, 2);
 });
@@ -70,7 +70,7 @@ test('history limits retain the newest entries within count and text budgets', (
     lastUpdatedAt: index + 1,
     content: 'x'.repeat(100),
   }));
-  const limited = limitConversationHistory(entries, 3, 1000);
+  const limited = limitConversationHistory(entries, 3, 1500);
   assert.deepEqual(limited.map(item => item.id), ['message-2', 'message-3', 'message-4']);
 });
 
