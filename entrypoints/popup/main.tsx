@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
@@ -14,14 +14,12 @@ import HistoryPage from './pages/HistoryPage';
 import LogsPage from './pages/LogsPage';
 import VariablesPage from './pages/VariablesPage';
 import AutomationPage from './pages/AutomationPage';
-import { usePagePolling } from './hooks/usePagePolling';
 import { useRuntimeStatus, type RuntimeStatus } from './hooks/useRuntimeStatus';
 import { useVariables } from './hooks/useVariables';
 import { useAutomationSettings } from './hooks/useAutomationSettings';
 import { useHistory } from './hooks/useHistory';
 import { useLogs } from './hooks/useLogs';
 
-type LogEntry = import('../../lib/contracts').DiagnosticEvent;
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
 
 
