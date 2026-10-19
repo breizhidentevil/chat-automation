@@ -4,7 +4,7 @@ import './style.css';
 import { isValidChatSiteProcedure } from '../../lib/procedure-validation';
 import { LOCALE_STORAGE_KEY, preferredLocale, translate, type Locale } from '../../lib/i18n';
 import { ensureSiteAccessForTab } from '../../services/site-access';
-import { simulateAutomation, type SimulationResult } from '../../lib/simulator';
+
 import { addMessage, moveMessage, removeMessage, updateMessage } from '../../lib/message-sequence';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../lib/automation-config';
 import { previewMessageTemplate, type TemplatePreviewResult } from '../../lib/template-preview';
@@ -19,15 +19,11 @@ import { useVariables } from './hooks/useVariables';
 import { useAutomationSettings } from './hooks/useAutomationSettings';
 import { useHistory } from './hooks/useHistory';
 import { useLogs } from './hooks/useLogs';
+import { useSimulation } from './hooks/useSimulation';
 
 type Page = 'automation' | 'variables' | 'history' | 'logs' | 'simulator';
 
 
-
-function toLocalDateTimeInput(date: Date): string {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
 
 function Popup() {
   const [locale, setLocale] = useState<Locale>(preferredLocale(typeof navigator !== 'undefined' ? navigator.language : 'fr'));
@@ -44,20 +40,15 @@ function Popup() {
   const [variablePreviewText, setVariablePreviewText] = useState('Bonjour {{prenom}}');
   const [variablePreviewResult, setVariablePreviewResult] = useState<TemplatePreviewResult | null>(null);
   const [variablePreviewError, setVariablePreviewError] = useState('');
-  const [simulationContext, setSimulationContext] = useState(`{
-  "chat": { "session": { "title": "Conversation de test", "url": "https://example.test/chat" } },
-  "data": { "ticket": "A-123", "items": [{ "name": "Exemple", "value": "123" }] }
-}`);
-  const [simulationStartAt, setSimulationStartAt] = useState(() => toLocalDateTimeInput(new Date()));
-  const [simulationCycles, setSimulationCycles] = useState('2');
-  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
-  const [simulationError, setSimulationError] = useState('');
   const { runtimeStatus, clockNow } = useRuntimeStatus(() => setStatus(t('automationStatusReadError')));
   const { message, setMessage, automationMessages, setAutomationMessages, interval, setIntervalValue, unit, setUnit, repeatCount, setRepeatCount, timeWindowEnabled, setTimeWindowEnabled, startTime, setStartTime, endTime, setEndTime, persistSettings } = useAutomationSettings(
     () => setStatus(t('settingsReadError')),
     () => setStatus(t('settingsSaveError')),
   );
   const { variables, variableName, setVariableName, variableValue, setVariableValue, variableScope, setVariableScope, editingVariableId, variableError, saveVariable, editVariable, deleteVariable, cancelEditing } = useVariables({ t, locale, onSaved: name => setStatus(t('testSaved', { name })) });
+  const { simulationContext, setSimulationContext, simulationStartAt, setSimulationStartAt, simulationCycles, setSimulationCycles, simulationResult, simulationError, runSimulation } = useSimulation({
+    automationMessages, variables, interval, unit, timeWindowEnabled, startTime, endTime, t,
+  });
   const { historyMessages, historyOrigin, historyConversationId, historyError, refreshHistory, clearSiteHistory, exportHistory } = useHistory({
     enabled: page === 'history',
     t,
@@ -177,52 +168,6 @@ function Popup() {
 
   function moveAutomationMessage(from: number, to: number) {
     setAutomationMessages(current => moveMessage(current, from, to));
-  }
-
-  async function runSimulation() {
-    setSimulationError('');
-    setSimulationResult(null);
-    const messages = automationMessages.map(item => item.trim());
-    if (!messages.length || messages.some(item => !item)) {
-      setSimulationError(t('sequenceEmpty'));
-      return;
-    }
-    let dynamicData: Record<string, unknown>;
-    try {
-      const parsed: unknown = JSON.parse(simulationContext);
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(t('simulationContextInvalid'));
-      dynamicData = parsed as Record<string, unknown>;
-    } catch (error) {
-      setSimulationError(error instanceof Error ? error.message : t('simulationContextInvalid'));
-      return;
-    }
-    const cycleCount = Number(simulationCycles);
-    const intervalAmount = Number(interval);
-    const startAt = new Date(simulationStartAt);
-    if (!Number.isSafeInteger(cycleCount) || cycleCount < 1 || cycleCount > 10) {
-      setSimulationError(t('simulationCycleLimit'));
-      return;
-    }
-    if (!Number.isFinite(intervalAmount) || intervalAmount <= 0 || !Number.isFinite(startAt.getTime())) {
-      setSimulationError(t('simulationInvalidSettings'));
-      return;
-    }
-    try {
-      const result = await simulateAutomation({
-        messages,
-        variables,
-        intervalMs: Math.round(intervalAmount * (unit === 'minutes' ? 60_000 : 1_000)),
-        repeatCount: cycleCount,
-        startAt,
-        timeWindowEnabled,
-        startTime,
-        endTime,
-        dynamicData,
-      });
-      setSimulationResult(result);
-    } catch (error) {
-      setSimulationError(error instanceof Error ? error.message : t('simulationFailedGeneric'));
-    }
   }
 
   async function startAutomation() {
