@@ -177,8 +177,6 @@ function Popup() {
       variables={variables}
       validateStrategy={() => void validateStrategy()}
       status={status}
-      siteAccessStatus={siteAccessStatus}
-      enableActiveSite={() => void enableActiveSite()}
       automationMessages={automationMessages}
       draggingIndex={draggingIndex}
       setDraggingIndex={setDraggingIndex}
