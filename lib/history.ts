@@ -25,34 +25,13 @@ export const HISTORY_STORAGE_KEY = 'chatAutomationHistoryV1';
  * firstSeenAt timestamp.
  */
 export function deduplicateConversationMessages(messages: ConversationMessage[]): ConversationMessage[] {
-  const sorted = [...messages].sort((a, b) => a.firstSeenAt - b.firstSeenAt);
-  const result: ConversationMessage[] = [];
-  for (const message of sorted) {
-    const duplicateIndex = result.findIndex(existing =>
-      existing.origin === message.origin
-      && existing.conversationId === message.conversationId
-      && existing.role === message.role
-      && existing.content === message.content
-      && Math.abs(existing.firstSeenAt - message.firstSeenAt) <= 1000
-    );
-    if (duplicateIndex < 0) {
-      result.push(message);
-      continue;
-    }
-    const previous = result[duplicateIndex]!;
-    const statusRank = (status: ConversationMessageStatus) => status === 'complete' ? 2 : status === 'incomplete' ? 1 : 0;
-    const latest = message.lastUpdatedAt >= previous.lastUpdatedAt ? message : previous;
-    result[duplicateIndex] = {
-      ...previous,
-      ...latest,
-      id: previous.id,
-      firstSeenAt: Math.min(previous.firstSeenAt, message.firstSeenAt),
-      lastUpdatedAt: Math.max(previous.lastUpdatedAt, message.lastUpdatedAt),
-      status: statusRank(previous.status) >= statusRank(message.status) ? previous.status : message.status,
-      ...(previous.completedAt || message.completedAt ? { completedAt: Math.max(previous.completedAt ?? 0, message.completedAt ?? 0) } : {}),
-    };
+  const byIdentity = new Map<string, ConversationMessage>();
+  for (const message of messages) {
+    const key = `${message.origin}::${message.id}`;
+    const previous = byIdentity.get(key);
+    byIdentity.set(key, previous ? mergeConversationMessage(previous, message) : message);
   }
-  return result;
+  return [...byIdentity.values()].sort((a, b) => a.firstSeenAt - b.firstSeenAt);
 }
 
 const statusRank = (status: ConversationMessageStatus): number =>
