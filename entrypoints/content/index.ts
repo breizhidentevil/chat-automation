@@ -5,6 +5,7 @@ import type { Candidate, ChatSiteProcedure } from '../../lib/contracts';
 import { markInterruptedMessagesIncomplete, readConversationHistory, upsertConversationMessage, type ConversationMessage, type ConversationRole } from '../../lib/history';
 import { resolveMessageTemplate, type VariableDefinition } from '../../lib/variables';
 import type { DiagnosticEvent } from '../../lib/contracts';
+import { isValidDiagnosticEvent } from '../../lib/diagnostic-validation';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -737,7 +738,7 @@ async function buildDynamicVariableData(config: AutomationConfig, timestamp: Dat
   const messages = chronological.map(toRecord);
   const sent = messages.filter(message => message.direction === 'sent').map((message, index) => ({ ...message, index }));
   const received = messages.filter(message => message.direction === 'received').map((message, index) => ({ ...message, index }));
-  const logs = (Array.isArray(storage.chatAutomationLogs) ? storage.chatAutomationLogs as DiagnosticEvent[] : [])
+  const logs = (Array.isArray(storage.chatAutomationLogs) ? storage.chatAutomationLogs.filter(isValidDiagnosticEvent) : [])
     .filter(item => item.site === origin)
     .map((item, index) => ({ ...item, index, message: item.details ?? item.event, timestamp: new Date(item.timestamp).toISOString() }));
   const dataStore = storage.chatAutomationData && typeof storage.chatAutomationData === 'object'
