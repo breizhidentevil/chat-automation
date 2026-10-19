@@ -10,11 +10,13 @@ import { isValidAutomationStartMessage } from '../../lib/automation-validation';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
+  registration: 'runtime',
   runAt: 'document_idle',
   main() {
     void startConversationHistoryObserver();
     browser.runtime.onMessage.addListener(async (message: unknown) => {
       if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
+      if (message.type === 'CHAT_AUTOMATION_PING') return { ready: true, origin: location.origin };
       if (message.type === 'CHAT_AUTOMATION_STOP') {
         stopAutomation();
         return { message: 'Automatisation arrêtée.' };
