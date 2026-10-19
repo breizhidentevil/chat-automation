@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { isValidChatSiteProcedure } from '../../../lib/procedure-validation';
 import { buildAutomationStartPayload, validateAutomationConfig } from '../../../lib/automation-config';
 import { ensureSiteAccessForTab } from '../../../services/site-access';
+import { getSupportedSiteOrigin } from '../../../lib/site-origin';
 import type { VariableDefinition } from '../../../lib/variables';
 import type { Locale } from '../../../lib/i18n';
 import { translate } from '../../../lib/i18n';
@@ -38,14 +39,15 @@ export function useAutomationController({
 
   async function activeTab(): Promise<Browser.tabs.Tab> {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url || !/^https?:/.test(tab.url)) throw new Error(t('strategyUnavailable'));
+    if (tab?.id == null || !getSupportedSiteOrigin(tab.url)) throw new Error(t('strategyUnavailable'));
     return tab;
   }
 
   async function refreshStrategyStatus() {
     try {
       const tab = await activeTab();
-      const origin = new URL(tab.url!).origin;
+      const origin = getSupportedSiteOrigin(tab.url);
+      if (!origin) throw new Error(t('strategyUnavailable'));
       setStrategyOrigin(origin);
       const data = await browser.storage.local.get('chatAutomationProcedures');
       const procedures = data.chatAutomationProcedures;
