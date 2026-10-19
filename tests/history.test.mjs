@@ -9,7 +9,7 @@ const compiled = ts.transpile(source, {
   target: ts.ScriptTarget.ES2022,
 });
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
-const { deduplicateConversationMessages } = await import(moduleUrl);
+const { deduplicateConversationMessages, mergeConversationMessage, limitConversationHistory } = await import(moduleUrl);
 
 function message(overrides = {}) {
   return {
@@ -72,4 +72,39 @@ test('deduplication sorts output by first-seen timestamp', () => {
     message({ id: 'earlier', firstSeenAt: 1000 }),
   ]);
   assert.deepEqual(result.map(item => item.id), ['earlier', 'later']);
+});
+
+test('a late streaming update cannot downgrade a completed message', () => {
+  const completed = message({ status: 'complete', completedAt: 1800, lastUpdatedAt: 1800 });
+  const lateStreaming = message({ status: 'streaming', lastUpdatedAt: 2200, content: 'Hello, still updating' });
+  const result = mergeConversationMessage(completed, lateStreaming);
+  assert.equal(result.status, 'complete');
+  assert.equal(result.completedAt, 1800);
+  assert.equal(result.content, 'Hello, still updating');
+  assert.equal(result.lastUpdatedAt, 2200);
+});
+
+test('a completed update finalizes an incomplete message and records completion time', () => {
+  const incomplete = message({ status: 'incomplete', lastUpdatedAt: 1500 });
+  const completed = message({ status: 'complete', lastUpdatedAt: 2000, completedAt: 1900 });
+  const result = mergeConversationMessage(incomplete, completed);
+  assert.equal(result.status, 'complete');
+  assert.equal(result.completedAt, 1900);
+});
+
+test('history limits retain the newest entries and enforce the entry-count limit', () => {
+  const result = limitConversationHistory([
+    message({ id: 'old', firstSeenAt: 1 }),
+    message({ id: 'middle', firstSeenAt: 2 }),
+    message({ id: 'new', firstSeenAt: 3 }),
+  ], 2, 10000);
+  assert.deepEqual(result.map(item => item.id), ['middle', 'new']);
+});
+
+test('history limits retain the newest entry when it alone exceeds the approximate budget', () => {
+  const result = limitConversationHistory([
+    message({ id: 'old', content: 'old' }),
+    message({ id: 'new', content: 'x'.repeat(100) }),
+  ], 10, 50);
+  assert.deepEqual(result.map(item => item.id), ['new']);
 });
