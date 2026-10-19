@@ -11,6 +11,13 @@ import { isSenderOriginAllowed } from '../lib/message-origin-validation';
 const LOG_KEY = 'chatAutomationLogs';
 let logWriteQueue: Promise<void> = Promise.resolve();
 
+function isExtensionUiSender(sender: browser.runtime.MessageSender): boolean {
+  return sender.id === browser.runtime.id
+    && !sender.tab
+    && typeof sender.url === 'string'
+    && sender.url.startsWith(browser.runtime.getURL('/'));
+}
+
 function persistDiagnosticEvent(entry: DiagnosticEvent): Promise<{ ok: boolean }> {
   const write = logWriteQueue.then(async () => {
     const stored = await browser.storage.local.get(LOG_KEY);
@@ -40,7 +47,7 @@ export default defineBackground(() => {
     if (!message || typeof message !== 'object' || !('type' in message)) return undefined;
 
     // Destructive storage actions are accepted only from this extension's own UI.
-    if (sender.id === browser.runtime.id && message.type === 'CHAT_HISTORY_CLEAR_SITE' && 'origin' in message && typeof message.origin === 'string') {
+    if (isExtensionUiSender(sender) && message.type === 'CHAT_HISTORY_CLEAR_SITE' && 'origin' in message && typeof message.origin === 'string') {
       let origin: string;
       try {
         const parsed = new URL(message.origin);
@@ -55,7 +62,7 @@ export default defineBackground(() => {
       });
     }
 
-    if (sender.id === browser.runtime.id && message.type === 'CHAT_LOGS_CLEAR') {
+    if (isExtensionUiSender(sender) && message.type === 'CHAT_LOGS_CLEAR') {
       const operation = logWriteQueue.then(() => browser.storage.local.remove(LOG_KEY));
       logWriteQueue = operation.catch(error => {
         console.error('[Chat Automation] Effacement des journaux impossible.', error);
