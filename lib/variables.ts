@@ -143,6 +143,12 @@ export async function resolveMessageTemplate(
   for (const variable of applicable.filter(item => item.scope === 'global')) byName.set(variable.name, variable);
   for (const variable of applicable.filter(item => item.scope === scope && item.scope !== 'global')) byName.set(variable.name, variable);
 
+  const openingDelimiters = template.match(/{{/g)?.length ?? 0;
+  const closingDelimiters = template.match(/}}/g)?.length ?? 0;
+  if (openingDelimiters !== closingDelimiters) {
+    throw new Error('Syntaxe de variable invalide. Utilisez {{nom}}, les filtres Liquid et les balises {% ... %}.');
+  }
+
   const unknown = validateTemplateVariables(template, variables, scope);
   if (unknown.length > 0) throw new Error(`Variable(s) inconnue(s) : ${unknown.map(name => `{{${name}}}`).join(', ')}. Créez-les dans la page Variables.`);
 
