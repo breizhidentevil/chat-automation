@@ -23,6 +23,16 @@ export default defineContentScript({
         }
         return { ready: true, origin: location.origin };
       }
+      if (message.type === 'CHAT_HISTORY_CLEARED' && 'origin' in message && message.origin === location.origin) {
+        // Keep already-visible content from being re-persisted after a user clears
+        // this site's history. If a node's content changes later, treat it as new.
+        historyKnownEntries = [];
+        historyClaimedExisting = new Set<string>();
+        for (const candidate of historyMessageCandidates()) {
+          historyClearedContent.set(candidate.element, candidate.content);
+        }
+        return { ok: true };
+      }
       if (message.type === 'CHAT_AUTOMATION_PERMISSION_REVOKED') {
         siteAccessRevoked = true;
         stopAutomation('stopped', 'Accès au site révoqué : automatisation et capture de l’historique arrêtées.');
@@ -434,6 +444,7 @@ const HISTORY_MESSAGE_SELECTORS = [
   'article', '[role="listitem"]',
 ].join(',');
 
+const historyClearedContent = new WeakMap<HTMLElement, string>();
 const historyElementIds = new WeakMap<HTMLElement, string>();
 const historyFirstSeen = new WeakMap<HTMLElement, number>();
 const historyLastContent = new WeakMap<HTMLElement, string>();
@@ -613,6 +624,15 @@ function scanConversationHistory(): void {
 
     for (const candidate of candidates) {
       const { element, role, content } = candidate;
+      const contentAtClear = historyClearedContent.get(element);
+      if (contentAtClear !== undefined) {
+        if (content === contentAtClear) continue;
+        historyClearedContent.delete(element);
+        historyElementIds.delete(element);
+        historyFirstSeen.delete(element);
+        historyLastContent.delete(element);
+        historyElementRoles.delete(element);
+      }
       let id = historyElementIds.get(element);
       if (!id) {
         const reusable = historyKnownEntries.find(entry =>
