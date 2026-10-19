@@ -36,14 +36,14 @@ test('parses nested JSON and YAML objects and rejects malformed documents', () =
     personne: '{"prenom":"Alex","adresse":{"ville":"Nantes"}}',
     articles: '[{"id":1}]',
   });
-  assert.deepEqual(parseVariableDocument('personne:\\n  prenom: Alex\\n  adresse:\\n    ville: Nantes\\narticles:\\n  premier:\\n    id: 1'), {
+  assert.deepEqual(parseVariableDocument('personne:\n  prenom: Alex\n  adresse:\n    ville: Nantes\narticles:\n  premier:\n    id: 1'), {
     personne: '{"prenom":"Alex","adresse":{"ville":"Nantes"}}',
     articles: '{"premier":{"id":1}}',
   });
-  assert.throws(() => parseVariableDocument('prenom: Alex\\nprenom: Sam'), /dupliquée/);
+  assert.throws(() => parseVariableDocument('prenom: Alex\nprenom: Sam'), /dupliquée/);
   assert.throws(() => parseVariableDocument('{oops'), /JSON invalide/);
   assert.throws(() => parseVariableDocument('ligne invalide'), /Syntaxe YAML invalide/);
-  assert.throws(() => parseVariableDocument('personne:\\n   prenom: Alex'), /multiples de deux/);
+  assert.throws(() => parseVariableDocument('personne:\n   prenom: Alex'), /multiples de deux/);
 });
 
 
@@ -58,10 +58,10 @@ test('rejects excessively deep JSON and skipped YAML indentation levels', () => 
   let nested = '"fin"';
   for (let index = 0; index < 14; index += 1) nested = `{"niveau":${nested}}`;
   assert.throws(() => parseVariableDocument(`{"racine":${nested}}`), /profondeur maximale/);
-  assert.throws(() => parseVariableDocument('personne:\\n    adresse: Nantes'), /Indentation YAML inattendue/);
+  assert.throws(() => parseVariableDocument('personne:\n    adresse: Nantes'), /Indentation YAML inattendue/);
 });
 
 test('rejects YAML keys that cannot be referenced safely', () => {
-  assert.throws(() => parseVariableDocument('personne:\\n  __proto__: x'), /invalide ou interdit/);
-  assert.throws(() => parseVariableDocument('personne:\\n  adresse:\\n      ville: Nantes'), /Indentation YAML inattendue/);
+  assert.throws(() => parseVariableDocument('personne:\n  __proto__: x'), /invalide ou interdit/);
+  assert.throws(() => parseVariableDocument('personne:\n  adresse:\n      ville: Nantes'), /Indentation YAML inattendue/);
 });
