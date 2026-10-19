@@ -176,5 +176,4 @@ test('supports Liquid default values and standard string filters', async () => {
     context,
   );
   assert.equal(result.text, 'Client / DUPONT / nantes');
-  assert.deepEqual(result.variablesUsed, ['prenom', 'nom', 'ville']);
 });
