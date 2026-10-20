@@ -13,7 +13,7 @@
 
 - The main branch workflow run [#39346853059](https://github.com/breizhidentevil/chat-automation/actions/runs/39346853059) also completed successfully.
 - PR #18, `feat/variables-yaml-json-editor`, remains open and belongs to its own branch. Its latest observed failed run is [#39343508885](https://github.com/breizhidentevil/chat-automation/actions/runs/39343508885); it used workflow merge SHA `e2f588460d3a622f3f17f013c876ddda1fa03099` while the PR reports head `4fd7bec8c6823c15c884d1a371fce6e3afb78183`. Do not treat that run as proof that the current PR head fails or passes; re-check status checks for the exact current head before any merge.
-- Review of the PR #18 parser code identified a likely YAML duplicate-detection defect: the duplicate path key is constructed from indentation levels rather than parent key names, so equal child names under separate objects may collide. This feature remains on its owner branch and has not been copied or modified here; verify with a focused test and notify the PR owner if confirmed.
+- Review of the PR #18 parser code identified a YAML duplicate-detection defect: the duplicate path key is constructed from indentation levels rather than parent key names, so equal child names under separate objects collide. I reported the exact reproduction (`personne.prenom` and `adresse.prenom`) in a comment on PR #18; that branch was not modified and the test has not been executed locally.
 - Local npm commands are unavailable in this execution environment. No local test result is claimed.
 
 ## Changes on the autonomous branch
@@ -28,7 +28,7 @@
 
 1. Finish updating this log, then create/update a PR from `autonomous/continuous-improvement` to `main`.
 2. Wait for all required CI jobs to finish on the exact PR head; fix failures before considering merge. Never merge while status is failing, pending, missing, or unknown.
-3. Recheck PR #18's current head and status checks. Independently confirm the suspected YAML nested-key collision without changing its branch; report a focused finding to its owner.
+3. Recheck PR #18's current head and status checks. The YAML nested-key collision was reported to the PR owner; verify whether a regression test/fix lands without modifying that branch.
 4. Continue with the highest-priority independently actionable bug, with focused tests and verified CI evidence.
 
 ## Safety rules
