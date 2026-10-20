@@ -133,6 +133,22 @@ test('variable validation rejects malformed, oversized and duplicate persisted d
   );
 });
 
+test('dynamic template roots cannot be shadowed by custom variables', async () => {
+  for (const name of ['system', 'automation', 'chat', 'history', 'logs', 'strategy', 'data']) {
+    assert.equal(isValidVariableName(name), false, `reserved dynamic root: ${name}`);
+    assert.equal(isValidVariableDefinition(variable(name, 'shadow')), false);
+  }
+
+  const result = await resolveMessageTemplate(
+    '{{data.items[0].label}}',
+    [variable('data', 'shadow')],
+    context,
+    'automation',
+    { data: { items: [{ label: 'dynamic value' }] } },
+  );
+  assert.equal(result.text, 'dynamic value');
+});
+
 test('template resolution ignores malformed persisted variable definitions', async () => {
   const result = await resolveMessageTemplate(
     'Hello {{name}}',
