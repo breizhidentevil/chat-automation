@@ -71,7 +71,7 @@ function isAutomationConfigDraft(value: unknown): value is AutomationConfigDraft
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const draft = value as Record<string, unknown>;
   return Array.isArray(draft.messages) &&
-    draft.messages.every((message: unknown) => typeof message === 'string') &&
+    Array.from(draft.messages).every((message: unknown) => typeof message === 'string') &&
     typeof draft.interval === 'string' &&
     (draft.unit === 'seconds' || draft.unit === 'minutes') &&
     typeof draft.repeatCount === 'string' &&
