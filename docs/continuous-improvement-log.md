@@ -61,6 +61,6 @@
 
 - Finding: `validateAutomationConfig` normalized its typed draft before validating its runtime shape. Malformed values from an unexpected caller could throw during `.map()`, or an unknown unit could be silently interpreted as seconds.
 - Change: added a shape guard before normalization for message arrays and elements, interval/repeat strings, supported units, boolean time-window flag, clock strings, and variable arrays. Invalid input returns the existing `invalidSettings` diagnostic.
-- Regression coverage: tests exercise unknown units, non-boolean flags, null/non-array messages, non-string message entries, and null variables.
+- Regression coverage: tests exercise unknown units, non-boolean flags, null/non-array messages, non-string message entries, sparse arrays, and null variables. An additional review caught that `Array.prototype.every` skips sparse slots; the guard now materializes the array before checking every entry.
 - Commits: `5d0c116d97bb42ed83c68e99c886f45f99e025f9` (guard), `08753fc2ad9c837455bb8ff5d5852e16d7d4231e` (tests), `f7865873a6e499c8e96cef0c5baf27157301a3cd` (changelog).
 - Validation: changes are committed on `autonomous/continuous-improvement`. Local npm execution is unavailable in this environment; CI status for the latest head must be confirmed before considering the iteration fully validated. No merge to `main` was performed.
