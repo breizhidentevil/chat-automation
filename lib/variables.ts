@@ -60,7 +60,16 @@ export function filterValidVariableDefinitions(value: unknown): VariableDefiniti
     seenIds.add(candidate.id);
     seenNames.add(nameKey);
     totalValueLength += candidate.value.length;
-    valid.push(candidate);
+    // Persist only declared fields so unknown properties cannot smuggle
+    // unbounded payloads through validation into extension storage.
+    valid.push({
+      id: candidate.id,
+      name: candidate.name,
+      type: 'static',
+      value: candidate.value,
+      scope: candidate.scope,
+      updatedAt: candidate.updatedAt,
+    });
   }
   return valid;
 }
