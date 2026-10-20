@@ -38,7 +38,7 @@ export function isValidVariableDefinition(value: unknown): value is VariableDefi
   if (!value || typeof value !== 'object') return false;
   const item = value as Partial<VariableDefinition>;
   return typeof item.id === 'string' && item.id.length > 0 && item.id.length <= MAX_VARIABLE_ID_LENGTH &&
-    isValidVariableName(item.name) && !DYNAMIC_ROOTS.has(item.name) &&
+    isValidVariableName(item.name) &&
     item.type === 'static' && typeof item.value === 'string' &&
     item.value.length <= MAX_VARIABLE_VALUE_LENGTH &&
     (item.scope === 'global' || item.scope === 'automation') &&
