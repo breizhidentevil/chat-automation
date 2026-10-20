@@ -80,6 +80,23 @@ test('unknown static variables fail with an actionable error', async () => {
   );
 });
 
+test('unknown variables used with Liquid filters are validated unless defaulted', async () => {
+  assert.deepEqual(validateTemplateVariables('{{ missing | upcase }}', []), ['missing']);
+  assert.deepEqual(validateTemplateVariables('{{ missing | default: "fallback" }}', []), []);
+  assert.deepEqual(validateTemplateVariables('{{ missing | default: "fallback" }} {{ missing }}', []), ['missing']);
+  await assert.rejects(
+    resolveMessageTemplate('Hello {{ missing | upcase }}', [], context),
+    /Variable\(s\) inconnue\(s\)/,
+  );
+  const rendered = await resolveMessageTemplate(
+    '{{ name | capitalize }}',
+    [variable('name', 'marie')],
+    context,
+  );
+  assert.equal(rendered.text, 'Marie');
+  assert.deepEqual(rendered.variablesUsed, ['name']);
+});
+
 test('malformed template braces are rejected', async () => {
   await assert.rejects(
     resolveMessageTemplate('Hello {{name', [variable('name', 'World')], context),
