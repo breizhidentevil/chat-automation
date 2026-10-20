@@ -76,11 +76,11 @@ export function stableSelectors(element: HTMLElement): string[] {
   }
   if (!selectors.length) throw new Error('Unable to create a unique selector for the selected chat input.');
   // Preserve a structural selector as the final fallback even when all semantic attributes exist.
-  return selectors.length <= 8 ? selectors : [...selectors.slice(0, 7), selectors[selectors.length - 1]];
+  return selectors.length <= 8 ? selectors : [...selectors.slice(0, 7), selectors[selectors.length - 1]!];
 }
 
 export function stableSelector(element: HTMLElement): string {
-  return stableSelectors(element)[0];
+  return stableSelectors(element)[0]!;
 }
 
 export function findSendButton(input: HTMLElement): HTMLElement | undefined {
