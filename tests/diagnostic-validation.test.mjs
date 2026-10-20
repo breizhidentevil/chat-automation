@@ -47,7 +47,7 @@ test('rejects array containers and whitespace-only site/event identifiers', () =
   assert.equal(isValidDiagnosticEvent([]), false);
   assert.equal(isValidDiagnosticEvent(Object.assign([], event())), false);
   assert.equal(isValidDiagnosticEvent(event({ site: '   ' })), false);
-  assert.equal(isValidDiagnosticEvent(event({ event: '\\t\\n' })), false);
+  assert.equal(isValidDiagnosticEvent(event({ event: '\t\n' })), false);
 });
 
 
