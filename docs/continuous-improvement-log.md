@@ -83,3 +83,11 @@
 - This follow-up is committed separately from the variable-validation iteration; exact-head CI is required before considering it validated. No merge to `main`.
 
 - Review follow-up: fallback-selector validation used `Array.prototype.every`, which skips sparse slots. It now materializes the bounded selector array before checking each entry; a sparse-selector regression test was added. CI for the resulting head remains required.
+
+
+## Validation des séquences de messages runtime — 2026-10-20
+
+- Constat : `isValidAutomationStartMessage` vérifiait les tableaux avec `every` puis calculait leur taille avec `reduce`. Ces méthodes ignorent les emplacements vides d’un tableau clairsemé, qui pouvait donc être accepté malgré un slot de message manquant.
+- Correction : après avoir borné la longueur à 100, la validation matérialise le tableau avec `Array.from`, puis vérifie chaque entrée et la taille cumulée sur cette copie dense.
+- Test de non-régression : une séquence de deux emplacements dont le premier est vide doit être rejetée.
+- Le contrôle CI doit être confirmé sur le SHA exact résultant ; aucun test local n’est revendiqué. Travail limité à `autonomous/continuous-improvement`, sans merge vers `main`.

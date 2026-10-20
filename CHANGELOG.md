@@ -1,3 +1,8 @@
+## Unreleased — validation des séquences runtime
+
+- Rejette les séquences de messages clairsemées dans la validation du payload runtime, car les méthodes `every` et `reduce` ignorent les emplacements vides.
+- Ajoute un test de non-régression pour une séquence contenant un emplacement vide.
+
 ## Unreleased — validation des sélecteurs de procédure
 
 - La validation vérifie désormais aussi les emplacements vides des tableaux de sélecteurs de secours, afin de rejeter les tableaux clairsemés malformés.

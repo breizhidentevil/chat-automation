@@ -34,6 +34,9 @@ test('rejects malformed message sequences', () => {
   assert.equal(isValidAutomationStartMessage(null), false);
   assert.equal(isValidAutomationStartMessage([]), false);
   assert.equal(isValidAutomationStartMessage(config({ messages: [] })), false);
+  const sparseMessages = Array(2);
+  sparseMessages[1] = 'Hello';
+  assert.equal(isValidAutomationStartMessage(config({ messages: sparseMessages })), false);
   assert.equal(isValidAutomationStartMessage(config({ messages: ['   '] })), false);
   assert.equal(isValidAutomationStartMessage(config({ messages: Array(101).fill('x') })), false);
   assert.equal(isValidAutomationStartMessage(config({ messages: ['x'.repeat(100_001)] })), false);
