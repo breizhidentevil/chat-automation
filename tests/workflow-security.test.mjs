@@ -41,3 +41,8 @@ test('audits npm dependencies for high-severity vulnerabilities in CI', () => {
 test('uses a supported Node.js version for the build toolchain', () => {
   assert.match(workflow, /node-version:\s*22\s*$/m);
 });
+
+
+test('bounds CI runtime so browser tooling cannot block the workflow indefinitely', () => {
+  assert.match(workflow, /build:\\s*\\n[\\s\\S]*?runs-on:\\s*ubuntu-24\\.04\\s*\\n\\s+timeout-minutes:\\s*30\\s*\\n/);
+});
