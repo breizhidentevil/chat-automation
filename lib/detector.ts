@@ -75,7 +75,8 @@ export function stableSelectors(element: HTMLElement): string[] {
     current = parent;
   }
   if (!selectors.length) throw new Error('Unable to create a unique selector for the selected chat input.');
-  return selectors.slice(0, 8);
+  // Preserve a structural selector as the final fallback even when all semantic attributes exist.
+  return selectors.length <= 8 ? selectors : [...selectors.slice(0, 7), selectors[selectors.length - 1]];
 }
 
 export function stableSelector(element: HTMLElement): string {
