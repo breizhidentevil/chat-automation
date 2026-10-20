@@ -33,6 +33,10 @@ export function isValidChatSiteProcedure(value: unknown, expectedOrigin?: string
   if (procedure.schemaVersion !== 2 || !isNormalizedHttpOrigin(procedure.origin)) return false;
   if (expectedOrigin !== undefined && procedure.origin !== expectedOrigin) return false;
   if (!isValidSelector(procedure.inputSelector)) return false;
+  if (procedure.inputSelectors !== undefined &&
+      (!Array.isArray(procedure.inputSelectors) || procedure.inputSelectors.length < 1 || procedure.inputSelectors.length > 8 ||
+       !procedure.inputSelectors.every(isValidSelector) || new Set(procedure.inputSelectors).size !== procedure.inputSelectors.length ||
+       !procedure.inputSelectors.includes(procedure.inputSelector))) return false;
   if (!isValidTimestamp(procedure.updatedAt) || !isValidCount(procedure.successCount) || !isValidCount(procedure.failureCount)) return false;
   if (procedure.lastSuccessAt !== undefined &&
       (!isValidTimestamp(procedure.lastSuccessAt) || procedure.lastSuccessAt > procedure.updatedAt)) return false;
