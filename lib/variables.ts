@@ -38,7 +38,7 @@ export function isValidVariableDefinition(value: unknown): value is VariableDefi
   if (!value || typeof value !== 'object') return false;
   const item = value as Partial<VariableDefinition>;
   return typeof item.id === 'string' && item.id.length > 0 && item.id.length <= MAX_VARIABLE_ID_LENGTH &&
-    isValidVariableName(item.name) &&
+    isValidVariableName(item.name) && !DYNAMIC_ROOTS.has(item.name) &&
     item.type === 'static' && typeof item.value === 'string' &&
     item.value.length <= MAX_VARIABLE_VALUE_LENGTH &&
     (item.scope === 'global' || item.scope === 'automation') &&
@@ -88,7 +88,7 @@ delete liquid.tags.layout;
 delete liquid.tags.block;
 
 export function isValidVariableName(value: unknown): value is string {
-  return typeof value === 'string' && VARIABLE_NAME_PATTERN.test(value) && !BLOCKED_PATH_PARTS.has(value);
+  return typeof value === 'string' && VARIABLE_NAME_PATTERN.test(value) && !BLOCKED_PATH_PARTS.has(value) && !DYNAMIC_ROOTS.has(value);
 }
 
 export function findTemplateVariables(template: string): string[] {
