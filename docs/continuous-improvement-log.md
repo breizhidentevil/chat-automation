@@ -17,7 +17,8 @@
 - The earlier zero-job pending runs were superseded by that completed run. Run [#39348740327](https://github.com/breizhidentevil/chat-automation/actions/runs/39348740327) completed successfully on exact SHA `6db377e40e0b24727e909cf5a0247c93b052ec72`. Dependency audit, type-check, unit tests, Chromium smoke test, and Chrome/Firefox/Edge builds passed; publishing and Pages deployment were skipped for the pull-request event.
 - Run [#39348684340](https://github.com/breizhidentevil/chat-automation/actions/runs/39348684340) failed unit tests on earlier SHA `2663439186fde22f66e5311d21c9ac4ababa4b98` because an unsafe-filter test used an unknown variable, so validation stopped before testing the filter. The fixture was corrected to provide a valid variable. The corrected head passed the full CI run above.
 - The roadmap for the conversation simulator was stale: PR #17 was already merged, with successful validation run [#39340728444](https://github.com/breizhidentevil/chat-automation/actions/runs/39340728444). Its status is now corrected.
-- Run [#39348946822](https://github.com/breizhidentevil/chat-automation/actions/runs/39348946822) is running against SHA `976b6a84809084ede1a066ecb3cbaa52bddd6e7b`, not the current branch head. Its audit, type-check, unit tests and Chrome build steps have passed so far; Chrome build was still in progress at last check, with Chromium smoke test and Firefox/Edge builds pending. This run does not validate subsequent commits.
+- Run [#39348946822](https://github.com/breizhidentevil/chat-automation/actions/runs/39348946822) remains in progress against older SHA `976b6a84809084ede1a066ecb3cbaa52bddd6e7b`; it does not validate later changes. Its audit, type-check and unit tests passed, and its Chrome build had been in progress at last check.
+- Exact-head run [#39349137957](https://github.com/breizhidentevil/chat-automation/actions/runs/39349137957) was queued for SHA `16919b1de6688d05b4679da3abe8dfd1d521cd12`. Earlier runs for intermediate commits were cancelled as newer commits arrived. The current-head CI is not yet validated.
 - PR #18, `feat/variables-yaml-json-editor`, remains open on its own branch. Its latest observed failed run [#39343508885](https://github.com/breizhidentevil/chat-automation/actions/runs/39343508885) used workflow merge SHA `e2f588460d3a622f3f17f013c876ddda1fa03099`, not PR head `4fd7bec8c6823c15c884d1a371fce6e3afb78183`. Do not treat it as proof that the current PR head fails or passes.
 - PR #18's parser appears to detect duplicate YAML child keys using indentation rather than parent names, potentially colliding for `personne.prenom` and `adresse.prenom`. A reproduction was reported in the PR discussion; that branch was not modified.
 - Local npm commands are unavailable in this execution environment. No local test result is claimed.
@@ -34,7 +35,7 @@
 
 ## Next task
 
-1. Verify run #39348946822 completes; it only covers SHA `976b6a84809084ede1a066ecb3cbaa52bddd6e7b`. Then confirm CI for the latest branch head, including the diagnostic-validation changes.
+1. Verify queued run #39349137957 and then confirm CI for the exact latest branch head, including the diagnostic-validation changes. Run #39348946822 covers only the older SHA `976b6a84809084ede1a066ecb3cbaa52bddd6e7b`.
 2. Keep PR #20 open until all required checks on the exact current head are complete and successful and merge safety is confirmed.
 3. PR #18's YAML duplicate-key issue remains outstanding on its own branch. Do not modify that branch; continue independent work only on `autonomous/continuous-improvement`.
 
