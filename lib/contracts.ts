@@ -19,6 +19,8 @@ export interface ChatSiteProcedure {
   origin: string;
   schemaVersion: 2;
   inputSelector: string;
+  /** Ordered, validated alternatives for recovering the same input after DOM changes. */
+  inputSelectors?: string[];
   sendStrategy: SendStrategy;
   updatedAt: number;
   lastSuccessAt?: number;
