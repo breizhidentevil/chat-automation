@@ -47,8 +47,42 @@ export function stableSelector(element: HTMLElement): string {
     try { if (document.querySelectorAll(selector).length === 1) return selector; } catch { /* continue with a safer fallback */ }
   }
   const role = element.getAttribute('role');
-  if (role && document.querySelectorAll(`${tag}[role="${CSS.escape(role)}"]`).length === 1) return `${tag}[role="${CSS.escape(role)}"]`;
-  return tag;
+  if (role) {
+    const selector = `${tag}[role="${CSS.escape(role)}"]`;
+    try { if (document.querySelectorAll(selector).length === 1) return selector; } catch { /* continue with a structural selector */ }
+  }
+
+  // A bare tag such as "textarea" is not a reliable fallback: chat sites often
+  // keep hidden composers or other textareas in the DOM, so querySelector() can
+  // resolve a different element from the one selected during strategy validation.
+  // Build a DOM path with nth-of-type segments and accept it only if it resolves
+  // uniquely to the exact selected element.
+  const segments: string[] = [];
+  let current: HTMLElement | null = element;
+  while (current) {
+    const currentTag = current.tagName.toLowerCase();
+    const parent: HTMLElement | null = current.parentElement;
+    let segment = currentTag;
+    if (parent) {
+      const sameTagSiblings = Array.from(parent.children).filter(
+        sibling => sibling.tagName.toLowerCase() === currentTag,
+      );
+      if (sameTagSiblings.length > 1) {
+        segment += `:nth-of-type(${sameTagSiblings.indexOf(current) + 1})`;
+      }
+    }
+    segments.unshift(segment);
+    const selector = segments.join(' > ');
+    try {
+      const matches = document.querySelectorAll(selector);
+      if (matches.length === 1 && matches[0] === element) return selector;
+    } catch { /* keep climbing until a valid unique path is found */ }
+    current = parent;
+  }
+
+  // The document path should normally be unique. Fail closed rather than
+  // persist a selector that could silently target another input.
+  throw new Error('Unable to create a unique selector for the selected chat input.');
 }
 
 export function findSendButton(input: HTMLElement): HTMLElement | undefined {
