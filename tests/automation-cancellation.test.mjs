@@ -59,3 +59,18 @@ test('serializes send requests while the prior send awaits DOM confirmation', ()
   assert.ok(release < actualSend);
   assert.match(source.slice(inFlightCheck, lockSet), /send-request-rejected-in-flight/);
 });
+
+test('does not mutate sequence cursors after stop/restart during completion logging', () => {
+  const completedLog = source.indexOf("'automation-message-completed'");
+  const guardAfterMessageLog = source.indexOf('if (activeAutomation !== config) return;', completedLog);
+  const cursorIncrement = source.indexOf('messageIndex += 1;', completedLog);
+  const sequenceLog = source.indexOf("'automation-sequence-completed'", cursorIncrement);
+  const guardAfterSequenceLog = source.indexOf('if (activeAutomation !== config) return;', sequenceLog);
+  const finiteDecision = source.indexOf("if (config.repeatMode === 'finite'", sequenceLog);
+
+  assert.ok(completedLog >= 0);
+  assert.ok(guardAfterMessageLog > completedLog && guardAfterMessageLog < cursorIncrement);
+  assert.ok(cursorIncrement > guardAfterMessageLog);
+  assert.ok(sequenceLog > cursorIncrement);
+  assert.ok(guardAfterSequenceLog > sequenceLog && guardAfterSequenceLog < finiteDecision);
+});

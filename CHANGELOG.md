@@ -1,3 +1,9 @@
+## Unreleased — isolation des séquences après arrêt/redémarrage
+
+- Vérifie l'identité de l'automatisation après l'écriture asynchrone des événements de fin de message et de séquence.
+- Empêche un ancien tick de modifier les index et compteurs partagés d'une nouvelle exécution démarrée pendant la journalisation.
+- Ajoute un test de non-régression couvrant les deux frontières asynchrones.
+
 ## Unreleased — confidentialité des journaux
 
 - Retire les extraits du message envoyé et des messages visibles de tous les diagnostics de confirmation et de validation.

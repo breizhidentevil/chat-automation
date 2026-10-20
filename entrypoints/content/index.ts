@@ -1048,11 +1048,15 @@ async function runAutomationTick(): Promise<void> {
   }
 
   await logEvent(location.origin, 'INFO', 'automation-message-completed', `message=${currentIndex + 1}/${config.messages.length}; ${result.message}`);
+  // Stop/restart can happen while diagnostics are being persisted. An obsolete
+  // tick must not mutate the shared cursor belonging to a newer run.
+  if (activeAutomation !== config) return;
   messageIndex += 1;
   if (messageIndex >= config.messages.length) {
     messageIndex = 0;
     completedSequences += 1;
     await logEvent(location.origin, 'INFO', 'automation-sequence-completed', `sequence=${completedSequences}/${config.repeatMode === 'infinite' ? 'infinite' : config.repeatCount}`);
+    if (activeAutomation !== config) return;
     if (config.repeatMode === 'finite' && completedSequences >= Math.max(1, Math.floor(config.repeatCount))) {
       stopAutomation('finished', `Terminé : ${completedSequences} séquence(s) complète(s).`);
       await logEvent(location.origin, 'INFO', 'automation-finished', `sequenceIterations=${completedSequences}; messagesPerSequence=${config.messages.length}`);

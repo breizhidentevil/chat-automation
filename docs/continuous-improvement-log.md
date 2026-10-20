@@ -123,3 +123,10 @@
 - Correction : remplacer les extraits par la longueur du message, des compteurs DOM et les longueurs des candidats récents. Les événements de validation n'enregistrent plus le texte du message testé.
 - Tests : ajout d'une vérification de non-régression sur les chemins de journalisation de confirmation et de timeout.
 - La CI doit confirmer le SHA exact ; aucun test local n'est revendiqué. Aucun merge dans `main`.
+
+
+## Isolation du curseur après arrêt/redémarrage — 2026-10-20
+
+- Constat P0 : après l'envoi confirmé, `runAutomationTick` attendait l'écriture des journaux avant de mettre à jour le curseur de séquence. Un arrêt suivi d'un redémarrage pendant cette attente pouvait laisser l'ancien tick incrémenter les compteurs globaux de la nouvelle exécution.
+- Correction : revérification de l'identité de l'instance après les écritures asynchrones de fin de message et de séquence, avant toute mutation du curseur ou décision de fin.
+- Test de non-régression ajouté. Validation complète attendue dans la CI du commit exact ; aucun merge dans `main`.
