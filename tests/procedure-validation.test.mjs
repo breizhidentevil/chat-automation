@@ -58,3 +58,9 @@ test('validates ordered fallback selectors and keeps legacy records compatible',
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: Array(9).fill('textarea') })), false);
   assert.equal(isValidChatSiteProcedure(procedure()), true);
 });
+
+test('validates optional saved input identity fingerprints', () => {
+  assert.equal(isValidChatSiteProcedure(procedure({ inputProfile: { tagName: 'textarea', contentEditable: false, placeholder: 'Message' } })), true);
+  assert.equal(isValidChatSiteProcedure(procedure({ inputProfile: { tagName: 'TEXTAREA', contentEditable: false } })), false);
+  assert.equal(isValidChatSiteProcedure(procedure({ inputProfile: { tagName: 'textarea', contentEditable: 'false' } })), false);
+});
