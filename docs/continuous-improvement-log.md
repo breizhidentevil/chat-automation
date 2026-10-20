@@ -107,3 +107,11 @@
 - Correction : vérifier l'identité de la configuration au début du `catch` et à nouveau après l'écriture asynchrone du diagnostic avant d'appeler `stopAutomation('failed')`.
 - Test de non-régression ajouté pour empêcher qu'une erreur d'une ancienne séquence ne coupe une nouvelle exécution.
 - La CI doit valider le SHA exact. Aucun merge dans `main`.
+
+
+## Prévention des envois concurrents — 2026-10-20
+
+- Priorité P0 de `docs/roadmap.md` : prévention des actions répétées accidentelles. `sendText` attendait jusqu'à 20 secondes la confirmation DOM sans empêcher une seconde commande d'entrer dans la même séquence de soumission ; des commandes rapprochées pouvaient donc produire des envois concurrents.
+- Correction : verrou local au content script, rejet des demandes entrantes pendant un envoi en cours, événement de diagnostic `send-request-rejected-in-flight` et libération systématique du verrou dans `finally`.
+- Test de régression ajouté pour contrôler la sérialisation et la libération du verrou.
+- Vérifications : la CI précédente a réussi sur le SHA antérieur `553508bfbe78d7d0452c6ae4247e599ff2b6f6a3`; elle ne valide pas ce changement. Attendre le résultat de la CI du nouveau SHA. Aucun résultat local n'est revendiqué et aucun merge dans `main` n'est effectué.

@@ -92,7 +92,29 @@ function inputMatchesSavedProfile(node: HTMLElement, profile: ChatSiteProcedure[
   return savedAttributes.length === 0 || savedAttributes.some(([value, actual]) => value === actual);
 }
 
+// Serialize all sends in this content-script instance. A duplicate command can arrive
+// while the previous send is waiting for the site's DOM confirmation; allowing both to
+// proceed can submit the same prompt twice before either confirmation becomes visible.
+let sendInProgress = false;
+
 async function sendText(
+  rawText: string,
+  options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
+): Promise<{ message: string; success: boolean }> {
+  if (sendInProgress) {
+    void logEvent(location.origin, 'WARN', 'send-request-rejected-in-flight');
+    return { message: 'Un envoi est déjà en cours de confirmation. Attendez son résultat avant de relancer.', success: false };
+  }
+
+  sendInProgress = true;
+  try {
+    return await performSendText(rawText, options);
+  } finally {
+    sendInProgress = false;
+  }
+}
+
+async function performSendText(
   rawText: string,
   options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
 ): Promise<{ message: string; success: boolean }> {

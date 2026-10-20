@@ -1,3 +1,9 @@
+## Unreleased — prévention des envois concurrents
+
+- Sérialise les demandes d'envoi dans chaque content script afin qu'une commande répétée pendant l'attente de confirmation DOM ne déclenche pas une seconde soumission.
+- Rejette explicitement les demandes concurrentes, journalise l'événement et libère le verrou dans un bloc `finally`, y compris en cas d'erreur.
+- Ajoute un test de régression vérifiant le verrou, le rejet et sa libération.
+
 ## Unreleased — isolation des erreurs entre exécutions
 
 - Empêche une lecture ou une résolution asynchrone échouée appartenant à une ancienne séquence d'arrêter une automatisation démarrée entre-temps.

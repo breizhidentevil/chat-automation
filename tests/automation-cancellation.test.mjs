@@ -43,3 +43,19 @@ test('does not let an obsolete preparation failure stop a newer automation run',
   assert.ok(firstGuard >= 0 && firstGuard < logError);
   assert.ok(secondGuard > logError && secondGuard < stop);
 });
+
+test('serializes send requests while the prior send awaits DOM confirmation', () => {
+  const lockDeclaration = source.indexOf('let sendInProgress = false;');
+  const sendWrapper = source.indexOf('async function sendText(');
+  const inFlightCheck = source.indexOf('if (sendInProgress)', sendWrapper);
+  const lockSet = source.indexOf('sendInProgress = true;', inFlightCheck);
+  const delegatedSend = source.indexOf('return await performSendText(rawText, options);', lockSet);
+  const release = source.indexOf('sendInProgress = false;', delegatedSend);
+  const actualSend = source.indexOf('async function performSendText(');
+
+  assert.ok(lockDeclaration >= 0 && sendWrapper > lockDeclaration);
+  assert.ok(inFlightCheck > sendWrapper && inFlightCheck < lockSet);
+  assert.ok(lockSet < delegatedSend && delegatedSend < release);
+  assert.ok(release < actualSend);
+  assert.match(source.slice(inFlightCheck, lockSet), /send-request-rejected-in-flight/);
+});
