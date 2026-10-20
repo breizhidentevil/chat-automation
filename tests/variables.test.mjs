@@ -73,11 +73,41 @@ test('dynamic paths resolve nested properties, array indexes and runtime context
   assert.equal(result.text, 'second / 3 / 2');
 });
 
+test('Liquid default filters handle missing dynamic paths without weakening required-path checks', async () => {
+  const result = await resolveMessageTemplate(
+    '{{data.missing | default: "fallback"}}',
+    [],
+    context,
+  );
+  assert.equal(result.text, 'fallback');
+  await assert.rejects(
+    resolveMessageTemplate('{{data.missing}}', [], context),
+    /Propriété|donnée absente/,
+  );
+});
+
 test('unknown static variables fail with an actionable error', async () => {
   await assert.rejects(
     resolveMessageTemplate('Hello {{missing}}', [], context),
     /Variable\(s\) inconnue\(s\)/,
   );
+});
+
+test('unknown variables used with Liquid filters are validated unless defaulted', async () => {
+  assert.deepEqual(validateTemplateVariables('{{ missing | upcase }}', []), ['missing']);
+  assert.deepEqual(validateTemplateVariables('{{ missing | default: "fallback" }}', []), []);
+  assert.deepEqual(validateTemplateVariables('{{ missing | default: "fallback" }} {{ missing }}', []), ['missing']);
+  await assert.rejects(
+    resolveMessageTemplate('Hello {{ missing | upcase }}', [], context),
+    /Variable\(s\) inconnue\(s\)/,
+  );
+  const rendered = await resolveMessageTemplate(
+    '{{ name | capitalize }}',
+    [variable('name', 'marie')],
+    context,
+  );
+  assert.equal(rendered.text, 'Marie');
+  assert.deepEqual(rendered.variablesUsed, ['name']);
 });
 
 test('malformed template braces are rejected', async () => {
@@ -172,4 +202,20 @@ test('variable collections are capped by count and aggregate value size', () => 
   assert.equal(filtered.some(item => item.name === 'large_10'), false);
   assert.equal(filtered.some(item => item.name === 'small_after_limit'), false);
   assert.equal(filtered.reduce((total, item) => total + item.value.length, 0) <= 1_000_000, true);
+});
+
+test('variable validation rejects arrays even when they carry definition-like properties', () => {
+  const array = Object.assign([], variable('array-name', 'value'));
+  assert.equal(isValidVariableDefinition(array), false);
+  assert.deepEqual(filterValidVariableDefinitions([array]), []);
+});
+
+test('variable filtering strips unknown properties before persistence', () => {
+  const untrusted = { ...variable('name', 'value'), injected: 'x'.repeat(2_000_000) };
+  const [filtered] = filterValidVariableDefinitions([untrusted]);
+
+  assert.ok(filtered);
+  assert.deepEqual(filtered, variable('name', 'value'));
+  assert.equal('injected' in filtered, false);
+  assert.deepEqual(Object.keys(filtered).sort(), ['id', 'name', 'scope', 'type', 'updatedAt', 'value']);
 });

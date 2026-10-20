@@ -92,7 +92,29 @@ function inputMatchesSavedProfile(node: HTMLElement, profile: ChatSiteProcedure[
   return savedAttributes.length === 0 || savedAttributes.some(([value, actual]) => value === actual);
 }
 
+// Serialize all sends in this content-script instance. A duplicate command can arrive
+// while the previous send is waiting for the site's DOM confirmation; allowing both to
+// proceed can submit the same prompt twice before either confirmation becomes visible.
+let sendInProgress = false;
+
 async function sendText(
+  rawText: string,
+  options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
+): Promise<{ message: string; success: boolean }> {
+  if (sendInProgress) {
+    void logEvent(location.origin, 'WARN', 'send-request-rejected-in-flight');
+    return { message: 'Un envoi est déjà en cours de confirmation. Attendez son résultat avant de relancer.', success: false };
+  }
+
+  sendInProgress = true;
+  try {
+    return await performSendText(rawText, options);
+  } finally {
+    sendInProgress = false;
+  }
+}
+
+async function performSendText(
   rawText: string,
   options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
 ): Promise<{ message: string; success: boolean }> {
@@ -101,8 +123,14 @@ async function sendText(
   if (!text) return { message: 'Le message est vide.', success: false };
   const origin = location.origin;
   await logEvent(origin, 'INFO', 'send-request-received');
+  if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+    return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+  }
 
   const procedure = await getProcedure(origin);
+  if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+    return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+  }
   if (options.requireSavedStrategy && !procedure) {
     await logEvent(origin, 'ERROR', 'automation-blocked-no-validated-strategy');
     return { message: 'Aucune stratégie validée n’est enregistrée pour ce site. Ouvrez Détection et validez une stratégie avant de démarrer l’automatisation.', success: false };
@@ -150,6 +178,9 @@ async function sendText(
   // Snapshot the actual matching DOM nodes, not only a count. Some chat UIs
   // reuse or replace message wrappers between sends, so a count alone can miss
   // the next message (especially when the same prompt is sent twice).
+  if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+    return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+  }
   const baselineMatches = getMatchingMessageElements(text);
   try {
     await insertText(chosen, text);
@@ -157,6 +188,10 @@ async function sendText(
       return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
     }
     await logEvent(origin, 'INFO', 'text-inserted', `element=${chosen.tagName.toLowerCase()}; selector=${procedure?.inputSelector ?? stableSelector(chosen)}`);
+    // Logging is asynchronous too: cancellation during it must not reach the click/Enter.
+    if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+      return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+    }
   } catch (error) {
     await logEvent(origin, 'ERROR', 'text-insertion-failed', error instanceof Error ? error.message : 'unknown error');
     return { message: 'Le champ a été identifié, mais l’insertion du texte a échoué.', success: false };
@@ -184,9 +219,15 @@ async function sendText(
         await logEvent(origin, 'ERROR', 'saved-send-button-unavailable', procedure.sendStrategy.selector, { strategy: 'saved-procedure' });
         return { message: 'Le bouton enregistré est absent ou désactivé. Relancez la validation de stratégie.', success: false };
       }
+      if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+        return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+      }
       button.click();
       await logEvent(origin, 'INFO', 'saved-send-strategy-executed', `method=button; selector=${procedure.sendStrategy.selector}`, { strategy: 'saved-procedure' });
     } else if (procedure.sendStrategy.method === 'enter') {
+      if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+        return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+      }
       chosen.focus();
       chosen.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
       chosen.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
@@ -209,15 +250,14 @@ async function sendText(
     }
   }
 
-  const expectedPreview = messageLogPreview(text);
-  await logEvent(origin, 'INFO', 'send-confirmation-wait-started', `Message attendu=${JSON.stringify(expectedPreview)}; délai=20000ms; vérification=1s`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
+  await logEvent(origin, 'INFO', 'send-confirmation-wait-started', `messageLength=${text.length}; délai=20000ms; vérification=1s`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
   const confirmed = await waitForVisibleMessage(text, baselineMatches, 20000);
   if (!confirmed) {
-    await logEvent(origin, 'ERROR', 'send-result-unconfirmed', `Message attendu=${JSON.stringify(expectedPreview)}; aucun nouveau message correspondant après 20000ms.`, { strategy: procedure?.sendStrategy.method ?? 'fallback', durationMs: 20000 });
+    await logEvent(origin, 'ERROR', 'send-result-unconfirmed', `messageLength=${text.length}; aucun nouveau message correspondant après 20000ms.`, { strategy: procedure?.sendStrategy.method ?? 'fallback', durationMs: 20000 });
     return { message: 'La méthode a été exécutée, mais aucun nouveau message correspondant n’a été détecté. Automatisation suspendue pour éviter les envois répétés non confirmés.', success: false };
   }
 
-  await logEvent(origin, 'INFO', 'send-result-confirmed-in-dom', `Message attendu=${JSON.stringify(expectedPreview)}; message correspondant observé dans la conversation.`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
+  await logEvent(origin, 'INFO', 'send-result-confirmed-in-dom', `messageLength=${text.length}; message correspondant observé dans la conversation.`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
   return { message: 'Message détecté dans la conversation après exécution de la méthode d’envoi.', success: true };
 }
 
@@ -284,11 +324,10 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
   }
 
-  const expectedPreview = messageLogPreview(text);
-  await logEvent(origin, 'INFO', 'strategy-validation-confirmation-wait-started', `Message attendu=${JSON.stringify(expectedPreview)}; délai=20000ms; vérification=1s`, { strategy: strategy.method });
+  await logEvent(origin, 'INFO', 'strategy-validation-confirmation-wait-started', `messageLength=${text.length}; délai=20000ms; vérification=1s`, { strategy: strategy.method });
   const confirmed = await waitForVisibleMessage(text, baselineMatches, 20000);
   if (!confirmed) {
-    await logEvent(origin, 'WARN', 'strategy-validation-failed', `Message attendu=${JSON.stringify(expectedPreview)}; aucun nouveau message correspondant après 20000ms ; stratégie non sauvegardée.`, { strategy: strategy.method, durationMs: 20000 });
+    await logEvent(origin, 'WARN', 'strategy-validation-failed', `messageLength=${text.length}; aucun nouveau message correspondant après 20000ms ; stratégie non sauvegardée.`, { strategy: strategy.method, durationMs: 20000 });
     return { message: 'Test non confirmé : aucun nouveau message correspondant n’a été détecté dans la conversation. La stratégie n’a pas été enregistrée. Vérifiez le résultat sur le site avant de réessayer.', validated: false };
   }
 
@@ -314,7 +353,7 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     failureCount: existing?.failureCount ?? 0,
   };
   await saveProcedure(procedure);
-  await logEvent(origin, 'INFO', 'strategy-validation-succeeded-and-saved', `method=${strategy.method}; inputs=${inputSelectors.join(' | ')}; message confirmé=${JSON.stringify(expectedPreview)}`, { strategy: strategy.method });
+  await logEvent(origin, 'INFO', 'strategy-validation-succeeded-and-saved', `method=${strategy.method}; inputs=${inputSelectors.join(' | ')}; confirmation DOM reçue`, { strategy: strategy.method });
   return { message: `Validation réussie : un nouveau message a été détecté dans la conversation. La stratégie « ${strategy.method === 'button' ? 'bouton d’envoi' : 'Entrée'} » est enregistrée pour ${origin}. Cette preuve concerne l’interface, pas la confirmation du serveur.`, validated: true };
 }
 
@@ -368,11 +407,6 @@ async function waitForEnabledSendButton(input: HTMLElement, timeoutMs: number): 
     await new Promise(resolve => window.setTimeout(resolve, 100));
   } while (performance.now() < deadline);
   return undefined;
-}
-
-function messageLogPreview(value: string): string {
-  const normalized = value.replace(/\s+/g, ' ').trim();
-  return normalized.length > 180 ? `${normalized.slice(0, 180)}… [tronqué, ${normalized.length} caractères au total]` : normalized;
 }
 
 function normalizedText(value: string): string {
@@ -439,7 +473,6 @@ function waitForVisibleMessage(text: string, baselineMatches: HTMLElement[], tim
     let done = false;
     let lastCount = baselineMatches.length;
     const baselineNodes = new Set(baselineMatches);
-    const expectedPreview = text.length > 180 ? `${text.slice(0, 180)}…` : text;
     const startedAt = performance.now();
     const finish = (value: boolean) => {
       if (done) return;
@@ -454,7 +487,7 @@ function waitForVisibleMessage(text: string, baselineMatches: HTMLElement[], tim
       lastCount = matches.length;
       const newlyRenderedMatch = matches.some(element => !baselineNodes.has(element));
       if (newlyRenderedMatch || lastCount > baselineMatches.length) {
-        void logEvent(location.origin, 'INFO', 'message-confirmation-match-found', `expected="${expectedPreview}"; matchesBefore=${baselineMatches.length}; matchesNow=${lastCount}; newNode=${newlyRenderedMatch}; elapsedMs=${Math.round(performance.now() - startedAt)}`);
+        void logEvent(location.origin, 'INFO', 'message-confirmation-match-found', `messageLength=${text.length}; matchesBefore=${baselineMatches.length}; matchesNow=${lastCount}; newNode=${newlyRenderedMatch}; elapsedMs=${Math.round(performance.now() - startedAt)}`);
         finish(true);
       }
     };
@@ -465,9 +498,9 @@ function waitForVisibleMessage(text: string, baselineMatches: HTMLElement[], tim
       const diagnostics = Array.from(document.querySelectorAll<HTMLElement>(USER_MESSAGE_SELECTORS))
         .filter(element => isVisibleElement(element) && !isEditableOrControl(element))
         .slice(-8)
-        .map(element => normalizedText(element.innerText || element.textContent || '').slice(0, 120))
-        .filter(Boolean);
-      void logEvent(location.origin, 'WARN', 'message-confirmation-timeout', `expected="${expectedPreview}"; matchesBefore=${baselineMatches.length}; matchesAtTimeout=${lastCount}; elapsedMs=${Math.round(performance.now() - startedAt)}; recentMessageCandidates=${JSON.stringify(diagnostics)}`);
+        .map(element => normalizedText(element.innerText || element.textContent || '').length)
+        .filter(length => length > 0);
+      void logEvent(location.origin, 'WARN', 'message-confirmation-timeout', `messageLength=${text.length}; matchesBefore=${baselineMatches.length}; matchesAtTimeout=${lastCount}; elapsedMs=${Math.round(performance.now() - startedAt)}; recentCandidateLengths=${JSON.stringify(diagnostics)}`);
       finish(false);
     }, timeoutMs);
     check();
@@ -979,6 +1012,9 @@ async function runAutomationTick(): Promise<void> {
   try {
     const timestamp = new Date();
     const dynamicData = await buildDynamicVariableData(config, timestamp);
+    // Stop/restart can happen while storage and conversation data are being read.
+    // Re-check run identity before doing more work or attempting any side effect.
+    if (activeAutomation !== config) return;
     const resolved = await resolveMessageTemplate(
       template,
       config.variables,
@@ -986,16 +1022,23 @@ async function runAutomationTick(): Promise<void> {
       'automation',
       dynamicData,
     );
+    if (activeAutomation !== config) return;
     text = resolved.text;
     if (resolved.variablesUsed.length > 0) {
       await logEvent(location.origin, 'INFO', 'automation-variables-resolved', `message=${currentIndex + 1}; variables=${resolved.variablesUsed.join(', ')}; iteration=${completedSequences + 1}`);
+      if (activeAutomation !== config) return;
     }
   } catch (error) {
+    // A rejected async operation from an obsolete run must not stop a newer run.
+    if (activeAutomation !== config) return;
     const detail = error instanceof Error ? error.message : 'Erreur de résolution des variables.';
     await logEvent(location.origin, 'ERROR', 'automation-variable-resolution-failed', `message=${currentIndex + 1}; ${detail}`);
+    if (activeAutomation !== config) return;
     stopAutomation('failed', `Impossible de résoudre les variables du message ${currentIndex + 1} : ${detail}`);
     return;
   }
+  // Do not let a Stop/restart received during async preparation leak into a send.
+  if (activeAutomation !== config) return;
   const result = await sendText(text, { requireSavedStrategy: true, automationConfig: config });
   if (activeAutomation !== config) return;
   if (!result.success) {
@@ -1005,11 +1048,15 @@ async function runAutomationTick(): Promise<void> {
   }
 
   await logEvent(location.origin, 'INFO', 'automation-message-completed', `message=${currentIndex + 1}/${config.messages.length}; ${result.message}`);
+  // Stop/restart can happen while diagnostics are being persisted. An obsolete
+  // tick must not mutate the shared cursor belonging to a newer run.
+  if (activeAutomation !== config) return;
   messageIndex += 1;
   if (messageIndex >= config.messages.length) {
     messageIndex = 0;
     completedSequences += 1;
     await logEvent(location.origin, 'INFO', 'automation-sequence-completed', `sequence=${completedSequences}/${config.repeatMode === 'infinite' ? 'infinite' : config.repeatCount}`);
+    if (activeAutomation !== config) return;
     if (config.repeatMode === 'finite' && completedSequences >= Math.max(1, Math.floor(config.repeatCount))) {
       stopAutomation('finished', `Terminé : ${completedSequences} séquence(s) complète(s).`);
       await logEvent(location.origin, 'INFO', 'automation-finished', `sequenceIterations=${completedSequences}; messagesPerSequence=${config.messages.length}`);

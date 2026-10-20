@@ -4,6 +4,8 @@ import {
   type AutomationStartMessage,
 } from './automation-validation';
 import {
+  filterValidVariableDefinitions,
+  MAX_VARIABLE_DEFINITIONS,
   validateTemplateVariables,
   type VariableDefinition,
 } from './variables';
@@ -63,12 +65,32 @@ export function normalizeAutomationConfig(draft: AutomationConfigDraft): Normali
     timeWindowEnabled: draft.timeWindowEnabled,
     startTime: draft.startTime,
     endTime: draft.endTime,
-    variables: draft.variables,
+    // Rebuild each definition from the allowlisted schema before it reaches runtime.
+    variables: filterValidVariableDefinitions(draft.variables),
   };
+}
+
+function isAutomationConfigDraft(value: unknown): value is AutomationConfigDraft {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const draft = value as Record<string, unknown>;
+  return Array.isArray(draft.messages) &&
+    Array.from(draft.messages).every((message: unknown) => typeof message === 'string') &&
+    typeof draft.interval === 'string' &&
+    (draft.unit === 'seconds' || draft.unit === 'minutes') &&
+    typeof draft.repeatCount === 'string' &&
+    typeof draft.timeWindowEnabled === 'boolean' &&
+    typeof draft.startTime === 'string' &&
+    typeof draft.endTime === 'string' &&
+    Array.isArray(draft.variables) &&
+    draft.variables.length <= MAX_VARIABLE_DEFINITIONS &&
+    filterValidVariableDefinitions(draft.variables).length === draft.variables.length;
 }
 
 /** Validate user-editable values before any browser permission or runtime side effects. */
 export function validateAutomationConfig(draft: AutomationConfigDraft): AutomationConfigValidation {
+  // Treat runtime/storage values as untrusted even though callers are typed.
+  // Reject malformed shapes before normalization can throw or silently coerce them.
+  if (!isAutomationConfigDraft(draft)) return { ok: false, code: 'invalidSettings' };
   const config = normalizeAutomationConfig(draft);
   if (config.messages.length === 0 || config.messages.some(message => !message)) {
     return { ok: false, code: 'sequenceEmpty' };

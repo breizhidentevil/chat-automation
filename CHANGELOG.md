@@ -1,3 +1,64 @@
+## Unreleased — préserver le contenu final de l’historique
+
+- Empêche un instantané de message encore en streaming, reçu avec un horodatage plus récent, d’écraser le contenu d’un message déjà terminé.
+- Ajoute un test de régression pour ce scénario d’arrivée tardive.
+
+## Unreleased — isolation des séquences après arrêt/redémarrage
+
+- Vérifie l'identité de l'automatisation après l'écriture asynchrone des événements de fin de message et de séquence.
+- Empêche un ancien tick de modifier les index et compteurs partagés d'une nouvelle exécution démarrée pendant la journalisation.
+- Ajoute un test de non-régression couvrant les deux frontières asynchrones.
+
+## Unreleased — confidentialité des journaux
+
+- Retire les extraits du message envoyé et des messages visibles de tous les diagnostics de confirmation et de validation.
+- Conserve les informations de diagnostic utiles (longueur, compteurs, stratégie, durée) sans enregistrer le contenu des conversations dans les journaux techniques.
+- Ajoute des tests de non-régression pour éviter la réintroduction d'extraits de texte dans les événements de journalisation.
+
+## Unreleased — prévention des envois concurrents
+
+- Sérialise les demandes d'envoi dans chaque content script afin qu'une commande répétée pendant l'attente de confirmation DOM ne déclenche pas une seconde soumission.
+- Rejette explicitement les demandes concurrentes, journalise l'événement et libère le verrou dans un bloc `finally`, y compris en cas d'erreur.
+- Ajoute un test de régression vérifiant le verrou, le rejet et sa libération.
+
+## Unreleased — isolation des erreurs entre exécutions
+
+- Empêche une lecture ou une résolution asynchrone échouée appartenant à une ancienne séquence d'arrêter une automatisation démarrée entre-temps.
+- Ajoute un contrôle d'identité avant et après l'écriture du diagnostic, avec un test de non-régression sur l'ordre de ces garde-fous.
+
+## Unreleased — annulation sûre des automatisations
+
+- Vérifie que l’instance d’automatisation est toujours active après chaque préparation asynchrone des variables, avant l’insertion du texte et immédiatement avant le clic ou l’envoi par Entrée.
+- Empêche un arrêt ou un redémarrage pendant la lecture des données ou l’écriture des journaux de déclencher ensuite un envoi obsolète.
+- Ajoute des tests de régression vérifiant l’ordre des contrôles d’annulation aux frontières asynchrones et avant les effets d’envoi.
+
+## Unreleased — validation des séquences runtime
+
+- Rejette les séquences de messages clairsemées dans la validation du payload runtime, car les méthodes `every` et `reduce` ignorent les emplacements vides.
+- Ajoute un test de non-régression pour une séquence contenant un emplacement vide.
+
+## Unreleased — validation des sélecteurs de procédure
+
+- La validation vérifie désormais aussi les emplacements vides des tableaux de sélecteurs de secours, afin de rejeter les tableaux clairsemés malformés.
+- Ajout d’un test de non-régression pour les sélecteurs de secours clairsemés.
+
+## Unreleased — validation et assainissement des procédures de site\n\n- Rejette les tableaux utilisés comme objets de procédure, de stratégie d’envoi ou de profil de champ.\n- Reconstruit les procédures validées selon leur schéma autorisé avant lecture ou écriture en stockage, en écartant les propriétés injectées.\n- Ajoute des tests de non-régression pour les tableaux usurpant des objets et les propriétés inattendues.\n\n## Unreleased — validation des définitions de variables
+
+- Les configurations d’automatisation rejettent les collections de variables malformées, clairsemées, trop volumineuses ou contenant des définitions invalides.
+- Les définitions acceptées sont reconstruites selon leur schéma autorisé avant d’être intégrées à la configuration et au message runtime, ce qui écarte les propriétés injectées inattendues.
+- Tests de non-régression ajoutés pour les définitions invalides, les tableaux clairsemés et les propriétés supplémentaires volumineuses.
+
+## Unreleased — validation défensive des configurations
+
+- La validation d'une configuration d'automatisation rejette désormais les objets malformés avant normalisation : unité inconnue, types invalides, séquence non-tableau ou variables non-tableau.
+- Ajout de tests de non-régression pour vérifier qu'une entrée malformée retourne une erreur contrôlée au lieu de provoquer une exception ou une conversion silencieuse.
+
+## Unreleased — roadmap et suivi des itérations
+
+- Création de `docs/roadmap.md` pour centraliser les dix axes d'amélioration, leur ordre de priorité, les principes de développement continu et les critères de clôture.
+- Les prochaines itérations doivent consigner ici les changements livrés, et dans `docs/continuous-improvement-log.md` les détails techniques, décisions, commits et résultats de validation utiles.
+- Cette entrée documente l'ajout du processus de suivi ; elle ne signifie pas que les dix axes sont implémentés.
+
 ## 5.3.0 — React architecture refactor
 
 - Extracted pure message-sequence operations and centralized automation configuration normalization, validation, and runtime payload creation.

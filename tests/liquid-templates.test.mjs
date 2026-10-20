@@ -94,7 +94,7 @@ test('LiquidJS cannot access inherited properties or prototype-related paths', a
 
 test('unsafe prototype filters are rejected by the patched engine', async () => {
   await assert.rejects(
-    resolveMessageTemplate('{{ value | valueOf }}', [], context),
+    resolveMessageTemplate('{{ value | valueOf }}', [variable('value', 'safe')], context),
     /undefined filter|filter.*valueOf/i,
   );
 });

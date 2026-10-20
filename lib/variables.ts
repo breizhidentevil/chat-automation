@@ -35,7 +35,7 @@ export const MAX_VARIABLE_DEFINITIONS = 100;
 export const MAX_TOTAL_VARIABLE_VALUE_LENGTH = 1_000_000;
 
 export function isValidVariableDefinition(value: unknown): value is VariableDefinition {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const item = value as Partial<VariableDefinition>;
   return typeof item.id === 'string' && item.id.length > 0 && item.id.length <= MAX_VARIABLE_ID_LENGTH &&
     isValidVariableName(item.name) &&
@@ -60,12 +60,20 @@ export function filterValidVariableDefinitions(value: unknown): VariableDefiniti
     seenIds.add(candidate.id);
     seenNames.add(nameKey);
     totalValueLength += candidate.value.length;
-    valid.push(candidate);
+    // Persist only declared fields so unknown properties cannot smuggle
+    // unbounded payloads through validation into extension storage.
+    valid.push({
+      id: candidate.id,
+      name: candidate.name,
+      type: 'static',
+      value: candidate.value,
+      scope: candidate.scope,
+      updatedAt: candidate.updatedAt,
+    });
   }
   return valid;
 }
 
-const TEMPLATE_TOKEN = /{{\s*([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*)\s*}}/g;
 const DYNAMIC_ROOTS = new Set(['system', 'automation', 'chat', 'history', 'logs', 'strategy', 'data']);
 const BLOCKED_PATH_PARTS = new Set(['__proto__', 'prototype', 'constructor']);
 
@@ -91,10 +99,29 @@ export function isValidVariableName(value: unknown): value is string {
   return typeof value === 'string' && VARIABLE_NAME_PATTERN.test(value) && !BLOCKED_PATH_PARTS.has(value) && !DYNAMIC_ROOTS.has(value);
 }
 
+interface TemplateVariableReference {
+  name: string;
+  hasDefaultFilter: boolean;
+}
+
+/** Read simple variable paths from Liquid output expressions, including filtered expressions. */
+function findTemplateVariableReferences(template: string): TemplateVariableReference[] {
+  const references: TemplateVariableReference[] = [];
+  for (const match of template.matchAll(/{{\s*([^{}]+?)\s*}}/g)) {
+    const expression = match[1] ?? '';
+    const [rawPath, ...filters] = expression.split('|');
+    const name = rawPath?.trim() ?? '';
+    if (!/^[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*|\[\d+\])*$/.test(name)) continue;
+    references.push({
+      name,
+      hasDefaultFilter: filters.some(filter => /^\s*default(?:\s*:|\s*$)/.test(filter)),
+    });
+  }
+  return references;
+}
+
 export function findTemplateVariables(template: string): string[] {
-  const names = new Set<string>();
-  for (const match of template.matchAll(TEMPLATE_TOKEN)) names.add(match[1]!);
-  return [...names];
+  return [...new Set(findTemplateVariableReferences(template).map(reference => reference.name))];
 }
 
 function isDynamicPath(name: string): boolean {
@@ -106,7 +133,10 @@ export function validateTemplateVariables(template: string, variables: VariableD
   const available = new Set(filterValidVariableDefinitions(variables)
     .filter(variable => variable.scope === 'global' || variable.scope === scope)
     .map(variable => variable.name));
-  return findTemplateVariables(template).filter(name => !isDynamicPath(name) && !available.has(name));
+  const references = findTemplateVariableReferences(template);
+  return [...new Set(references
+    .filter(reference => !reference.hasDefaultFilter && !isDynamicPath(reference.name) && !available.has(reference.name))
+    .map(reference => reference.name))];
 }
 
 function tokenizePath(path: string): Array<string | number> {
@@ -192,9 +222,9 @@ export async function resolveMessageTemplate(
     },
   };
 
-  // Preserve the legacy resolver's explicit errors and blocked-path checks for simple tokens.
-  for (const name of variablesUsed) {
-    if (isDynamicPath(name)) readPath(rootData, name);
+  // Preserve explicit errors for required dynamic paths, while allowing Liquid's default filter to handle missing paths.
+  for (const reference of findTemplateVariableReferences(template)) {
+    if (isDynamicPath(reference.name) && !reference.hasDefaultFilter) readPath(rootData, reference.name);
   }
 
   try {

@@ -22,11 +22,15 @@ export function isValidAutomationStartMessage(value: unknown): value is Automati
 
   if (!Array.isArray(message.messages) ||
       message.messages.length === 0 ||
-      message.messages.length > MAX_MESSAGES ||
-      !message.messages.every((item: unknown) =>
+      message.messages.length > MAX_MESSAGES) return false;
+
+  // Array iteration methods skip holes. Materialize the bounded input first so
+  // sparse message sequences cannot pass validation with missing send slots.
+  const messages = Array.from(message.messages);
+  if (!messages.every((item: unknown) =>
         typeof item === 'string' && item.trim().length > 0 && item.length <= MAX_MESSAGE_LENGTH
       ) ||
-      message.messages.reduce((total, item) => total + (typeof item === 'string' ? item.length : 0), 0) > MAX_TOTAL_MESSAGE_LENGTH) return false;
+      messages.reduce((total, item) => total + item.length, 0) > MAX_TOTAL_MESSAGE_LENGTH) return false;
 
   if (typeof message.intervalMs !== 'number' ||
       !Number.isSafeInteger(message.intervalMs) ||

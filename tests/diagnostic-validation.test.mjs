@@ -43,6 +43,13 @@ test('rejects missing, unsupported, or oversized event fields', () => {
   assert.equal(isValidDiagnosticEvent(event({ strategy: 7 })), false);
 });
 
+test('rejects array containers and whitespace-only site/event identifiers', () => {
+  assert.equal(isValidDiagnosticEvent([]), false);
+  assert.equal(isValidDiagnosticEvent(Object.assign([], event())), false);
+  assert.equal(isValidDiagnosticEvent(event({ site: '   ' })), false);
+  assert.equal(isValidDiagnosticEvent(event({ event: '\t\n' })), false);
+});
+
 
 test('diagnostic history respects count and aggregate text budgets while retaining recent events', async () => {
   const { limitDiagnosticEvents, MAX_TOTAL_DIAGNOSTIC_CHARACTERS } = await import(moduleUrl);
@@ -57,5 +64,38 @@ test('diagnostic history respects count and aggregate text budgets while retaini
   assert.equal(limited.at(-1)?.timestamp, 200);
   const estimatedSize = limited.reduce((total, item) =>
     total + item.site.length + item.event.length + (item.details?.length ?? 0) + (item.strategy?.length ?? 0) + 128, 0);
+  assert.ok(estimatedSize <= MAX_TOTAL_DIAGNOSTIC_CHARACTERS);
+});
+
+test('diagnostic history scans backward and stops once the event-count budget is met', async () => {
+  const { limitDiagnosticEvents } = await import(moduleUrl);
+  const events = Array.from({ length: 2_000 }, (_, index) => event({ timestamp: index + 1 }));
+  let indexedReads = 0;
+  const observed = new Proxy(events, {
+    get(target, property, receiver) {
+      if (typeof property === 'string' && /^\d+$/.test(property)) indexedReads += 1;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+
+  const limited = limitDiagnosticEvents(observed);
+  assert.equal(limited.length, 500);
+  assert.equal(limited[0]?.timestamp, 1_501);
+  assert.equal(limited.at(-1)?.timestamp, 2_000);
+  assert.equal(indexedReads, 500);
+});
+
+test('diagnostic history strips unknown properties that bypass the text budget', async () => {
+  const { limitDiagnosticEvents, MAX_TOTAL_DIAGNOSTIC_CHARACTERS } = await import(moduleUrl);
+  const untrusted = event({ timestamp: 1, extraPayload: 'x'.repeat(2_000_000) });
+  const [limited] = limitDiagnosticEvents([untrusted]);
+
+  assert.ok(limited);
+  assert.equal('extraPayload' in limited, false);
+  assert.deepEqual(Object.keys(limited).sort(), [
+    'details', 'durationMs', 'event', 'level', 'site', 'strategy', 'timestamp',
+  ]);
+  const estimatedSize = limited.site.length + limited.event.length +
+    (limited.details?.length ?? 0) + (limited.strategy?.length ?? 0) + 128;
   assert.ok(estimatedSize <= MAX_TOTAL_DIAGNOSTIC_CHARACTERS);
 });

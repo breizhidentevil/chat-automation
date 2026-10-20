@@ -92,3 +92,28 @@ test('rejects malformed clock values and excessively long sequences', () => {
   assert.equal(validateAutomationConfig(draft({ startTime: '25:00' })).code, 'invalidSettings');
   assert.equal(validateAutomationConfig(draft({ messages: ['x'.repeat(1_000_001)] })).code, 'sequenceTooLong');
 });
+
+test('rejects malformed draft shapes before normalization', () => {
+  assert.equal(validateAutomationConfig(draft({ unit: 'hours' })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ timeWindowEnabled: 'yes' })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ messages: null })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ messages: ['ok', 42] })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ messages: Array(1) })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ variables: null })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ variables: [{ ...variable, value: 42 }] })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ variables: Array(1) })).code, 'invalidSettings');
+  const tooManyVariables = Array.from({ length: 101 }, (_, index) => ({
+    ...variable, id: `id-${index}`, name: `name-${index}`,
+  }));
+  assert.equal(validateAutomationConfig(draft({ variables: tooManyVariables })).code, 'invalidSettings');
+});
+
+test('sanitizes variable definitions before returning runtime configuration', () => {
+  const untrusted = { ...variable, injected: 'x'.repeat(2_000_000) };
+  const result = validateAutomationConfig(draft({ variables: [untrusted] }));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(result.config.variables, [variable]);
+  assert.equal('injected' in result.config.variables[0], false);
+  assert.deepEqual(buildAutomationStartPayload(result.config).variables, [variable]);
+});

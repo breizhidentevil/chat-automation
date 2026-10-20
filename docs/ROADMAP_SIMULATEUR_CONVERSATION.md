@@ -55,8 +55,9 @@ Remplacer le simulateur de planification actuel par un simulateur comportemental
 ### Étape 5 — Intégration et livraison — validation CI réussie
 - Mettre à jour les traductions FR/EN et la documentation.
 - Exécution CI confirmée : typecheck, tests unitaires, smoke test Chromium et builds Chrome, Firefox MV3 et Edge réussis.
-- Pull request ouverte : https://github.com/breizhidentevil/chat-automation/pull/17.
-- La PR reste non fusionnée ; revue finale avant intégration dans `main`.
+- Pull request [#17](https://github.com/breizhidentevil/chat-automation/pull/17) fusionnée le 2026-10-19.
+- La CI associée au commit de tête de la PR [#39340728444](https://github.com/breizhidentevil/chat-automation/actions/runs/39340728444) a réussi : validation de la toolchain, tests, smoke test Chromium et builds navigateur.
+- Étape terminée : le simulateur conversationnel est intégré dans `main`. Toute évolution supplémentaire doit être suivie dans la roadmap active et une nouvelle PR.
 
 ## Critères d'acceptation
 

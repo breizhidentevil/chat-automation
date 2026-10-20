@@ -92,3 +92,35 @@ test('saveProcedure preserves valid entries and removes invalid stored records',
     else globalThis.browser = previousBrowser;
   }
 });
+
+
+test('saveProcedure strips unexpected properties from accepted records', async () => {
+  const previousBrowser = globalThis.browser;
+  let written;
+  const untrusted = {
+    ...procedure({
+      inputProfile: { tagName: 'textarea', contentEditable: false, injected: 'profile' },
+      sendStrategy: { method: 'button', selector: 'button', confidence: 1, injected: 'strategy' },
+    }),
+    injected: 'x'.repeat(2_000_000),
+  };
+  globalThis.browser = {
+    storage: { local: {
+      get: async () => ({ chatAutomationProcedures: { 'https://example.com': untrusted } }),
+      set: async value => { written = value.chatAutomationProcedures; },
+    } },
+  };
+  try {
+    await saveProcedure(untrusted);
+    assert.equal('injected' in written['https://example.com'], false);
+    assert.equal('injected' in written['https://example.com'].sendStrategy, false);
+    assert.equal('injected' in written['https://example.com'].inputProfile, false);
+    assert.deepEqual(Object.keys(written['https://example.com']).sort(), [
+      'failureCount', 'inputProfile', 'inputSelector', 'lastSuccessAt', 'origin',
+      'schemaVersion', 'sendStrategy', 'successCount', 'updatedAt',
+    ]);
+  } finally {
+    if (previousBrowser === undefined) delete globalThis.browser;
+    else globalThis.browser = previousBrowser;
+  }
+});

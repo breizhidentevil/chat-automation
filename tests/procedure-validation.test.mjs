@@ -27,6 +27,13 @@ function procedure(overrides = {}) {
 
 test('accepts a valid saved procedure', () => {
   assert.equal(isValidChatSiteProcedure(procedure(), 'https://example.com'), true);
+  assert.equal(isValidChatSiteProcedure(Object.assign([], procedure())), false);
+  assert.equal(isValidChatSiteProcedure(procedure({
+    inputProfile: Object.assign([], { tagName: 'textarea', contentEditable: false }),
+  })), false);
+  assert.equal(isValidChatSiteProcedure(procedure({
+    sendStrategy: Object.assign([], { method: 'button', selector: 'button', confidence: 1 }),
+  })), false);
 });
 
 test('rejects non-origin URLs, mismatched keys and unsupported schemas', () => {
@@ -55,6 +62,9 @@ test('validates ordered fallback selectors and keeps legacy records compatible',
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['textarea', 'form textarea'] })), true);
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['form textarea'] })), false);
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['textarea', 'textarea'] })), false);
+  const sparseSelectors = ['textarea'];
+  sparseSelectors.length = 2;
+  assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: sparseSelectors })), false);
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: Array(9).fill('textarea') })), false);
   assert.equal(isValidChatSiteProcedure(procedure()), true);
 });
