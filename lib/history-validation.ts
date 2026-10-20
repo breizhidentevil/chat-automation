@@ -24,6 +24,7 @@ export function isValidConversationMessage(value: unknown): value is Conversatio
   if (!Number.isFinite(item.firstSeenAt) || !Number.isFinite(item.lastUpdatedAt)) return false;
   if ((item.firstSeenAt as number) < 0 || (item.lastUpdatedAt as number) < (item.firstSeenAt as number)) return false;
   if (item.completedAt !== undefined && (
+    item.status !== 'complete' ||
     !Number.isFinite(item.completedAt) ||
     item.completedAt < item.firstSeenAt! ||
     item.completedAt > item.lastUpdatedAt!
