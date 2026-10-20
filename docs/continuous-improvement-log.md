@@ -35,3 +35,14 @@
 - Never force-push, overwrite unrelated work, or commit directly to `main`.
 - Never merge when required CI is failing, missing, or unknown.
 - Report tests, commits, pushes, and releases only when confirmed by repository evidence.
+
+
+## Strategy recovery hardening — 2026-10-20
+
+- Confirmed design weakness: a single saved CSS selector was a single point of failure for locating the chat input.
+- Extended saved procedures with optional ordered `inputSelectors`, preserving compatibility with existing records that only contain `inputSelector`.
+- Strategy validation now saves up to eight selectors that were each verified to uniquely identify the selected input at validation time. The list includes independent identifying attributes where available and retains a structural selector as the final fallback.
+- During automation, the extension tries the saved selectors in order and only accepts a visible, connected, editable, enabled node. It never switches the send method as a side effect. If every selector fails, it stops safely with a more precise error rather than guessing.
+- Added validation tests for ordered fallback lists, duplicates, missing primary selector and maximum list size.
+- Commits: `1f4fb9fff5b26a6f675e2650389117921ce26538`, `b3ae86bcdcea9a5b63fdad1c0df8c834f1cf5957`, `c5eb24e105df1fb317b59943606b4b2354ee1fdf`, `7d060a49f36949b14cefa8ede2832787b78afb97`, `1ce4a64e052fd7ec4ab51e445f6c9674dd8e3dad`, `99e3e859b28bb778e161dfdc912814d9ce2cad56`.
+- CI status must be checked against the latest branch head before merge. Local tests were not run in this environment.
