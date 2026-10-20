@@ -31,8 +31,20 @@ export function limitDiagnosticEvents(value: unknown): DiagnosticEvent[] {
   const result: DiagnosticEvent[] = [];
   let totalCharacters = 0;
   for (let index = value.length - 1; index >= 0 && result.length < MAX_DIAGNOSTIC_LOGS; index -= 1) {
-    const event = value[index];
-    if (!isValidDiagnosticEvent(event)) continue;
+    const candidate = value[index];
+    if (!isValidDiagnosticEvent(candidate)) continue;
+
+    // Persist only the schema fields: unknown properties are not included in
+    // the size estimate and could otherwise bypass the aggregate text budget.
+    const event: DiagnosticEvent = {
+      timestamp: candidate.timestamp,
+      level: candidate.level,
+      site: candidate.site,
+      event: candidate.event,
+      ...(candidate.details !== undefined ? { details: candidate.details } : {}),
+      ...(candidate.strategy !== undefined ? { strategy: candidate.strategy } : {}),
+      ...(candidate.durationMs !== undefined ? { durationMs: candidate.durationMs } : {}),
+    };
     const size = event.site.length + event.event.length +
       (event.details?.length ?? 0) + (event.strategy?.length ?? 0) + 128;
     if (result.length > 0 && totalCharacters + size > MAX_TOTAL_DIAGNOSTIC_CHARACTERS) break;
