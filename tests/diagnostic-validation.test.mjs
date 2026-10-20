@@ -43,6 +43,13 @@ test('rejects missing, unsupported, or oversized event fields', () => {
   assert.equal(isValidDiagnosticEvent(event({ strategy: 7 })), false);
 });
 
+test('rejects array containers and whitespace-only site/event identifiers', () => {
+  assert.equal(isValidDiagnosticEvent([]), false);
+  assert.equal(isValidDiagnosticEvent(Object.assign([], event())), false);
+  assert.equal(isValidDiagnosticEvent(event({ site: '   ' })), false);
+  assert.equal(isValidDiagnosticEvent(event({ event: '\\t\\n' })), false);
+});
+
 
 test('diagnostic history respects count and aggregate text budgets while retaining recent events', async () => {
   const { limitDiagnosticEvents, MAX_TOTAL_DIAGNOSTIC_CHARACTERS } = await import(moduleUrl);
