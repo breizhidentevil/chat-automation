@@ -64,3 +64,11 @@
 - Regression coverage: tests exercise unknown units, non-boolean flags, null/non-array messages, non-string message entries, sparse arrays, and null variables. An additional review caught that `Array.prototype.every` skips sparse slots; the guard now materializes the array before checking every entry.
 - Commits: `5d0c116d97bb42ed83c68e99c886f45f99e025f9` (guard), `08753fc2ad9c837455bb8ff5d5852e16d7d4231e` (tests), `f7865873a6e499c8e96cef0c5baf27157301a3cd` (changelog).
 - Validation: changes are committed on `autonomous/continuous-improvement`. Local npm execution is unavailable in this environment; CI status for the latest head must be confirmed before considering the iteration fully validated. No merge to `main` was performed.
+
+## Defensive automation variable validation — 2026-10-20
+
+- Finding: the automation draft shape guard accepted any array as `variables`. Invalid definitions were silently ignored by template validation, while accepted objects could carry unknown, potentially large properties into the runtime payload.
+- Change: configuration validation now rejects variable collections whose entries fail the existing schema, uniqueness, count, or aggregate-size filters. Normalization reconstructs accepted variable definitions using the allowlisted fields before creating the runtime payload.
+- Regression coverage: invalid definition values, sparse variable arrays, and a valid definition carrying a 2 MB unexpected property. The latter must remain valid while the extra property is absent from normalized configuration and payload.
+- Commits: `2c9cfbea6ddd32d92330775e26b5bbed7440fdd4` (validator), `50d53893ddc94002307a408432e888ba18b246cd` (tests), `adbc29d6271bd10b0e1c5e746ee802d3948fa648` (changelog).
+- Validation: local npm execution is unavailable in this environment. CI must be checked against the exact latest branch head; no test success or merge is claimed.
