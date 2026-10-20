@@ -84,3 +84,18 @@ test('diagnostic history scans backward and stops once the event-count budget is
   assert.equal(limited.at(-1)?.timestamp, 2_000);
   assert.equal(indexedReads, 500);
 });
+
+test('diagnostic history strips unknown properties that bypass the text budget', async () => {
+  const { limitDiagnosticEvents, MAX_TOTAL_DIAGNOSTIC_CHARACTERS } = await import(moduleUrl);
+  const untrusted = event({ timestamp: 1, extraPayload: 'x'.repeat(2_000_000) });
+  const [limited] = limitDiagnosticEvents([untrusted]);
+
+  assert.ok(limited);
+  assert.equal('extraPayload' in limited, false);
+  assert.deepEqual(Object.keys(limited).sort(), [
+    'details', 'durationMs', 'event', 'level', 'site', 'strategy', 'timestamp',
+  ]);
+  const estimatedSize = limited.site.length + limited.event.length +
+    (limited.details?.length ?? 0) + (limited.strategy?.length ?? 0) + 128;
+  assert.ok(estimatedSize <= MAX_TOTAL_DIAGNOSTIC_CHARACTERS);
+});
