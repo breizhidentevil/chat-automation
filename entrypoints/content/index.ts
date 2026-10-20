@@ -92,7 +92,7 @@ async function inputMatchesSavedProfile(node: HTMLElement, profile: ChatSiteProc
   return savedAttributes.length === 0 || savedAttributes.some(([value, actual]) => value === actual);
 }
 
-function sendText(
+async function sendText(
   rawText: string,
   options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
 ): Promise<{ message: string; success: boolean }> {
