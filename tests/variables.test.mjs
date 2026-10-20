@@ -203,3 +203,13 @@ test('variable collections are capped by count and aggregate value size', () => 
   assert.equal(filtered.some(item => item.name === 'small_after_limit'), false);
   assert.equal(filtered.reduce((total, item) => total + item.value.length, 0) <= 1_000_000, true);
 });
+
+test('variable filtering strips unknown properties before persistence', () => {
+  const untrusted = { ...variable('name', 'value'), injected: 'x'.repeat(2_000_000) };
+  const [filtered] = filterValidVariableDefinitions([untrusted]);
+
+  assert.ok(filtered);
+  assert.deepEqual(filtered, variable('name', 'value'));
+  assert.equal('injected' in filtered, false);
+  assert.deepEqual(Object.keys(filtered).sort(), ['id', 'name', 'scope', 'type', 'updatedAt', 'value']);
+});
