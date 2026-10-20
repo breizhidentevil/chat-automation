@@ -66,3 +66,21 @@ test('diagnostic history respects count and aggregate text budgets while retaini
     total + item.site.length + item.event.length + (item.details?.length ?? 0) + (item.strategy?.length ?? 0) + 128, 0);
   assert.ok(estimatedSize <= MAX_TOTAL_DIAGNOSTIC_CHARACTERS);
 });
+
+test('diagnostic history scans backward and stops once the event-count budget is met', async () => {
+  const { limitDiagnosticEvents } = await import(moduleUrl);
+  const events = Array.from({ length: 2_000 }, (_, index) => event({ timestamp: index + 1 }));
+  let indexedReads = 0;
+  const observed = new Proxy(events, {
+    get(target, property, receiver) {
+      if (typeof property === 'string' && /^\\d+$/.test(property)) indexedReads += 1;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+
+  const limited = limitDiagnosticEvents(observed);
+  assert.equal(limited.length, 500);
+  assert.equal(limited[0]?.timestamp, 1_501);
+  assert.equal(limited.at(-1)?.timestamp, 2_000);
+  assert.equal(indexedReads, 500);
+});
