@@ -72,3 +72,5 @@
 - Regression coverage: invalid definition values, sparse variable arrays, and a valid definition carrying a 2 MB unexpected property. The latter must remain valid while the extra property is absent from normalized configuration and payload.
 - Commits: `2c9cfbea6ddd32d92330775e26b5bbed7440fdd4` (validator), `50d53893ddc94002307a408432e888ba18b246cd` (tests), `adbc29d6271bd10b0e1c5e746ee802d3948fa648` (changelog).
 - Validation: local npm execution is unavailable in this environment. CI must be checked against the exact latest branch head; no test success or merge is claimed.
+
+- Follow-up hardening: reject variable arrays over `MAX_VARIABLE_DEFINITIONS` before scanning their contents, bounding validation work for oversized untrusted collections. Added a 101-definition regression case. Commits: `db96a10b9d1ae3c95264c5feb7ba0138f027d0e0` (bound), `ba0b1264b9197bc41b898e80d4f7e8372211b7c8` (test).
