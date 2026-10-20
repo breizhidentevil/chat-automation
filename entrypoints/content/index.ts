@@ -250,15 +250,14 @@ async function performSendText(
     }
   }
 
-  const expectedPreview = messageLogPreview(text);
-  await logEvent(origin, 'INFO', 'send-confirmation-wait-started', `Message attendu=${JSON.stringify(expectedPreview)}; délai=20000ms; vérification=1s`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
+  await logEvent(origin, 'INFO', 'send-confirmation-wait-started', `messageLength=${text.length}; délai=20000ms; vérification=1s`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
   const confirmed = await waitForVisibleMessage(text, baselineMatches, 20000);
   if (!confirmed) {
-    await logEvent(origin, 'ERROR', 'send-result-unconfirmed', `Message attendu=${JSON.stringify(expectedPreview)}; aucun nouveau message correspondant après 20000ms.`, { strategy: procedure?.sendStrategy.method ?? 'fallback', durationMs: 20000 });
+    await logEvent(origin, 'ERROR', 'send-result-unconfirmed', `messageLength=${text.length}; aucun nouveau message correspondant après 20000ms.`, { strategy: procedure?.sendStrategy.method ?? 'fallback', durationMs: 20000 });
     return { message: 'La méthode a été exécutée, mais aucun nouveau message correspondant n’a été détecté. Automatisation suspendue pour éviter les envois répétés non confirmés.', success: false };
   }
 
-  await logEvent(origin, 'INFO', 'send-result-confirmed-in-dom', `Message attendu=${JSON.stringify(expectedPreview)}; message correspondant observé dans la conversation.`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
+  await logEvent(origin, 'INFO', 'send-result-confirmed-in-dom', `messageLength=${text.length}; message correspondant observé dans la conversation.`, { strategy: procedure?.sendStrategy.method ?? 'fallback' });
   return { message: 'Message détecté dans la conversation après exécution de la méthode d’envoi.', success: true };
 }
 
@@ -325,11 +324,10 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
   }
 
-  const expectedPreview = messageLogPreview(text);
-  await logEvent(origin, 'INFO', 'strategy-validation-confirmation-wait-started', `Message attendu=${JSON.stringify(expectedPreview)}; délai=20000ms; vérification=1s`, { strategy: strategy.method });
+  await logEvent(origin, 'INFO', 'strategy-validation-confirmation-wait-started', `messageLength=${text.length}; délai=20000ms; vérification=1s`, { strategy: strategy.method });
   const confirmed = await waitForVisibleMessage(text, baselineMatches, 20000);
   if (!confirmed) {
-    await logEvent(origin, 'WARN', 'strategy-validation-failed', `Message attendu=${JSON.stringify(expectedPreview)}; aucun nouveau message correspondant après 20000ms ; stratégie non sauvegardée.`, { strategy: strategy.method, durationMs: 20000 });
+    await logEvent(origin, 'WARN', 'strategy-validation-failed', `messageLength=${text.length}; aucun nouveau message correspondant après 20000ms ; stratégie non sauvegardée.`, { strategy: strategy.method, durationMs: 20000 });
     return { message: 'Test non confirmé : aucun nouveau message correspondant n’a été détecté dans la conversation. La stratégie n’a pas été enregistrée. Vérifiez le résultat sur le site avant de réessayer.', validated: false };
   }
 
@@ -355,7 +353,7 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     failureCount: existing?.failureCount ?? 0,
   };
   await saveProcedure(procedure);
-  await logEvent(origin, 'INFO', 'strategy-validation-succeeded-and-saved', `method=${strategy.method}; inputs=${inputSelectors.join(' | ')}; message confirmé=${JSON.stringify(expectedPreview)}`, { strategy: strategy.method });
+  await logEvent(origin, 'INFO', 'strategy-validation-succeeded-and-saved', `method=${strategy.method}; inputs=${inputSelectors.join(' | ')}; confirmation DOM reçue`, { strategy: strategy.method });
   return { message: `Validation réussie : un nouveau message a été détecté dans la conversation. La stratégie « ${strategy.method === 'button' ? 'bouton d’envoi' : 'Entrée'} » est enregistrée pour ${origin}. Cette preuve concerne l’interface, pas la confirmation du serveur.`, validated: true };
 }
 
@@ -409,11 +407,6 @@ async function waitForEnabledSendButton(input: HTMLElement, timeoutMs: number): 
     await new Promise(resolve => window.setTimeout(resolve, 100));
   } while (performance.now() < deadline);
   return undefined;
-}
-
-function messageLogPreview(value: string): string {
-  const normalized = value.replace(/\s+/g, ' ').trim();
-  return normalized.length > 180 ? `${normalized.slice(0, 180)}… [tronqué, ${normalized.length} caractères au total]` : normalized;
 }
 
 function normalizedText(value: string): string {
@@ -480,7 +473,6 @@ function waitForVisibleMessage(text: string, baselineMatches: HTMLElement[], tim
     let done = false;
     let lastCount = baselineMatches.length;
     const baselineNodes = new Set(baselineMatches);
-    const expectedPreview = text.length > 180 ? `${text.slice(0, 180)}…` : text;
     const startedAt = performance.now();
     const finish = (value: boolean) => {
       if (done) return;
@@ -495,7 +487,7 @@ function waitForVisibleMessage(text: string, baselineMatches: HTMLElement[], tim
       lastCount = matches.length;
       const newlyRenderedMatch = matches.some(element => !baselineNodes.has(element));
       if (newlyRenderedMatch || lastCount > baselineMatches.length) {
-        void logEvent(location.origin, 'INFO', 'message-confirmation-match-found', `expected="${expectedPreview}"; matchesBefore=${baselineMatches.length}; matchesNow=${lastCount}; newNode=${newlyRenderedMatch}; elapsedMs=${Math.round(performance.now() - startedAt)}`);
+        void logEvent(location.origin, 'INFO', 'message-confirmation-match-found', `messageLength=${text.length}; matchesBefore=${baselineMatches.length}; matchesNow=${lastCount}; newNode=${newlyRenderedMatch}; elapsedMs=${Math.round(performance.now() - startedAt)}`);
         finish(true);
       }
     };
@@ -506,9 +498,9 @@ function waitForVisibleMessage(text: string, baselineMatches: HTMLElement[], tim
       const diagnostics = Array.from(document.querySelectorAll<HTMLElement>(USER_MESSAGE_SELECTORS))
         .filter(element => isVisibleElement(element) && !isEditableOrControl(element))
         .slice(-8)
-        .map(element => normalizedText(element.innerText || element.textContent || '').slice(0, 120))
-        .filter(Boolean);
-      void logEvent(location.origin, 'WARN', 'message-confirmation-timeout', `expected="${expectedPreview}"; matchesBefore=${baselineMatches.length}; matchesAtTimeout=${lastCount}; elapsedMs=${Math.round(performance.now() - startedAt)}; recentMessageCandidates=${JSON.stringify(diagnostics)}`);
+        .map(element => normalizedText(element.innerText || element.textContent || '').length)
+        .filter(length => length > 0);
+      void logEvent(location.origin, 'WARN', 'message-confirmation-timeout', `messageLength=${text.length}; matchesBefore=${baselineMatches.length}; matchesAtTimeout=${lastCount}; elapsedMs=${Math.round(performance.now() - startedAt)}; recentCandidateLengths=${JSON.stringify(diagnostics)}`);
       finish(false);
     }, timeoutMs);
     check();

@@ -1,3 +1,9 @@
+## Unreleased — confidentialité des journaux
+
+- Retire les extraits du message envoyé et des messages visibles de tous les diagnostics de confirmation et de validation.
+- Conserve les informations de diagnostic utiles (longueur, compteurs, stratégie, durée) sans enregistrer le contenu des conversations dans les journaux techniques.
+- Ajoute des tests de non-régression pour éviter la réintroduction d'extraits de texte dans les événements de journalisation.
+
 ## Unreleased — prévention des envois concurrents
 
 - Sérialise les demandes d'envoi dans chaque content script afin qu'une commande répétée pendant l'attente de confirmation DOM ne déclenche pas une seconde soumission.

@@ -115,3 +115,11 @@
 - Correction : verrou local au content script, rejet des demandes entrantes pendant un envoi en cours, événement de diagnostic `send-request-rejected-in-flight` et libération systématique du verrou dans `finally`.
 - Test de régression ajouté pour contrôler la sérialisation et la libération du verrou.
 - Vérifications : la CI précédente a réussi sur le SHA antérieur `553508bfbe78d7d0452c6ae4247e599ff2b6f6a3`; elle ne valide pas ce changement. Attendre le résultat de la CI du nouveau SHA. Aucun résultat local n'est revendiqué et aucun merge dans `main` n'est effectué.
+
+
+## Réduction des données sensibles dans les journaux — 2026-10-20
+
+- Constat P1 (observabilité/confidentialité) : les journaux de confirmation d'envoi et de validation enregistraient jusqu'à 180 caractères du prompt ainsi que des extraits des huit derniers messages visibles en cas d'échec. Les journaux persistants pouvaient donc dupliquer du contenu privé de conversation inutilement.
+- Correction : remplacer les extraits par la longueur du message, des compteurs DOM et les longueurs des candidats récents. Les événements de validation n'enregistrent plus le texte du message testé.
+- Tests : ajout d'une vérification de non-régression sur les chemins de journalisation de confirmation et de timeout.
+- La CI doit confirmer le SHA exact ; aucun test local n'est revendiqué. Aucun merge dans `main`.
