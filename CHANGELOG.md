@@ -1,3 +1,8 @@
+## Unreleased — préserver le contenu final de l’historique
+
+- Empêche un instantané de message encore en streaming, reçu avec un horodatage plus récent, d’écraser le contenu d’un message déjà terminé.
+- Ajoute un test de régression pour ce scénario d’arrivée tardive.
+
 ## Unreleased — isolation des séquences après arrêt/redémarrage
 
 - Vérifie l'identité de l'automatisation après l'écriture asynchrone des événements de fin de message et de séquence.

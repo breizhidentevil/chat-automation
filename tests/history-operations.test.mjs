@@ -46,6 +46,30 @@ test('merge keeps a completed status when a late streaming update arrives', () =
   assert.equal(merged.completedAt, 2500);
 });
 
+test('a newer streaming snapshot cannot overwrite completed message content', () => {
+  const completed = message({
+    id: 'same',
+    status: 'complete',
+    content: 'Final answer',
+    firstSeenAt: 1000,
+    lastUpdatedAt: 3000,
+    completedAt: 2900,
+  });
+  const lateStreaming = message({
+    id: 'same',
+    status: 'streaming',
+    content: 'Partial answer',
+    firstSeenAt: 1000,
+    lastUpdatedAt: 4000,
+  });
+
+  const merged = mergeConversationMessage(completed, lateStreaming);
+  assert.equal(merged.status, 'complete');
+  assert.equal(merged.content, 'Final answer');
+  assert.equal(merged.completedAt, 2900);
+  assert.equal(merged.lastUpdatedAt, 4000);
+});
+
 test('deduplication merges repeated updates with the same identity', () => {
   const first = message({ id: 'same', firstSeenAt: 1000, lastUpdatedAt: 1100 });
   const update = message({ id: 'same', firstSeenAt: 1000, lastUpdatedAt: 1600, status: 'complete', completedAt: 1500, content: 'Final' });

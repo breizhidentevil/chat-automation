@@ -130,3 +130,10 @@
 - Constat P0 : après l'envoi confirmé, `runAutomationTick` attendait l'écriture des journaux avant de mettre à jour le curseur de séquence. Un arrêt suivi d'un redémarrage pendant cette attente pouvait laisser l'ancien tick incrémenter les compteurs globaux de la nouvelle exécution.
 - Correction : revérification de l'identité de l'instance après les écritures asynchrones de fin de message et de séquence, avant toute mutation du curseur ou décision de fin.
 - Test de non-régression ajouté. Validation complète attendue dans la CI du commit exact ; aucun merge dans `main`.
+
+
+## Préservation du contenu final de l’historique — 2026-10-20
+
+- Constat P1 : la fusion d'historique préservait le statut `complete` mais choisissait le contenu uniquement selon `lastUpdatedAt`. Un instantané `streaming` reçu plus tard pouvait donc remplacer le texte final tout en laissant le statut `complete`.
+- Correction : une entrée déjà terminée conserve son payload face aux mises à jour `streaming` ou `incomplete`; une nouvelle entrée `complete` peut toujours actualiser le contenu si son horodatage est plus récent.
+- Ajout d'un test de non-régression. Validation CI à vérifier sur le SHA exact ; aucune fusion dans `main`.

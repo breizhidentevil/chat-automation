@@ -93,8 +93,14 @@ const statusRank = (status: ConversationMessageStatus): number =>
 
 /** Merge updates without allowing a late streaming event to downgrade a final status. */
 export function mergeConversationMessage(previous: ConversationMessage, incoming: ConversationMessage): ConversationMessage {
-  const latest = incoming.lastUpdatedAt >= previous.lastUpdatedAt ? incoming : previous;
   const status = statusRank(previous.status) >= statusRank(incoming.status) ? previous.status : incoming.status;
+  // Once a message is complete, a later-arriving streaming/incomplete snapshot
+  // must not replace its final content just because its timestamp is newer.
+  // Only another complete snapshot may update a completed message's payload.
+  const preserveCompletedPayload = previous.status === 'complete' && incoming.status !== 'complete';
+  const latest = preserveCompletedPayload
+    ? previous
+    : incoming.lastUpdatedAt >= previous.lastUpdatedAt ? incoming : previous;
   const completedAt = status === 'complete'
     ? Math.max(previous.completedAt ?? 0, incoming.completedAt ?? 0) || latest.lastUpdatedAt
     : undefined;
