@@ -1,3 +1,8 @@
+## Unreleased — validation défensive des configurations
+
+- La validation d'une configuration d'automatisation rejette désormais les objets malformés avant normalisation : unité inconnue, types invalides, séquence non-tableau ou variables non-tableau.
+- Ajout de tests de non-régression pour vérifier qu'une entrée malformée retourne une erreur contrôlée au lieu de provoquer une exception ou une conversion silencieuse.
+
 ## Unreleased — roadmap et suivi des itérations
 
 - Création de `docs/roadmap.md` pour centraliser les dix axes d'amélioration, leur ordre de priorité, les principes de développement continu et les critères de clôture.
