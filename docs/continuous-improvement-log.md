@@ -26,10 +26,9 @@
 
 ## Next task
 
-1. Finish updating this log, then create/update a PR from `autonomous/continuous-improvement` to `main`.
-2. Wait for all required CI jobs to finish on the exact PR head; fix failures before considering merge. Never merge while status is failing, pending, missing, or unknown.
-3. Recheck PR #18's current head and status checks. The YAML nested-key collision was reported to the PR owner; verify whether a regression test/fix lands without modifying that branch.
-4. Continue with the highest-priority independently actionable bug, with focused tests and verified CI evidence.
+1. PR #20 is open against `main`; its latest confirmed CI run is green on SHA `d347c2a5d8e730dfe17276cab11bfae3176aa2ef`. Recheck the exact head and required checks after any further commit; do not merge merely because this run passed if the head changes or mandatory checks are absent.
+2. PR #18 head `4fd7bec8c6823c15c884d1a371fce6e3afb78183` currently reports zero check runs and zero commit statuses (combined state `pending`), so its validation is missing/unknown. Do not merge it. The parser code still contains the YAML duplicate-detection collision: the key is based on indentation levels, not parent names. The report is in the PR discussion; do not modify that separate branch.
+3. Continue with the highest-priority independently actionable improvement on `autonomous/continuous-improvement`, adding focused regression tests and recording exact verification evidence.
 
 ## Safety rules
 
