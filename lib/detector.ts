@@ -37,18 +37,50 @@ export function detectCandidates(root: ParentNode = document): Candidate[] {
   return candidates.sort((a, b) => b.score - a.score);
 }
 
-export function stableSelector(element: HTMLElement): string {
+export function stableSelectors(element: HTMLElement): string[] {
   const tag = element.tagName.toLowerCase();
+  const selectors: string[] = [];
+  const addIfUnique = (selector: string) => {
+    try {
+      const matches = document.querySelectorAll(selector);
+      if (matches.length === 1 && matches[0] === element && !selectors.includes(selector)) selectors.push(selector);
+    } catch { /* invalid selector; try another identifying attribute */ }
+  };
+
+  // Save several independent, currently unique selectors. At runtime any one may
+  // survive when a site regenerates IDs, placeholders, or test attributes.
   for (const attribute of ['data-testid', 'data-test', 'aria-label', 'name', 'placeholder', 'id']) {
     const value = element.getAttribute(attribute);
     if (!value) continue;
     const escaped = CSS.escape(value);
-    const selector = attribute === 'id' ? `#${escaped}` : `${tag}[${attribute}="${escaped}"]`;
-    try { if (document.querySelectorAll(selector).length === 1) return selector; } catch { /* continue with a safer fallback */ }
+    addIfUnique(attribute === 'id' ? `#${escaped}` : `${tag}[${attribute}="${escaped}"]`);
   }
   const role = element.getAttribute('role');
-  if (role && document.querySelectorAll(`${tag}[role="${CSS.escape(role)}"]`).length === 1) return `${tag}[role="${CSS.escape(role)}"]`;
-  return tag;
+  if (role) addIfUnique(`${tag}[role="${CSS.escape(role)}"]`);
+
+  // A bare tag such as "textarea" is unsafe when several composers exist.
+  // Generate a structural path and verify that it uniquely identifies this node.
+  const segments: string[] = [];
+  let current: HTMLElement | null = element;
+  while (current) {
+    const currentTag = current.tagName.toLowerCase();
+    const parent: HTMLElement | null = current.parentElement;
+    let segment = currentTag;
+    if (parent) {
+      const sameTagSiblings = Array.from(parent.children).filter(sibling => sibling.tagName.toLowerCase() === currentTag);
+      if (sameTagSiblings.length > 1) segment += `:nth-of-type(${sameTagSiblings.indexOf(current) + 1})`;
+    }
+    segments.unshift(segment);
+    addIfUnique(segments.join(' > '));
+    current = parent;
+  }
+  if (!selectors.length) throw new Error('Unable to create a unique selector for the selected chat input.');
+  // Preserve a structural selector as the final fallback even when all semantic attributes exist.
+  return selectors.length <= 8 ? selectors : [...selectors.slice(0, 7), selectors[selectors.length - 1]!];
+}
+
+export function stableSelector(element: HTMLElement): string {
+  return stableSelectors(element)[0]!;
 }
 
 export function findSendButton(input: HTMLElement): HTMLElement | undefined {

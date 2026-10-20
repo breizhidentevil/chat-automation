@@ -33,6 +33,19 @@ export function isValidChatSiteProcedure(value: unknown, expectedOrigin?: string
   if (procedure.schemaVersion !== 2 || !isNormalizedHttpOrigin(procedure.origin)) return false;
   if (expectedOrigin !== undefined && procedure.origin !== expectedOrigin) return false;
   if (!isValidSelector(procedure.inputSelector)) return false;
+  if (procedure.inputSelectors !== undefined &&
+      (!Array.isArray(procedure.inputSelectors) || procedure.inputSelectors.length < 1 || procedure.inputSelectors.length > 8 ||
+       !procedure.inputSelectors.every(isValidSelector) || new Set(procedure.inputSelectors).size !== procedure.inputSelectors.length ||
+       !procedure.inputSelectors.includes(procedure.inputSelector))) return false;
+  if (procedure.inputProfile !== undefined) {
+    const profile = procedure.inputProfile;
+    if (!profile || typeof profile !== 'object' || typeof profile.tagName !== 'string' ||
+        !/^[a-z][a-z0-9-]{0,63}$/.test(profile.tagName) || typeof profile.contentEditable !== 'boolean' ||
+        ['role', 'ariaLabel', 'name', 'placeholder'].some(key =>
+          profile[key as 'role' | 'ariaLabel' | 'name' | 'placeholder'] !== undefined &&
+          (typeof profile[key as 'role' | 'ariaLabel' | 'name' | 'placeholder'] !== 'string' ||
+           (profile[key as 'role' | 'ariaLabel' | 'name' | 'placeholder'] as string).length > 512))) return false;
+  }
   if (!isValidTimestamp(procedure.updatedAt) || !isValidCount(procedure.successCount) || !isValidCount(procedure.failureCount)) return false;
   if (procedure.lastSuccessAt !== undefined &&
       (!isValidTimestamp(procedure.lastSuccessAt) || procedure.lastSuccessAt > procedure.updatedAt)) return false;

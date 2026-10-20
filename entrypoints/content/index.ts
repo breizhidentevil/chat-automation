@@ -1,4 +1,4 @@
-import { detectCandidates, findSendButton, stableSelector } from '../../lib/detector';
+import { detectCandidates, findSendButton, stableSelector, stableSelectors } from '../../lib/detector';
 import { logEvent } from '../../lib/logger';
 import { getProcedure, saveProcedure } from '../../lib/procedures';
 import type { Candidate, ChatSiteProcedure } from '../../lib/contracts';
@@ -77,6 +77,21 @@ export default defineContentScript({
   },
 });
 
+function inputMatchesSavedProfile(node: HTMLElement, profile: ChatSiteProcedure['inputProfile']): boolean {
+  if (!profile) return true; // legacy records have no fingerprint
+  if (node.tagName.toLowerCase() !== profile.tagName || node.isContentEditable !== profile.contentEditable) return false;
+  const attributes: Array<[string | undefined, string | null]> = [
+    [profile.role, node.getAttribute('role')],
+    [profile.ariaLabel, node.getAttribute('aria-label')],
+    [profile.name, node.getAttribute('name')],
+    [profile.placeholder, node.getAttribute('placeholder')],
+  ];
+  const savedAttributes = attributes.filter(([value]) => value !== undefined);
+  // When the selected field had semantic attributes, at least one must still match.
+  // This prevents a stale selector that now points at another textarea from being accepted.
+  return savedAttributes.length === 0 || savedAttributes.some(([value, actual]) => value === actual);
+}
+
 async function sendText(
   rawText: string,
   options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
@@ -95,18 +110,26 @@ async function sendText(
 
   let chosen: HTMLElement | undefined;
   if (procedure) {
-    try {
-      const node = document.querySelector<HTMLElement>(procedure.inputSelector);
-      if (node && node.isConnected && node.getClientRects().length > 0 && !node.matches(':disabled, [readonly]') && isEditable(node)) {
-        chosen = node;
-        await logEvent(origin, 'INFO', 'saved-procedure-input-found', procedure.inputSelector, { strategy: 'saved-procedure' });
-      } else {
-        await logEvent(origin, 'ERROR', 'saved-procedure-input-stale', procedure.inputSelector, { strategy: 'saved-procedure' });
-        if (options.requireSavedStrategy) return { message: 'Le champ de la stratégie enregistrée n’est plus valide. Automatisation suspendue ; relancez la validation de stratégie.', success: false };
+    const selectors = [...new Set([procedure.inputSelector, ...(procedure.inputSelectors ?? [])])];
+    let invalidSelectors = 0;
+    for (const selector of selectors) {
+      try {
+        const matches = document.querySelectorAll<HTMLElement>(selector);
+        // A selector that used to be unique may become ambiguous after a site update.
+        if (matches.length !== 1) continue;
+        const node = matches[0];
+        if (node && node.isConnected && node.getClientRects().length > 0 && !node.matches(':disabled, [aria-disabled="true"], [readonly]') && isEditable(node) && inputMatchesSavedProfile(node, procedure.inputProfile)) {
+          chosen = node;
+          await logEvent(origin, 'INFO', 'saved-procedure-input-found', selector, { strategy: 'saved-procedure' });
+          break;
+        }
+      } catch {
+        invalidSelectors += 1;
       }
-    } catch {
-      await logEvent(origin, 'ERROR', 'saved-procedure-selector-invalid', undefined, { strategy: 'saved-procedure' });
-      if (options.requireSavedStrategy) return { message: 'Le sélecteur du champ enregistré est invalide. Automatisation suspendue ; relancez la validation de stratégie.', success: false };
+    }
+    if (!chosen) {
+      await logEvent(origin, 'ERROR', 'saved-procedure-input-selectors-exhausted', `selectors=${selectors.length}; invalid=${invalidSelectors}`, { strategy: 'saved-procedure' });
+      if (options.requireSavedStrategy) return { message: 'Aucun des sélecteurs enregistrés ne retrouve le champ de saisie. Automatisation suspendue pour éviter un envoi dans le mauvais champ ; relancez la validation de stratégie.', success: false };
     }
   }
 
@@ -222,7 +245,18 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     return { message: 'Validation annulée : aucun champ de chat n’a été sélectionné. Aucune stratégie n’a été enregistrée.', validated: false };
   }
 
-  const inputSelector = stableSelector(input);
+  let inputSelectors: string[];
+  try {
+    inputSelectors = stableSelectors(input);
+  } catch (error) {
+    await logEvent(origin, 'ERROR', 'strategy-validation-selector-generation-failed', error instanceof Error ? error.message : 'unknown error');
+    return { message: 'Impossible de créer des sélecteurs fiables pour ce champ. Aucune stratégie n’a été enregistrée.', validated: false };
+  }
+  const inputSelector = inputSelectors[0];
+  if (!inputSelector) {
+    await logEvent(origin, 'ERROR', 'strategy-validation-selector-generation-failed', 'No primary selector generated.');
+    return { message: 'Impossible de créer un sélecteur principal fiable. Aucune stratégie n’a été enregistrée.', validated: false };
+  }
   const baselineMatches = getMatchingMessageElements(text);
   let strategy: ChatSiteProcedure['sendStrategy'];
   try {
@@ -264,6 +298,15 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     origin,
     schemaVersion: 2,
     inputSelector,
+    inputSelectors,
+    inputProfile: {
+      tagName: input.tagName.toLowerCase(),
+      ...(input.getAttribute('role') ? { role: input.getAttribute('role')! } : {}),
+      ...(input.getAttribute('aria-label') ? { ariaLabel: input.getAttribute('aria-label')! } : {}),
+      ...(input.getAttribute('name') ? { name: input.getAttribute('name')! } : {}),
+      ...(input.getAttribute('placeholder') ? { placeholder: input.getAttribute('placeholder')! } : {}),
+      contentEditable: input.isContentEditable,
+    },
     sendStrategy: strategy,
     updatedAt: now,
     lastSuccessAt: now,
@@ -271,7 +314,7 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     failureCount: existing?.failureCount ?? 0,
   };
   await saveProcedure(procedure);
-  await logEvent(origin, 'INFO', 'strategy-validation-succeeded-and-saved', `method=${strategy.method}; input=${inputSelector}; message confirmé=${JSON.stringify(expectedPreview)}`, { strategy: strategy.method });
+  await logEvent(origin, 'INFO', 'strategy-validation-succeeded-and-saved', `method=${strategy.method}; inputs=${inputSelectors.join(' | ')}; message confirmé=${JSON.stringify(expectedPreview)}`, { strategy: strategy.method });
   return { message: `Validation réussie : un nouveau message a été détecté dans la conversation. La stratégie « ${strategy.method === 'button' ? 'bouton d’envoi' : 'Entrée'} » est enregistrée pour ${origin}. Cette preuve concerne l’interface, pas la confirmation du serveur.`, validated: true };
 }
 

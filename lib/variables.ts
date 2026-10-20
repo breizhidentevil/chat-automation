@@ -88,7 +88,7 @@ delete liquid.tags.layout;
 delete liquid.tags.block;
 
 export function isValidVariableName(value: unknown): value is string {
-  return typeof value === 'string' && VARIABLE_NAME_PATTERN.test(value) && !BLOCKED_PATH_PARTS.has(value);
+  return typeof value === 'string' && VARIABLE_NAME_PATTERN.test(value) && !BLOCKED_PATH_PARTS.has(value) && !DYNAMIC_ROOTS.has(value);
 }
 
 export function findTemplateVariables(template: string): string[] {
