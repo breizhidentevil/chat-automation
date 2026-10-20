@@ -5,6 +5,7 @@ import {
 } from './automation-validation';
 import {
   filterValidVariableDefinitions,
+  MAX_VARIABLE_DEFINITIONS,
   validateTemplateVariables,
   type VariableDefinition,
 } from './variables';
@@ -81,6 +82,7 @@ function isAutomationConfigDraft(value: unknown): value is AutomationConfigDraft
     typeof draft.startTime === 'string' &&
     typeof draft.endTime === 'string' &&
     Array.isArray(draft.variables) &&
+    draft.variables.length <= MAX_VARIABLE_DEFINITIONS &&
     filterValidVariableDefinitions(draft.variables).length === draft.variables.length;
 }
 
