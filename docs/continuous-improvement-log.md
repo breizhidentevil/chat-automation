@@ -137,3 +137,5 @@
 - Constat P1 : la fusion d'historique préservait le statut `complete` mais choisissait le contenu uniquement selon `lastUpdatedAt`. Un instantané `streaming` reçu plus tard pouvait donc remplacer le texte final tout en laissant le statut `complete`.
 - Correction : une entrée déjà terminée conserve son payload face aux mises à jour `streaming` ou `incomplete`; une nouvelle entrée `complete` peut toujours actualiser le contenu si son horodatage est plus récent.
 - Ajout d'un test de non-régression. Validation CI à vérifier sur le SHA exact ; aucune fusion dans `main`.
+
+- CI du commit `47b1d79246aee8e1f38f1d8bc2983f0ba8647134` : type-check réussi, mais les tests ont mis en évidence un ancien test qui attendait encore que le contenu final soit remplacé par un instantané `streaming` plus récent. Test actualisé pour exprimer la nouvelle garantie de préservation du contenu final ; nouvelle CI déclenchée.

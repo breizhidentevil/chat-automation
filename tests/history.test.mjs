@@ -90,13 +90,13 @@ test('deduplication sorts output by first-seen timestamp', () => {
   assert.deepEqual(result.map(item => item.id), ['earlier', 'later']);
 });
 
-test('a late streaming update cannot downgrade a completed message', () => {
-  const completed = message({ status: 'complete', completedAt: 1800, lastUpdatedAt: 1800 });
+test('a later streaming snapshot cannot overwrite a completed message payload', () => {
+  const completed = message({ status: 'complete', completedAt: 1800, lastUpdatedAt: 1800, content: 'Hello' });
   const lateStreaming = message({ status: 'streaming', lastUpdatedAt: 2200, content: 'Hello, still updating' });
   const result = mergeConversationMessage(completed, lateStreaming);
   assert.equal(result.status, 'complete');
   assert.equal(result.completedAt, 1800);
-  assert.equal(result.content, 'Hello, still updating');
+  assert.equal(result.content, 'Hello');
   assert.equal(result.lastUpdatedAt, 2200);
 });
 
