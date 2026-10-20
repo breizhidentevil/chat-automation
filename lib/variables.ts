@@ -35,7 +35,7 @@ export const MAX_VARIABLE_DEFINITIONS = 100;
 export const MAX_TOTAL_VARIABLE_VALUE_LENGTH = 1_000_000;
 
 export function isValidVariableDefinition(value: unknown): value is VariableDefinition {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const item = value as Partial<VariableDefinition>;
   return typeof item.id === 'string' && item.id.length > 0 && item.id.length <= MAX_VARIABLE_ID_LENGTH &&
     isValidVariableName(item.name) &&

@@ -204,6 +204,12 @@ test('variable collections are capped by count and aggregate value size', () => 
   assert.equal(filtered.reduce((total, item) => total + item.value.length, 0) <= 1_000_000, true);
 });
 
+test('variable validation rejects arrays even when they carry definition-like properties', () => {
+  const array = Object.assign([], variable('array-name', 'value'));
+  assert.equal(isValidVariableDefinition(array), false);
+  assert.deepEqual(filterValidVariableDefinitions([array]), []);
+});
+
 test('variable filtering strips unknown properties before persistence', () => {
   const untrusted = { ...variable('name', 'value'), injected: 'x'.repeat(2_000_000) };
   const [filtered] = filterValidVariableDefinitions([untrusted]);
