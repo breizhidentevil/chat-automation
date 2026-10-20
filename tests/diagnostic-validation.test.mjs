@@ -73,7 +73,7 @@ test('diagnostic history scans backward and stops once the event-count budget is
   let indexedReads = 0;
   const observed = new Proxy(events, {
     get(target, property, receiver) {
-      if (typeof property === 'string' && /^\\d+$/.test(property)) indexedReads += 1;
+      if (typeof property === 'string' && /^\d+$/.test(property)) indexedReads += 1;
       return Reflect.get(target, property, receiver);
     },
   });
