@@ -4,6 +4,7 @@ import {
   type AutomationStartMessage,
 } from './automation-validation';
 import {
+  filterValidVariableDefinitions,
   validateTemplateVariables,
   type VariableDefinition,
 } from './variables';
@@ -63,7 +64,8 @@ export function normalizeAutomationConfig(draft: AutomationConfigDraft): Normali
     timeWindowEnabled: draft.timeWindowEnabled,
     startTime: draft.startTime,
     endTime: draft.endTime,
-    variables: draft.variables,
+    // Rebuild each definition from the allowlisted schema before it reaches runtime.
+    variables: filterValidVariableDefinitions(draft.variables),
   };
 }
 
@@ -78,7 +80,8 @@ function isAutomationConfigDraft(value: unknown): value is AutomationConfigDraft
     typeof draft.timeWindowEnabled === 'boolean' &&
     typeof draft.startTime === 'string' &&
     typeof draft.endTime === 'string' &&
-    Array.isArray(draft.variables);
+    Array.isArray(draft.variables) &&
+    filterValidVariableDefinitions(draft.variables).length === draft.variables.length;
 }
 
 /** Validate user-editable values before any browser permission or runtime side effects. */
