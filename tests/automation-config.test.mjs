@@ -102,6 +102,10 @@ test('rejects malformed draft shapes before normalization', () => {
   assert.equal(validateAutomationConfig(draft({ variables: null })).code, 'invalidSettings');
   assert.equal(validateAutomationConfig(draft({ variables: [{ ...variable, value: 42 }] })).code, 'invalidSettings');
   assert.equal(validateAutomationConfig(draft({ variables: Array(1) })).code, 'invalidSettings');
+  const tooManyVariables = Array.from({ length: 101 }, (_, index) => ({
+    ...variable, id: `id-${index}`, name: `name-${index}`,
+  }));
+  assert.equal(validateAutomationConfig(draft({ variables: tooManyVariables })).code, 'invalidSettings');
 });
 
 test('sanitizes variable definitions before returning runtime configuration', () => {
