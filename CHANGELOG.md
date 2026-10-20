@@ -1,3 +1,9 @@
+## Unreleased — validation des définitions de variables
+
+- Les configurations d’automatisation rejettent les collections de variables malformées, clairsemées, trop volumineuses ou contenant des définitions invalides.
+- Les définitions acceptées sont reconstruites selon leur schéma autorisé avant d’être intégrées à la configuration et au message runtime, ce qui écarte les propriétés injectées inattendues.
+- Tests de non-régression ajoutés pour les définitions invalides, les tableaux clairsemés et les propriétés supplémentaires volumineuses.
+
 ## Unreleased — validation défensive des configurations
 
 - La validation d'une configuration d'automatisation rejette désormais les objets malformés avant normalisation : unité inconnue, types invalides, séquence non-tableau ou variables non-tableau.
