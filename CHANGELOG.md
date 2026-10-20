@@ -1,3 +1,9 @@
+## Unreleased — roadmap et suivi des itérations
+
+- Création de `docs/roadmap.md` pour centraliser les dix axes d'amélioration, leur ordre de priorité, les principes de développement continu et les critères de clôture.
+- Les prochaines itérations doivent consigner ici les changements livrés, et dans `docs/continuous-improvement-log.md` les détails techniques, décisions, commits et résultats de validation utiles.
+- Cette entrée documente l'ajout du processus de suivi ; elle ne signifie pas que les dix axes sont implémentés.
+
 ## 5.3.0 — React architecture refactor
 
 - Extracted pure message-sequence operations and centralized automation configuration normalization, validation, and runtime payload creation.
