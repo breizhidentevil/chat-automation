@@ -114,7 +114,10 @@ function sendText(
     let invalidSelectors = 0;
     for (const selector of selectors) {
       try {
-        const node = document.querySelector<HTMLElement>(selector);
+        const matches = document.querySelectorAll<HTMLElement>(selector);
+        // A selector that used to be unique may become ambiguous after a site update.
+        if (matches.length !== 1) continue;
+        const node = matches[0];
         if (node && node.isConnected && node.getClientRects().length > 0 && !node.matches(':disabled, [aria-disabled="true"], [readonly]') && isEditable(node) && inputMatchesSavedProfile(node, procedure.inputProfile)) {
           chosen = node;
           await logEvent(origin, 'INFO', 'saved-procedure-input-found', selector, { strategy: 'saved-procedure', fallback: selector !== procedure.inputSelector });
