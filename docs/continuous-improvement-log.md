@@ -56,3 +56,11 @@
 - Updated `CHANGELOG.md` to record the roadmap addition and establish it as the summary of delivered changes per iteration.
 - Future iterations must update the changelog and add technical context, decisions, commit references, and exact-head validation outcomes here as appropriate.
 - Documentation-only changes in this entry have not been described as tested code; no test or CI result is claimed for them.
+
+## Defensive automation configuration validation — 2026-10-20
+
+- Finding: `validateAutomationConfig` normalized its typed draft before validating its runtime shape. Malformed values from an unexpected caller could throw during `.map()`, or an unknown unit could be silently interpreted as seconds.
+- Change: added a shape guard before normalization for message arrays and elements, interval/repeat strings, supported units, boolean time-window flag, clock strings, and variable arrays. Invalid input returns the existing `invalidSettings` diagnostic.
+- Regression coverage: tests exercise unknown units, non-boolean flags, null/non-array messages, non-string message entries, and null variables.
+- Commits: `5d0c116d97bb42ed83c68e99c886f45f99e025f9` (guard), `08753fc2ad9c837455bb8ff5d5852e16d7d4231e` (tests), `f7865873a6e499c8e96cef0c5baf27157301a3cd` (changelog).
+- Validation: changes are committed on `autonomous/continuous-improvement`. Local npm execution is unavailable in this environment; CI status for the latest head must be confirmed before considering the iteration fully validated. No merge to `main` was performed.
