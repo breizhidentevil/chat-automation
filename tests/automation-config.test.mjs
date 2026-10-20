@@ -98,5 +98,6 @@ test('rejects malformed draft shapes before normalization', () => {
   assert.equal(validateAutomationConfig(draft({ timeWindowEnabled: 'yes' })).code, 'invalidSettings');
   assert.equal(validateAutomationConfig(draft({ messages: null })).code, 'invalidSettings');
   assert.equal(validateAutomationConfig(draft({ messages: ['ok', 42] })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ messages: Array(1) })).code, 'invalidSettings');
   assert.equal(validateAutomationConfig(draft({ variables: null })).code, 'invalidSettings');
 });
