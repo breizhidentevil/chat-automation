@@ -50,3 +50,11 @@ test('rejects invalid counters and timestamps', () => {
   assert.equal(isValidChatSiteProcedure(procedure({ updatedAt: Number.NaN })), false);
   assert.equal(isValidChatSiteProcedure(procedure({ lastSuccessAt: 3000 })), false);
 });
+
+test('validates ordered fallback selectors and keeps legacy records compatible', () => {
+  assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['textarea', 'form textarea'] })), true);
+  assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['form textarea'] })), false);
+  assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['textarea', 'textarea'] })), false);
+  assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: Array(9).fill('textarea') })), false);
+  assert.equal(isValidChatSiteProcedure(procedure()), true);
+});
