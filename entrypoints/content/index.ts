@@ -77,7 +77,22 @@ export default defineContentScript({
   },
 });
 
-async function sendText(
+async function inputMatchesSavedProfile(node: HTMLElement, profile: ChatSiteProcedure['inputProfile']): boolean {
+  if (!profile) return true; // legacy records have no fingerprint
+  if (node.tagName.toLowerCase() !== profile.tagName || node.isContentEditable !== profile.contentEditable) return false;
+  const attributes: Array<[string | undefined, string | null]> = [
+    [profile.role, node.getAttribute('role')],
+    [profile.ariaLabel, node.getAttribute('aria-label')],
+    [profile.name, node.getAttribute('name')],
+    [profile.placeholder, node.getAttribute('placeholder')],
+  ];
+  const savedAttributes = attributes.filter(([value]) => value !== undefined);
+  // When the selected field had semantic attributes, at least one must still match.
+  // This prevents a stale selector that now points at another textarea from being accepted.
+  return savedAttributes.length === 0 || savedAttributes.some(([value, actual]) => value === actual);
+}
+
+function sendText(
   rawText: string,
   options: { requireSavedStrategy?: boolean; automationConfig?: AutomationConfig } = {},
 ): Promise<{ message: string; success: boolean }> {
@@ -100,7 +115,7 @@ async function sendText(
     for (const selector of selectors) {
       try {
         const node = document.querySelector<HTMLElement>(selector);
-        if (node && node.isConnected && node.getClientRects().length > 0 && !node.matches(':disabled, [aria-disabled="true"], [readonly]') && isEditable(node)) {
+        if (node && node.isConnected && node.getClientRects().length > 0 && !node.matches(':disabled, [aria-disabled="true"], [readonly]') && isEditable(node) && inputMatchesSavedProfile(node, procedure.inputProfile)) {
           chosen = node;
           await logEvent(origin, 'INFO', 'saved-procedure-input-found', selector, { strategy: 'saved-procedure', fallback: selector !== procedure.inputSelector });
           break;
@@ -277,6 +292,14 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     schemaVersion: 2,
     inputSelector,
     inputSelectors,
+    inputProfile: {
+      tagName: input.tagName.toLowerCase(),
+      role: input.getAttribute('role') ?? undefined,
+      ariaLabel: input.getAttribute('aria-label') ?? undefined,
+      name: input.getAttribute('name') ?? undefined,
+      placeholder: input.getAttribute('placeholder') ?? undefined,
+      contentEditable: input.isContentEditable,
+    },
     sendStrategy: strategy,
     updatedAt: now,
     lastSuccessAt: now,
