@@ -28,7 +28,7 @@ function isValidTimestamp(value: unknown): value is number {
 }
 
 export function isValidChatSiteProcedure(value: unknown, expectedOrigin?: string): value is ChatSiteProcedure {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const procedure = value as Partial<ChatSiteProcedure>;
   if (procedure.schemaVersion !== 2 || !isNormalizedHttpOrigin(procedure.origin)) return false;
   if (expectedOrigin !== undefined && procedure.origin !== expectedOrigin) return false;
@@ -39,7 +39,7 @@ export function isValidChatSiteProcedure(value: unknown, expectedOrigin?: string
        !procedure.inputSelectors.includes(procedure.inputSelector))) return false;
   if (procedure.inputProfile !== undefined) {
     const profile = procedure.inputProfile;
-    if (!profile || typeof profile !== 'object' || typeof profile.tagName !== 'string' ||
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile) || typeof profile.tagName !== 'string' ||
         !/^[a-z][a-z0-9-]{0,63}$/.test(profile.tagName) || typeof profile.contentEditable !== 'boolean' ||
         ['role', 'ariaLabel', 'name', 'placeholder'].some(key =>
           profile[key as 'role' | 'ariaLabel' | 'name' | 'placeholder'] !== undefined &&
@@ -50,7 +50,7 @@ export function isValidChatSiteProcedure(value: unknown, expectedOrigin?: string
   if (procedure.lastSuccessAt !== undefined &&
       (!isValidTimestamp(procedure.lastSuccessAt) || procedure.lastSuccessAt > procedure.updatedAt)) return false;
   const strategy = procedure.sendStrategy;
-  if (!strategy || typeof strategy !== 'object') return false;
+  if (!strategy || typeof strategy !== 'object' || Array.isArray(strategy)) return false;
   if (strategy.method === 'button') {
     return isValidSelector(strategy.selector) &&
       typeof strategy.confidence === 'number' && Number.isFinite(strategy.confidence) &&
@@ -61,4 +61,43 @@ export function isValidChatSiteProcedure(value: unknown, expectedOrigin?: string
       strategy.confidence >= 0 && strategy.confidence <= 1;
   }
   return false;
+}
+
+
+/** Return a schema-allowlisted copy of a validated procedure. */
+export function sanitizeChatSiteProcedure(value: unknown, expectedOrigin?: string): ChatSiteProcedure | undefined {
+  if (!isValidChatSiteProcedure(value, expectedOrigin)) return undefined;
+  const procedure = value as ChatSiteProcedure;
+  const sanitized: ChatSiteProcedure = {
+    origin: procedure.origin,
+    schemaVersion: 2,
+    inputSelector: procedure.inputSelector,
+    sendStrategy: procedure.sendStrategy.method === 'button'
+      ? {
+          method: 'button',
+          selector: procedure.sendStrategy.selector,
+          confidence: procedure.sendStrategy.confidence,
+        }
+      : {
+          method: procedure.sendStrategy.method,
+          confidence: procedure.sendStrategy.confidence,
+        },
+    updatedAt: procedure.updatedAt,
+    successCount: procedure.successCount,
+    failureCount: procedure.failureCount,
+  };
+  if (procedure.inputSelectors !== undefined) sanitized.inputSelectors = [...procedure.inputSelectors];
+  if (procedure.inputProfile !== undefined) {
+    const profile = procedure.inputProfile;
+    sanitized.inputProfile = {
+      tagName: profile.tagName,
+      contentEditable: profile.contentEditable,
+      ...(profile.role !== undefined ? { role: profile.role } : {}),
+      ...(profile.ariaLabel !== undefined ? { ariaLabel: profile.ariaLabel } : {}),
+      ...(profile.name !== undefined ? { name: profile.name } : {}),
+      ...(profile.placeholder !== undefined ? { placeholder: profile.placeholder } : {}),
+    };
+  }
+  if (procedure.lastSuccessAt !== undefined) sanitized.lastSuccessAt = procedure.lastSuccessAt;
+  return sanitized;
 }

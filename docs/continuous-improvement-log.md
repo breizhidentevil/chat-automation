@@ -74,3 +74,10 @@
 - Validation: local npm execution is unavailable in this environment. CI must be checked against the exact latest branch head; no test success or merge is claimed.
 
 - Follow-up hardening: reject variable arrays over `MAX_VARIABLE_DEFINITIONS` before scanning their contents, bounding validation work for oversized untrusted collections. Added a 101-definition regression case. Commits: `db96a10b9d1ae3c95264c5feb7ba0138f027d0e0` (bound), `ba0b1264b9197bc41b898e80d4f7e8372211b7c8` (test).
+
+## Defensive site-procedure validation — 2026-10-20
+
+- Finding: procedure validation accepted array objects with attached properties, including nested send strategies and input profiles. Valid procedure records were also copied to extension storage with arbitrary extra properties intact.
+- Change: reject arrays at all three object boundaries and add `sanitizeChatSiteProcedure`, which reconstructs validated records and nested objects from allowlisted fields. Both stored records loaded from storage and new writes now use sanitized copies.
+- Regression coverage: root and nested array impostors, plus a 2 MB injected property and extra nested properties that must not survive persistence.
+- This follow-up is committed separately from the variable-validation iteration; exact-head CI is required before considering it validated. No merge to `main`.

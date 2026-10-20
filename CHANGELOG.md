@@ -1,4 +1,4 @@
-## Unreleased — validation des définitions de variables
+## Unreleased — validation et assainissement des procédures de site\n\n- Rejette les tableaux utilisés comme objets de procédure, de stratégie d’envoi ou de profil de champ.\n- Reconstruit les procédures validées selon leur schéma autorisé avant lecture ou écriture en stockage, en écartant les propriétés injectées.\n- Ajoute des tests de non-régression pour les tableaux usurpant des objets et les propriétés inattendues.\n\n## Unreleased — validation des définitions de variables
 
 - Les configurations d’automatisation rejettent les collections de variables malformées, clairsemées, trop volumineuses ou contenant des définitions invalides.
 - Les définitions acceptées sont reconstruites selon leur schéma autorisé avant d’être intégrées à la configuration et au message runtime, ce qui écarte les propriétés injectées inattendues.
