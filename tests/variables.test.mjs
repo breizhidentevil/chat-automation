@@ -73,6 +73,19 @@ test('dynamic paths resolve nested properties, array indexes and runtime context
   assert.equal(result.text, 'second / 3 / 2');
 });
 
+test('Liquid default filters handle missing dynamic paths without weakening required-path checks', async () => {
+  const result = await resolveMessageTemplate(
+    '{{data.missing | default: "fallback"}}',
+    [],
+    context,
+  );
+  assert.equal(result.text, 'fallback');
+  await assert.rejects(
+    resolveMessageTemplate('{{data.missing}}', [], context),
+    /Propriété|donnée absente/,
+  );
+});
+
 test('unknown static variables fail with an actionable error', async () => {
   await assert.rejects(
     resolveMessageTemplate('Hello {{missing}}', [], context),
