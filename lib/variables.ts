@@ -213,9 +213,9 @@ export async function resolveMessageTemplate(
     },
   };
 
-  // Preserve the legacy resolver's explicit errors and blocked-path checks for simple tokens.
-  for (const name of variablesUsed) {
-    if (isDynamicPath(name)) readPath(rootData, name);
+  // Preserve explicit errors for required dynamic paths, while allowing Liquid's default filter to handle missing paths.
+  for (const reference of findTemplateVariableReferences(template)) {
+    if (isDynamicPath(reference.name) && !reference.hasDefaultFilter) readPath(rootData, reference.name);
   }
 
   try {
