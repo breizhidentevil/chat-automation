@@ -92,3 +92,11 @@ test('rejects malformed clock values and excessively long sequences', () => {
   assert.equal(validateAutomationConfig(draft({ startTime: '25:00' })).code, 'invalidSettings');
   assert.equal(validateAutomationConfig(draft({ messages: ['x'.repeat(1_000_001)] })).code, 'sequenceTooLong');
 });
+
+test('rejects malformed draft shapes before normalization', () => {
+  assert.equal(validateAutomationConfig(draft({ unit: 'hours' })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ timeWindowEnabled: 'yes' })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ messages: null })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ messages: ['ok', 42] })).code, 'invalidSettings');
+  assert.equal(validateAutomationConfig(draft({ variables: null })).code, 'invalidSettings');
+});
