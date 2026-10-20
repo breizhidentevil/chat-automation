@@ -1,3 +1,9 @@
+## Unreleased — annulation sûre des automatisations
+
+- Vérifie que l’instance d’automatisation est toujours active après chaque préparation asynchrone des variables, avant l’insertion du texte et immédiatement avant le clic ou l’envoi par Entrée.
+- Empêche un arrêt ou un redémarrage pendant la lecture des données ou l’écriture des journaux de déclencher ensuite un envoi obsolète.
+- Ajoute des tests de régression vérifiant l’ordre des contrôles d’annulation aux frontières asynchrones et avant les effets d’envoi.
+
 ## Unreleased — validation des séquences runtime
 
 - Rejette les séquences de messages clairsemées dans la validation du payload runtime, car les méthodes `every` et `reduce` ignorent les emplacements vides.

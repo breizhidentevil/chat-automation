@@ -91,3 +91,11 @@
 - Correction : après avoir borné la longueur à 100, la validation matérialise le tableau avec `Array.from`, puis vérifie chaque entrée et la taille cumulée sur cette copie dense.
 - Test de non-régression : une séquence de deux emplacements dont le premier est vide doit être rejetée.
 - Le contrôle CI doit être confirmé sur le SHA exact résultant ; aucun test local n’est revendiqué. Travail limité à `autonomous/continuous-improvement`, sans merge vers `main`.
+
+
+## Annulation sûre après préparation asynchrone — 2026-10-20
+
+- Constat : le moteur vérifiait l’identité de l’automatisation après l’envoi, mais pouvait terminer la lecture de l’historique/du stockage et la résolution des templates après un clic sur Arrêter ou après le démarrage d’une nouvelle séquence. Cette ancienne séquence pouvait donc continuer vers `sendText`.
+- Correction : contrôles d’identité après les appels asynchrones de préparation, avant `sendText`, après l’insertion et juste avant les effets d’envoi (clic ou événements Entrée). Une annulation ne transforme pas la nouvelle séquence en échec.
+- Tests : ajout de tests de régression vérifiant que les garde-fous se trouvent après les frontières asynchrones concernées et avant les effets de soumission.
+- Les tests locaux ne sont pas revendiqués dans cet environnement ; attendre le résultat CI pour le SHA exact. Modification limitée à `autonomous/continuous-improvement`, sans merge dans `main`.

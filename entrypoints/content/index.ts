@@ -101,8 +101,14 @@ async function sendText(
   if (!text) return { message: 'Le message est vide.', success: false };
   const origin = location.origin;
   await logEvent(origin, 'INFO', 'send-request-received');
+  if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+    return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+  }
 
   const procedure = await getProcedure(origin);
+  if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+    return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+  }
   if (options.requireSavedStrategy && !procedure) {
     await logEvent(origin, 'ERROR', 'automation-blocked-no-validated-strategy');
     return { message: 'Aucune stratégie validée n’est enregistrée pour ce site. Ouvrez Détection et validez une stratégie avant de démarrer l’automatisation.', success: false };
@@ -150,6 +156,9 @@ async function sendText(
   // Snapshot the actual matching DOM nodes, not only a count. Some chat UIs
   // reuse or replace message wrappers between sends, so a count alone can miss
   // the next message (especially when the same prompt is sent twice).
+  if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+    return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+  }
   const baselineMatches = getMatchingMessageElements(text);
   try {
     await insertText(chosen, text);
@@ -157,6 +166,10 @@ async function sendText(
       return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
     }
     await logEvent(origin, 'INFO', 'text-inserted', `element=${chosen.tagName.toLowerCase()}; selector=${procedure?.inputSelector ?? stableSelector(chosen)}`);
+    // Logging is asynchronous too: cancellation during it must not reach the click/Enter.
+    if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+      return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+    }
   } catch (error) {
     await logEvent(origin, 'ERROR', 'text-insertion-failed', error instanceof Error ? error.message : 'unknown error');
     return { message: 'Le champ a été identifié, mais l’insertion du texte a échoué.', success: false };
@@ -184,9 +197,15 @@ async function sendText(
         await logEvent(origin, 'ERROR', 'saved-send-button-unavailable', procedure.sendStrategy.selector, { strategy: 'saved-procedure' });
         return { message: 'Le bouton enregistré est absent ou désactivé. Relancez la validation de stratégie.', success: false };
       }
+      if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+        return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+      }
       button.click();
       await logEvent(origin, 'INFO', 'saved-send-strategy-executed', `method=button; selector=${procedure.sendStrategy.selector}`, { strategy: 'saved-procedure' });
     } else if (procedure.sendStrategy.method === 'enter') {
+      if (siteAccessRevoked || (options.automationConfig && activeAutomation !== options.automationConfig)) {
+        return { message: 'Envoi annulé car l’accès au site ou l’automatisation a été arrêté.', success: false };
+      }
       chosen.focus();
       chosen.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
       chosen.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
@@ -979,6 +998,9 @@ async function runAutomationTick(): Promise<void> {
   try {
     const timestamp = new Date();
     const dynamicData = await buildDynamicVariableData(config, timestamp);
+    // Stop/restart can happen while storage and conversation data are being read.
+    // Re-check run identity before doing more work or attempting any side effect.
+    if (activeAutomation !== config) return;
     const resolved = await resolveMessageTemplate(
       template,
       config.variables,
@@ -986,9 +1008,11 @@ async function runAutomationTick(): Promise<void> {
       'automation',
       dynamicData,
     );
+    if (activeAutomation !== config) return;
     text = resolved.text;
     if (resolved.variablesUsed.length > 0) {
       await logEvent(location.origin, 'INFO', 'automation-variables-resolved', `message=${currentIndex + 1}; variables=${resolved.variablesUsed.join(', ')}; iteration=${completedSequences + 1}`);
+      if (activeAutomation !== config) return;
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Erreur de résolution des variables.';
@@ -996,6 +1020,8 @@ async function runAutomationTick(): Promise<void> {
     stopAutomation('failed', `Impossible de résoudre les variables du message ${currentIndex + 1} : ${detail}`);
     return;
   }
+  // Do not let a Stop/restart received during async preparation leak into a send.
+  if (activeAutomation !== config) return;
   const result = await sendText(text, { requireSavedStrategy: true, automationConfig: config });
   if (activeAutomation !== config) return;
   if (!result.success) {
