@@ -21,8 +21,8 @@
 - Earlier work reserved dynamic template roots (`system`, `automation`, `chat`, `history`, `logs`, `strategy`, `data`) from custom variable names and added a regression test.
 - Strategy recovery hardening added up to eight validated input selectors plus a semantic fingerprint, with runtime uniqueness/visibility/editability checks and safe stopping if the saved field cannot be found.
 - Current reliability improvement: the main validation/build job now has a 30-minute timeout, bounding a stuck browser setup/build/test run rather than letting CI consume runner time indefinitely. Added a workflow-security regression test for the timeout policy.
-- The workflow, test, and this log were committed on `autonomous/continuous-improvement` through the GitHub contents API. The new CI policy test has not yet run; the resulting PR CI must confirm it.
-- The working branch's most recent confirmed commits from this run: `fd9dab65c89c668554391e3fa1bee1e2331e6a51` (job timeout) and `5427f52ea211804025c465436770470bce1ca939` (regression test). Log update commit pending.
+- The workflow and regression test were committed on `autonomous/continuous-improvement` through the GitHub contents API. The log update was committed as `b4281961da212041fffedc4358bb5f225666ccf6`; this revision records that confirmed state. The new CI policy test has not yet run; the resulting PR CI must confirm it.
+- The working branch's confirmed commits from this run: `fd9dab65c89c668554391e3fa1bee1e2331e6a51` (job timeout), `5427f52ea211804025c465436770470bce1ca939` (regression test), and `b4281961da212041fffedc4358bb5f225666ccf6` (log update).
 
 ## Next task
 
