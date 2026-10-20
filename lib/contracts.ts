@@ -21,6 +21,15 @@ export interface ChatSiteProcedure {
   inputSelector: string;
   /** Ordered, validated alternatives for recovering the same input after DOM changes. */
   inputSelectors?: string[];
+  /** Minimal semantic fingerprint used to reject selectors that now point at a different field. */
+  inputProfile?: {
+    tagName: string;
+    role?: string;
+    ariaLabel?: string;
+    name?: string;
+    placeholder?: string;
+    contentEditable: boolean;
+  };
   sendStrategy: SendStrategy;
   updatedAt: number;
   lastSuccessAt?: number;
