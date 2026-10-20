@@ -77,7 +77,7 @@ export default defineContentScript({
   },
 });
 
-async function inputMatchesSavedProfile(node: HTMLElement, profile: ChatSiteProcedure['inputProfile']): boolean {
+function inputMatchesSavedProfile(node: HTMLElement, profile: ChatSiteProcedure['inputProfile']): boolean {
   if (!profile) return true; // legacy records have no fingerprint
   if (node.tagName.toLowerCase() !== profile.tagName || node.isContentEditable !== profile.contentEditable) return false;
   const attributes: Array<[string | undefined, string | null]> = [
@@ -120,7 +120,7 @@ async function sendText(
         const node = matches[0];
         if (node && node.isConnected && node.getClientRects().length > 0 && !node.matches(':disabled, [aria-disabled="true"], [readonly]') && isEditable(node) && inputMatchesSavedProfile(node, procedure.inputProfile)) {
           chosen = node;
-          await logEvent(origin, 'INFO', 'saved-procedure-input-found', selector, { strategy: 'saved-procedure', fallback: selector !== procedure.inputSelector });
+          await logEvent(origin, 'INFO', 'saved-procedure-input-found', selector, { strategy: 'saved-procedure' });
           break;
         }
       } catch {
@@ -253,6 +253,10 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     return { message: 'Impossible de créer des sélecteurs fiables pour ce champ. Aucune stratégie n’a été enregistrée.', validated: false };
   }
   const inputSelector = inputSelectors[0];
+  if (!inputSelector) {
+    await logEvent(origin, 'ERROR', 'strategy-validation-selector-generation-failed', 'No primary selector generated.');
+    return { message: 'Impossible de créer un sélecteur principal fiable. Aucune stratégie n’a été enregistrée.', validated: false };
+  }
   const baselineMatches = getMatchingMessageElements(text);
   let strategy: ChatSiteProcedure['sendStrategy'];
   try {
@@ -297,10 +301,10 @@ async function validateAndSaveStrategy(rawText: string): Promise<{ message: stri
     inputSelectors,
     inputProfile: {
       tagName: input.tagName.toLowerCase(),
-      role: input.getAttribute('role') ?? undefined,
-      ariaLabel: input.getAttribute('aria-label') ?? undefined,
-      name: input.getAttribute('name') ?? undefined,
-      placeholder: input.getAttribute('placeholder') ?? undefined,
+      ...(input.getAttribute('role') ? { role: input.getAttribute('role')! } : {}),
+      ...(input.getAttribute('aria-label') ? { ariaLabel: input.getAttribute('aria-label')! } : {}),
+      ...(input.getAttribute('name') ? { name: input.getAttribute('name')! } : {}),
+      ...(input.getAttribute('placeholder') ? { placeholder: input.getAttribute('placeholder')! } : {}),
       contentEditable: input.isContentEditable,
     },
     sendStrategy: strategy,
