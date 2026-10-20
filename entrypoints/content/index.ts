@@ -1015,8 +1015,11 @@ async function runAutomationTick(): Promise<void> {
       if (activeAutomation !== config) return;
     }
   } catch (error) {
+    // A rejected async operation from an obsolete run must not stop a newer run.
+    if (activeAutomation !== config) return;
     const detail = error instanceof Error ? error.message : 'Erreur de résolution des variables.';
     await logEvent(location.origin, 'ERROR', 'automation-variable-resolution-failed', `message=${currentIndex + 1}; ${detail}`);
+    if (activeAutomation !== config) return;
     stopAutomation('failed', `Impossible de résoudre les variables du message ${currentIndex + 1} : ${detail}`);
     return;
   }

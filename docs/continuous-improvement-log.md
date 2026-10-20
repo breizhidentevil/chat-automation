@@ -99,3 +99,11 @@
 - Correction : contrôles d’identité après les appels asynchrones de préparation, avant `sendText`, après l’insertion et juste avant les effets d’envoi (clic ou événements Entrée). Une annulation ne transforme pas la nouvelle séquence en échec.
 - Tests : ajout de tests de régression vérifiant que les garde-fous se trouvent après les frontières asynchrones concernées et avant les effets de soumission.
 - Les tests locaux ne sont pas revendiqués dans cet environnement ; attendre le résultat CI pour le SHA exact. Modification limitée à `autonomous/continuous-improvement`, sans merge dans `main`.
+
+
+## Isolation des erreurs après arrêt/redémarrage — 2026-10-20
+
+- Revue complémentaire P0 : les chemins de succès vérifiaient l'identité de l'automatisation après les opérations asynchrones, mais le `catch` de préparation des variables arrêtait inconditionnellement l'automatisation active. Une ancienne opération rejetée pouvait donc arrêter une nouvelle séquence démarrée entre-temps.
+- Correction : vérifier l'identité de la configuration au début du `catch` et à nouveau après l'écriture asynchrone du diagnostic avant d'appeler `stopAutomation('failed')`.
+- Test de non-régression ajouté pour empêcher qu'une erreur d'une ancienne séquence ne coupe une nouvelle exécution.
+- La CI doit valider le SHA exact. Aucun merge dans `main`.

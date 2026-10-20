@@ -1,3 +1,8 @@
+## Unreleased — isolation des erreurs entre exécutions
+
+- Empêche une lecture ou une résolution asynchrone échouée appartenant à une ancienne séquence d'arrêter une automatisation démarrée entre-temps.
+- Ajoute un contrôle d'identité avant et après l'écriture du diagnostic, avec un test de non-régression sur l'ordre de ces garde-fous.
+
 ## Unreleased — annulation sûre des automatisations
 
 - Vérifie que l’instance d’automatisation est toujours active après chaque préparation asynchrone des variables, avant l’insertion du texte et immédiatement avant le clic ou l’envoi par Entrée.

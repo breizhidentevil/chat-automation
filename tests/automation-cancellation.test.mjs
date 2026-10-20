@@ -29,3 +29,17 @@ test('re-checks cancellation after insertion/logging and immediately before the 
   assert.ok(beforeButtonGuard > postInsertGuard && beforeButtonGuard < buttonClick);
   assert.ok(enterDispatch > buttonClick && beforeEnterGuard > buttonClick && beforeEnterGuard < enterDispatch);
 });
+
+test('does not let an obsolete preparation failure stop a newer automation run', () => {
+  const catchStart = source.indexOf("} catch (error) {", source.indexOf('const dynamicData = await buildDynamicVariableData(config, timestamp);'));
+  const catchEnd = source.indexOf('\n  // Do not let a Stop/restart received during async preparation leak into a send.', catchStart);
+  const handler = source.slice(catchStart, catchEnd);
+  const firstGuard = handler.indexOf('if (activeAutomation !== config) return;');
+  const logError = handler.indexOf("await logEvent(location.origin, 'ERROR', 'automation-variable-resolution-failed'");
+  const secondGuard = handler.indexOf('if (activeAutomation !== config) return;', firstGuard + 1);
+  const stop = handler.indexOf("stopAutomation('failed'");
+
+  assert.ok(catchStart >= 0 && catchEnd > catchStart);
+  assert.ok(firstGuard >= 0 && firstGuard < logError);
+  assert.ok(secondGuard > logError && secondGuard < stop);
+});
