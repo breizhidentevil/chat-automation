@@ -55,4 +55,8 @@ test('rejects invalid or inconsistent timestamps', () => {
   assert.equal(isValidConversationMessage(message({ status: 'complete', completedAt: 900 })), false);
   assert.equal(isValidConversationMessage(message({ status: 'complete', completedAt: 1500, lastUpdatedAt: 1400 })), false);
   assert.equal(isValidConversationMessage(message({ status: 'complete', completedAt: 1500, lastUpdatedAt: 1600 })), true);
+  assert.equal(isValidConversationMessage(message({ status: 'streaming', completedAt: 1000 })), false);
+  assert.equal(isValidConversationMessage(message({ status: 'incomplete', completedAt: 1000 })), false);
+  // Legacy complete records without completedAt remain valid and can be normalized by the history writer.
+  assert.equal(isValidConversationMessage(message({ status: 'complete' })), true);
 });
