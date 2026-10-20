@@ -35,7 +35,7 @@ export function isValidChatSiteProcedure(value: unknown, expectedOrigin?: string
   if (!isValidSelector(procedure.inputSelector)) return false;
   if (procedure.inputSelectors !== undefined &&
       (!Array.isArray(procedure.inputSelectors) || procedure.inputSelectors.length < 1 || procedure.inputSelectors.length > 8 ||
-       !procedure.inputSelectors.every(isValidSelector) || new Set(procedure.inputSelectors).size !== procedure.inputSelectors.length ||
+       !Array.from(procedure.inputSelectors).every(isValidSelector) || new Set(procedure.inputSelectors).size !== procedure.inputSelectors.length ||
        !procedure.inputSelectors.includes(procedure.inputSelector))) return false;
   if (procedure.inputProfile !== undefined) {
     const profile = procedure.inputProfile;

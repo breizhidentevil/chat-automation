@@ -1,3 +1,8 @@
+## Unreleased — validation des sélecteurs de procédure
+
+- La validation vérifie désormais aussi les emplacements vides des tableaux de sélecteurs de secours, afin de rejeter les tableaux clairsemés malformés.
+- Ajout d’un test de non-régression pour les sélecteurs de secours clairsemés.
+
 ## Unreleased — validation et assainissement des procédures de site\n\n- Rejette les tableaux utilisés comme objets de procédure, de stratégie d’envoi ou de profil de champ.\n- Reconstruit les procédures validées selon leur schéma autorisé avant lecture ou écriture en stockage, en écartant les propriétés injectées.\n- Ajoute des tests de non-régression pour les tableaux usurpant des objets et les propriétés inattendues.\n\n## Unreleased — validation des définitions de variables
 
 - Les configurations d’automatisation rejettent les collections de variables malformées, clairsemées, trop volumineuses ou contenant des définitions invalides.

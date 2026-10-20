@@ -62,6 +62,9 @@ test('validates ordered fallback selectors and keeps legacy records compatible',
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['textarea', 'form textarea'] })), true);
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['form textarea'] })), false);
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: ['textarea', 'textarea'] })), false);
+  const sparseSelectors = ['textarea'];
+  sparseSelectors.length = 2;
+  assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: sparseSelectors })), false);
   assert.equal(isValidChatSiteProcedure(procedure({ inputSelectors: Array(9).fill('textarea') })), false);
   assert.equal(isValidChatSiteProcedure(procedure()), true);
 });

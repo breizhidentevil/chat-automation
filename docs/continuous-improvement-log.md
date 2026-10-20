@@ -81,3 +81,5 @@
 - Change: reject arrays at all three object boundaries and add `sanitizeChatSiteProcedure`, which reconstructs validated records and nested objects from allowlisted fields. Both stored records loaded from storage and new writes now use sanitized copies.
 - Regression coverage: root and nested array impostors, plus a 2 MB injected property and extra nested properties that must not survive persistence.
 - This follow-up is committed separately from the variable-validation iteration; exact-head CI is required before considering it validated. No merge to `main`.
+
+- Review follow-up: fallback-selector validation used `Array.prototype.every`, which skips sparse slots. It now materializes the bounded selector array before checking each entry; a sparse-selector regression test was added. CI for the resulting head remains required.
